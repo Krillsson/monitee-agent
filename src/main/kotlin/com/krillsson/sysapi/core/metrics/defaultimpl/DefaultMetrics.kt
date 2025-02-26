@@ -9,7 +9,7 @@ open class DefaultMetrics(
     @Qualifier("defaultCpuMetrics") private val cpuMetrics: DefaultCpuMetrics,
     private val networkMetrics: DefaultNetworkMetrics,
     @Qualifier("defaultGpuMetrics") private val gpuMetrics: GpuMetrics,
-    private val diskMetrics: DefaultDiskMetrics,
+    @Qualifier("defaultDiskMetrics") private val diskMetrics: DefaultDiskMetrics,
     private val fileSystemMetrics: DefaultFileSystemMetrics,
     private val processesMetrics: DefaultProcessesMetrics,
     @Qualifier("defaultMotherboardMetrics") private val motherboardMetrics: MotherboardMetrics,

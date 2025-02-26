@@ -21,6 +21,7 @@ data class DiskLoad(
     val historyId: UUID,
     val name: String,
     val serial: String,
+    val temperature: Double?,
     @Embedded
     val values: DiskValues,
     @Embedded

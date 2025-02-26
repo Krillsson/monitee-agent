@@ -191,6 +191,7 @@ type Partition {
 type DiskMetrics {
     id: String!
     name: String!
+    temperature: Float
     reads: Int!
     readBytes: Long!
     writes: Int!

@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component
 open class DefaultSystemMetrics(
     @Qualifier("defaultCpuMetrics") private val cpuMetrics: CpuMetrics,
     private val networkMetrics: NetworkMetrics,
-    private val diskMetrics: DiskMetrics,
+    @Qualifier("defaultDiskMetrics") private val diskMetrics: DiskMetrics,
     private val fileSystemMetrics: FileSystemMetrics,
     private val memoryMetrics: MemoryMetrics,
     private val processesMetrics: ProcessesMetrics,

@@ -4,6 +4,7 @@ import com.krillsson.sysapi.core.domain.disk.*
 import com.krillsson.sysapi.core.metrics.DiskMetrics
 import com.krillsson.sysapi.core.speed.SpeedMeasurementManager
 import org.apache.commons.lang3.StringUtils
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import oshi.hardware.HWDiskStore
@@ -17,7 +18,8 @@ import java.util.concurrent.TimeUnit
 @Component
 open class DefaultDiskMetrics(
     private val hal: HardwareAbstractionLayer,
-    private val speedMeasurementManager: DiskReadWriteRateMeasurementManager
+    private val speedMeasurementManager: DiskReadWriteRateMeasurementManager,
+    @Qualifier("defaultDiskSensors") private val diskSensors: DefaultDiskSensors
 ) : DiskMetrics {
 
     private val diskMetric = Sinks.many()
@@ -98,7 +100,8 @@ open class DefaultDiskMetrics(
     private fun createDiskLoad(diskStore: HWDiskStore): DiskLoad {
         val metrics = diskMetrics(diskStore)
         val speed: DiskSpeed = requireNotNull(diskSpeedForStore(diskStore).orElse(DiskSpeed(-1, -1)))
-        return DiskLoad(diskStore.name, getSerial(diskStore), metrics, speed)
+        val temperature = diskSensors.getDiskTemperature(diskStore)
+        return DiskLoad(diskStore.name, getSerial(diskStore), temperature, metrics, speed)
     }
 
     private fun getSerial(d: HWDiskStore): String {

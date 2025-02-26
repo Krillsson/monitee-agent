@@ -3,6 +3,7 @@ package com.krillsson.sysapi.core.metrics.windows
 import com.krillsson.sysapi.core.metrics.MemoryMetrics
 import com.krillsson.sysapi.core.metrics.SystemMetrics
 import com.krillsson.sysapi.core.metrics.defaultimpl.*
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
@@ -12,7 +13,7 @@ class WindowsMetrics(
     cpuMetrics: WindowsCpuMetrics,
     networkMetrics: DefaultNetworkMetrics,
     gpuMetrics: WindowsGpuMetrics,
-    diskMetrics: DefaultDiskMetrics,
+    @Qualifier("windowsDiskMetrics") diskMetrics: WindowsDiskMetrics,
     fileSystemMetrics: DefaultFileSystemMetrics,
     processesMetrics: DefaultProcessesMetrics,
     motherboardMetrics: WindowsMotherboardMetrics,

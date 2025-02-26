@@ -41,7 +41,11 @@ fun FileSystemLoad.asFileSystemLoad(): com.krillsson.sysapi.core.domain.filesyst
 
 fun DiskLoad.asDiskLoad(): com.krillsson.sysapi.core.domain.disk.DiskLoad {
     return com.krillsson.sysapi.core.domain.disk.DiskLoad(
-            name, serial, values.asValues(), speed.asSpeed()
+        name,
+        serial,
+        temperature,
+        values.asValues(),
+        speed.asSpeed()
     )
 }
 

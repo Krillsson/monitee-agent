@@ -13,7 +13,7 @@ class LinuxMetrics(
     cpuMetrics: LinuxCpuMetrics,
     networkMetrics: DefaultNetworkMetrics,
     @Qualifier("defaultGpuMetrics") gpuMetrics: DefaultGpuMetrics,
-    diskMetrics: DefaultDiskMetrics,
+    diskMetrics: LinuxDiskMetrics,
     fileSystemMetrics: DefaultFileSystemMetrics,
     processesMetrics: DefaultProcessesMetrics,
     @Qualifier("defaultMotherboardMetrics") motherboardMetrics: DefaultMotherboardMetrics,
