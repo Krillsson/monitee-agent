@@ -15,12 +15,20 @@ class SmartCtl(val mapper: ObjectMapper) {
 
     private val logger by logger()
 
+    private var ignoredDevices = mutableListOf<String>()
+
     fun supportsCommand() = Bash.checkIfCommandExists(COMMAND).getOrNull() ?: false
 
     fun getSmartData(deviceName: String): Output? {
         return try {
-            val result = Bash.executeToText(QUERY_SMART_DATA.format(deviceName))
-            result.getOrNull()?.convertJsonStringToSmartData(deviceName)
+            if (!ignoredDevices.contains(deviceName)) {
+                val result = Bash.executeToText(QUERY_SMART_DATA.format(deviceName))
+                val json = result.getOrNull()?.convertJsonStringToSmartData(deviceName)
+                json
+            } else {
+                null
+            }
+
         } catch (exception: Throwable) {
             logger.error("Unable to execute command for device $deviceName", exception)
             null
@@ -31,10 +39,12 @@ class SmartCtl(val mapper: ObjectMapper) {
         return try {
             mapper.readValue(this, Output::class.java)
         } catch (exception: Throwable) {
-            logger.error("Unable to parse json for $deviceName ${exception.message}")
+            logger.error("Ignoring device. Unable to parse json for $deviceName ${exception.message}")
+            ignoredDevices.add(deviceName)
             null
         }
     }
+
     data class Output(
         /*
 
