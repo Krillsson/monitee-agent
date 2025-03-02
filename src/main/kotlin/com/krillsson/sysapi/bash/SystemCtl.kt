@@ -1,7 +1,9 @@
-package com.krillsson.sysapi.systemd
+package com.krillsson.sysapi.bash
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.dockerjava.api.exception.NotFoundException
+import com.krillsson.sysapi.systemd.CommandResult
+import com.krillsson.sysapi.systemd.SystemDaemonCommand
 import com.krillsson.sysapi.util.logger
 
 class SystemCtl(

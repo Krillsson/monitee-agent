@@ -162,6 +162,7 @@ class MonitorResolver(
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_READ_RATE -> DiskReadRateMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
             com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_WRITE_RATE -> DiskWriteRateMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_SPACE -> MemorySpaceMonitor.value(historyRepository.getMemoryLoadById(id)).asMonitoredValue()
             com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_USED -> MemoryUsedMonitor.value(historyRepository.getMemoryLoadById(id)).asMonitoredValue()

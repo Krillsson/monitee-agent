@@ -18,6 +18,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CPU_TEMP(ValueType.Numerical),
         FILE_SYSTEM_SPACE(ValueType.Numerical),
         DISK_READ_RATE(ValueType.Numerical),
+        DISK_TEMPERATURE(ValueType.Numerical),
         DISK_WRITE_RATE(ValueType.Numerical),
         MEMORY_SPACE(ValueType.Numerical),
         MEMORY_USED(ValueType.Numerical),

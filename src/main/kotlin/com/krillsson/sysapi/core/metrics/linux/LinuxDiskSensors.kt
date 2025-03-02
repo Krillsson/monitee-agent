@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.linux
 
+import com.krillsson.sysapi.bash.SmartCtl
 import com.krillsson.sysapi.core.metrics.defaultimpl.DefaultDiskSensors
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component

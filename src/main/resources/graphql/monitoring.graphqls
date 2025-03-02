@@ -198,6 +198,7 @@ enum MonitorType {
     FILE_SYSTEM_SPACE,
     DISK_READ_RATE,
     DISK_WRITE_RATE,
+    DISK_TEMPERATURE,
     MEMORY_SPACE @deprecated(reason: "Replaced by MEMORY_USED 2024-03-12"),
     MEMORY_USED,
     NETWORK_UP,

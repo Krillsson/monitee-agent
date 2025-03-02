@@ -1,6 +1,6 @@
 package com.krillsson.sysapi.graphql.domain
 
-import com.krillsson.sysapi.systemd.SystemCtl
+import com.krillsson.sysapi.bash.SystemCtl
 import com.krillsson.sysapi.systemd.SystemDaemonJournalEntry
 import com.krillsson.sysapi.windows.eventlog.WindowsEventLogRecord
 import com.krillsson.sysapi.windows.eventlog.WindowsEventLogSourceInfo

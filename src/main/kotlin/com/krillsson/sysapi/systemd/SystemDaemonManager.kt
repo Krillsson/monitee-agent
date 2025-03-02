@@ -1,6 +1,8 @@
 package com.krillsson.sysapi.systemd
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.krillsson.sysapi.bash.JournalCtl
+import com.krillsson.sysapi.bash.SystemCtl
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.graphql.domain.PageInfo
 import com.krillsson.sysapi.graphql.domain.SystemDaemonAccessAvailable

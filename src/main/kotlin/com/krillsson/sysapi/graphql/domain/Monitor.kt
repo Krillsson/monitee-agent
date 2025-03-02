@@ -81,6 +81,7 @@ object Selectors {
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.CPU_TEMP -> CpuTemperatureMonitor.selector
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_READ_RATE -> DiskReadRateMonitor.selector
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_WRITE_RATE -> DiskWriteRateMonitor.selector
+                com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor.selector
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.FILE_SYSTEM_SPACE -> FileSystemSpaceMonitor.selector
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_SPACE -> MemorySpaceMonitor.selector
                 com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_USED -> MemoryUsedMonitor.selector

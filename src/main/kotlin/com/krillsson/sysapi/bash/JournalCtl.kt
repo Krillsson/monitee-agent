@@ -1,10 +1,11 @@
-package com.krillsson.sysapi.systemd
+package com.krillsson.sysapi.bash
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.JournalLogsConfiguration
+import com.krillsson.sysapi.systemd.SystemDaemonJournalEntry
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.toOffsetDateTime
 import reactor.core.publisher.Flux

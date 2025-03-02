@@ -1,4 +1,4 @@
-package com.krillsson.sysapi.systemd
+package com.krillsson.sysapi.bash
 
 import com.krillsson.sysapi.util.logger
 import org.apache.commons.exec.*

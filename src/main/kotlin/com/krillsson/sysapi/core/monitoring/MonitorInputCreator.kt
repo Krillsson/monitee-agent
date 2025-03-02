@@ -439,6 +439,22 @@ class MonitorInputCreator(
                     )
                 }
             }
+
+            Monitor.Type.DISK_TEMPERATURE -> {
+                val diskLoads = metrics.diskMetrics().diskLoads().associateBy { it.name }
+                metrics.diskMetrics().disks().mapNotNull {
+                    diskLoads[it.name]?.let { load ->
+                        MonitorableItem(
+                            id = it.name,
+                            name = it.name,
+                            description = it.serial,
+                            maxValue = MonitoredValue.NumericalValue(120),
+                            currentValue = load.temperature?.toNumericalValue()?: MonitoredValue.NumericalValue(-1),
+                            type = type
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -98,6 +98,11 @@ object MonitorFactory {
                 id,
                 config as MonitorConfig<MonitoredValue.ConditionalValue>
             )
+
+            Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
         }
     }
 }
