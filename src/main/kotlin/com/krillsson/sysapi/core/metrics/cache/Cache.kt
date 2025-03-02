@@ -1,25 +1,28 @@
 package com.krillsson.sysapi.core.metrics.cache
 
 import com.krillsson.sysapi.config.CacheConfiguration
+import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.OperatingSystem
 import com.krillsson.sysapi.core.domain.system.Platform
+import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.*
+import com.krillsson.sysapi.util.EnvironmentUtils
 
 class Cache private constructor(
     metrics: Metrics,
     cacheConfiguration: CacheConfiguration,
-    platform: Platform,
-    operatingSystem: OperatingSystem
+    val platform: Platform,
+    val operatingSystem: OperatingSystem
 ) : Metrics {
-    private val cpuMetrics: CpuMetrics
-    private val networkMetrics: NetworkMetrics
-    private val gpuMetrics: GpuMetrics
-    private val fileSystemMetrics: FileSystemMetrics
-    private val diskMetrics: DiskMetrics
-    private val processesMetrics: ProcessesMetrics
-    private val motherboardMetrics: MotherboardMetrics
-    private val memoryMetrics: MemoryMetrics
-    private val systemMetrics: SystemMetrics
+    private val cpuMetrics: CpuMetrics = CachingCpuMetrics(metrics.cpuMetrics(), cacheConfiguration)
+    private val networkMetrics: NetworkMetrics = CachingNetworkMetrics(metrics.networkMetrics(), cacheConfiguration)
+    private val gpuMetrics: GpuMetrics = CachingGpuMetrics(metrics.gpuMetrics(), cacheConfiguration)
+    private val fileSystemMetrics: FileSystemMetrics = CachingFileSystemMetrics(metrics.fileSystemMetrics(), cacheConfiguration)
+    private val diskMetrics: DiskMetrics = CachingDiskMetrics(metrics.diskMetrics(), cacheConfiguration)
+    private val processesMetrics: ProcessesMetrics = CachingProcessesMetrics(metrics.processesMetrics(), cacheConfiguration)
+    private val motherboardMetrics: MotherboardMetrics = CachingMotherboardMetrics(metrics.motherboardMetrics(), cacheConfiguration)
+    private val memoryMetrics: MemoryMetrics = CachingMemoryMetrics(metrics.memoryMetrics(), cacheConfiguration)
 
     override fun initialize() {}
 
@@ -55,8 +58,34 @@ class Cache private constructor(
         return motherboardMetrics
     }
 
-    override fun systemMetrics(): SystemMetrics {
-        return systemMetrics
+    override fun systemLoad(sort: ProcessSort, limit: Int): SystemLoad {
+        return SystemLoad(
+            cpuMetrics.uptime(),
+            cpuMetrics.cpuLoad().systemLoadAverage,
+            cpuMetrics.cpuLoad(),
+            networkMetrics.networkInterfaceLoads(),
+            networkMetrics.connectivity(),
+            diskMetrics.diskLoads(),
+            fileSystemMetrics.fileSystemLoads(),
+            memoryMetrics.memoryLoad(),
+            processesMetrics.processesInfo(sort, limit).processes,
+            gpuMetrics.gpuLoads(),
+            motherboardMetrics.motherboardHealth()
+        )
+    }
+
+    override fun systemInfo(): SystemInfo {
+        return SystemInfo(
+            hostName = EnvironmentUtils.hostName,
+            operatingSystem = operatingSystem,
+            platform = platform,
+            cpuInfo = cpuMetrics.cpuInfo(),
+            motherboard = motherboardMetrics.motherboard(),
+            memory = memoryMetrics.memoryInfo(),
+            fileSystems = fileSystemMetrics.fileSystems(),
+            networkInterfaces = networkMetrics.networkInterfaces(),
+            gpus = gpuMetrics.gpus()
+        )
     }
 
     companion object {
@@ -68,28 +97,5 @@ class Cache private constructor(
         ): Metrics {
             return Cache(factory, cacheConfiguration, platform, operatingSystem)
         }
-    }
-
-    init {
-        cpuMetrics = CachingCpuMetrics(metrics.cpuMetrics(), cacheConfiguration)
-        networkMetrics = CachingNetworkMetrics(metrics.networkMetrics(), cacheConfiguration)
-        gpuMetrics = CachingGpuMetrics(metrics.gpuMetrics(), cacheConfiguration)
-        diskMetrics = CachingDiskMetrics(metrics.diskMetrics(), cacheConfiguration)
-        fileSystemMetrics = CachingFileSystemMetrics(metrics.fileSystemMetrics(), cacheConfiguration)
-        processesMetrics = CachingProcessesMetrics(metrics.processesMetrics(), cacheConfiguration)
-        motherboardMetrics = CachingMotherboardMetrics(metrics.motherboardMetrics(), cacheConfiguration)
-        memoryMetrics = CachingMemoryMetrics(metrics.memoryMetrics(), cacheConfiguration)
-        systemMetrics = CachingSystemMetrics(
-            cpuMetrics,
-            networkMetrics,
-            diskMetrics,
-            fileSystemMetrics,
-            memoryMetrics,
-            processesMetrics,
-            motherboardMetrics,
-            gpuMetrics,
-            platform,
-            operatingSystem
-        )
     }
 }

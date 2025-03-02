@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.core.metrics.linux
 
+import com.krillsson.sysapi.core.domain.system.OperatingSystem
+import com.krillsson.sysapi.core.domain.system.Platform
 import com.krillsson.sysapi.core.metrics.MemoryMetrics
 import com.krillsson.sysapi.core.metrics.SystemMetrics
 import com.krillsson.sysapi.core.metrics.defaultimpl.*
@@ -18,7 +20,8 @@ class LinuxMetrics(
     processesMetrics: DefaultProcessesMetrics,
     @Qualifier("defaultMotherboardMetrics") motherboardMetrics: DefaultMotherboardMetrics,
     memoryMetrics: MemoryMetrics,
-    systemMetrics: SystemMetrics
+    operatingSystem: OperatingSystem,
+    platform: Platform
 ) : DefaultMetrics(
     cpuMetrics,
     networkMetrics,
@@ -28,5 +31,6 @@ class LinuxMetrics(
     processesMetrics,
     motherboardMetrics,
     memoryMetrics,
-    systemMetrics
+    operatingSystem,
+    platform
 )

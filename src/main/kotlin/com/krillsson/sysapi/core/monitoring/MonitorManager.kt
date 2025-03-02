@@ -157,7 +157,7 @@ class MonitorManager(
     private fun validate(monitor: Monitor<MonitoredValue>): Boolean {
         return monitor.selectValue(
             MonitorInput(
-                metrics.systemMetrics().systemLoad(),
+                metrics.systemLoad(),
                 emptyList(),
                 emptyList(),
                 emptyList()

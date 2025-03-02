@@ -91,7 +91,7 @@ class MonitorResolver(
 
     @SchemaMapping
     fun maxValue(monitor: Monitor): MonitoredValue? {
-        return monitorManager.getById(monitor.id)?.maxValue(metrics.systemMetrics().systemInfo())
+        return monitorManager.getById(monitor.id)?.maxValue(metrics.systemInfo())
             ?.asMonitoredValue()
     }
 
@@ -130,21 +130,21 @@ class MonitorResolver(
                 com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Numerical -> Selectors.forNumericalMonitorType(
                     monitor.type
                 )(
-                    metrics.systemMetrics().systemLoad(),
+                    metrics.systemLoad(),
                     monitor.monitoredItemId
                 )
 
                 com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Fractional -> Selectors.forFractionalMonitorType(
                     monitor.type
                 )(
-                    metrics.systemMetrics().systemLoad(),
+                    metrics.systemLoad(),
                     monitor.monitoredItemId
                 )
 
                 com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Conditional -> Selectors.forConditionalMonitorType(
                     monitor.type
                 )(
-                    metrics.systemMetrics().systemLoad(),
+                    metrics.systemLoad(),
                     monitor.monitoredItemId
                 )
             }?.asMonitoredValue()

@@ -19,7 +19,7 @@ class HistoryRecorder(
 
     @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
     fun run() {
-        val metrics = metrics.systemMetrics().systemLoad(ProcessSort.MEMORY, -1)
+        val metrics = metrics.systemLoad(ProcessSort.MEMORY, -1)
         history.record(metrics.asHistorySystemLoad())
         history.purge(historyConfig.purging.olderThan, historyConfig.purging.unit)
     }
