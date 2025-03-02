@@ -1,6 +1,5 @@
 package com.krillsson.sysapi.core.monitoring.monitors
 
-import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
 import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
 import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
@@ -18,20 +17,18 @@ class DiskTemperatureMonitor(override val id: UUID, override val config: Monitor
             val diskLoads = load.diskLoads
             value(diskLoads, monitoredItemId)
         }
-
-        fun value(diskLoads: List<DiskLoad>, monitoredItemId: String?) =
-            diskLoads.firstOrNull { i ->
-                i.serial.equals(monitoredItemId, ignoreCase = true) || i.name.equals(
-                    monitoredItemId,
-                    ignoreCase = true
-                )
-            }?.temperature?.toNumericalValue()
+        fun value(diskLoads: List<DiskLoad>, monitoredItemId: String?): MonitoredValue.NumericalValue? {
+            val firstOrNull = diskLoads.firstOrNull { i ->
+                i.name == monitoredItemId
+            }
+            return firstOrNull?.temperature?.toNumericalValue()
+        }
     }
 
     override val type: Type = Type.DISK_TEMPERATURE
 
     override fun selectValue(event: MonitorInput): MonitoredValue.NumericalValue? =
-        selector(event.load, null)
+        selector(event.load, config.monitoredItemId)
 
     override fun maxValue(info: SystemInfo): MonitoredValue.NumericalValue? {
         // have no way of knowing this

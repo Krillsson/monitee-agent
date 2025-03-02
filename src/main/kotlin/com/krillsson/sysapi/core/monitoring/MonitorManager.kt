@@ -96,7 +96,7 @@ class MonitorManager(
             persist()
             monitor.id
         } else {
-            throw IllegalArgumentException("Not mappable to device: $type with $itemId")
+            throw IllegalArgumentException("Not mappable to device: $type with $itemId using ${metrics::class.java.simpleName}")
         }
     }
 

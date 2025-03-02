@@ -20,18 +20,18 @@ class SmartCtl(val mapper: ObjectMapper) {
     fun getSmartData(deviceName: String): Output? {
         return try {
             val result = Bash.executeToText(QUERY_SMART_DATA.format(deviceName))
-            result.getOrNull()?.convertJsonStringToSmartData()
+            result.getOrNull()?.convertJsonStringToSmartData(deviceName)
         } catch (exception: Throwable) {
             logger.error("Unable to execute command for device $deviceName", exception)
             null
         }
     }
 
-    private fun String.convertJsonStringToSmartData(): Output? {
+    private fun String.convertJsonStringToSmartData(deviceName: String): Output? {
         return try {
             mapper.readValue(this, Output::class.java)
         } catch (exception: Throwable) {
-            logger.error("Unable to parse json", exception)
+            logger.error("Unable to parse json for $deviceName ${exception.message}")
             null
         }
     }

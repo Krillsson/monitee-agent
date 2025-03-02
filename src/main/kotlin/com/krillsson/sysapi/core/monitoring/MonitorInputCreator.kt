@@ -31,7 +31,8 @@ class MonitorInputCreator(
     )
     private val diskTypes = listOf(
         Monitor.Type.DISK_READ_RATE,
-        Monitor.Type.DISK_WRITE_RATE
+        Monitor.Type.DISK_WRITE_RATE,
+        Monitor.Type.DISK_TEMPERATURE
     )
     private val fileSystemTypes = listOf(
         Monitor.Type.FILE_SYSTEM_SPACE
@@ -441,7 +442,7 @@ class MonitorInputCreator(
             }
 
             Monitor.Type.DISK_TEMPERATURE -> {
-                val diskLoads = metrics.diskMetrics().diskLoads().associateBy { it.name }
+                val diskLoads = metrics.diskMetrics().diskLoads().filter { it.temperature != null }.associateBy { it.name }
                 metrics.diskMetrics().disks().mapNotNull {
                     diskLoads[it.name]?.let { load ->
                         MonitorableItem(
