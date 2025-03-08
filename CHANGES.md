@@ -5,6 +5,7 @@
   - Windows caveat: appears to only work with SATA drives that have drive letters (so no NVMe drives)
 - Fix: Add more safety checks so systemd is not enabled when it's not supported
 - Fix: survey Linux CPU temp sensors at startup and pick the most appropriate one. See configuration.yml to override it.
+- Fix: cleanup graphQLPlayGround config from configuration.yml use spring.graphql.graphiql.enabled in application.properties
 
 ### 0.35.1
 - Fix UpdateChecker not being run

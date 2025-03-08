@@ -28,7 +28,6 @@ data class YAMLConfigFile(
         val linux: LinuxConfiguration = LinuxConfiguration(),
         val connectivityCheck: ConnectivityCheckConfiguration,
         val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
-        val graphQLPlayGround: GraphQLPlayGroundConfiguration,
         val docker: DockerConfiguration,
         val forwardHttpToHttps: Boolean,
         val logReader: LogReaderConfiguration = LogReaderConfiguration(),

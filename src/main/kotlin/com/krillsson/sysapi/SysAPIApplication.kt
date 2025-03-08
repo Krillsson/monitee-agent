@@ -22,7 +22,6 @@ import org.springframework.context.annotation.ImportRuntimeHints
     CacheConfiguration::class,
     ConnectivityCheckConfiguration::class,
     DockerConfiguration::class,
-    GraphQLPlayGroundConfiguration::class,
     HistoryConfiguration::class,
     HistoryPurgingConfiguration::class,
     LinuxConfiguration::class,
