@@ -6,6 +6,9 @@
 - Fix: Add more safety checks so systemd is not enabled when it's not supported
 - Fix: survey Linux CPU temp sensors at startup and pick the most appropriate one. See configuration.yml to override it.
 - Fix: cleanup graphQLPlayGround config from configuration.yml use spring.graphql.graphiql.enabled in application.properties
+- Fix: InvalidFormatException: Cannot deserialize value of type com.github.dockerjava.api.model.Capability
+- Fix: Java.lang.IllegalArgumentException: MonitorManager requires initialization. Call initialize
+- Fix: Journalctl: invalid option -- “1”
 
 ### 0.35.1
 - Fix UpdateChecker not being run
