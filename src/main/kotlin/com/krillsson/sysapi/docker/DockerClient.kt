@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.docker
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.model.Frame
@@ -51,6 +52,7 @@ class DockerClient(
     ) {
         override fun getObjectMapper(): ObjectMapper {
             return applicationObjectMapper
+                .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
         }
     }
 
