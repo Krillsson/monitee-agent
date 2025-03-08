@@ -1,6 +1,10 @@
 ### Unreleased
-- Add more safety checks so systemd is not enabled when it's not supported
-- Linux: survey CPU temp sensors at startup and pick the most appropriate one. See configuration.yml to override it.
+- Feature: HDD temperatures
+  - Docker requirement: add devices you'd like to monitor. E.g: --device=/dev/sda
+  - Linux standalone requirement: depends on smartctl. `sudo apt-get install smartmontools`
+  - Windows caveat: appears to only work with SATA drives that have drive letters (so no NVMe drives)
+- Fix: Add more safety checks so systemd is not enabled when it's not supported
+- Fix: survey Linux CPU temp sensors at startup and pick the most appropriate one. See configuration.yml to override it.
 
 ### 0.35.1
 - Fix UpdateChecker not being run
