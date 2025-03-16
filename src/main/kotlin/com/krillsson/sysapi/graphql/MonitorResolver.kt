@@ -11,6 +11,7 @@ import com.krillsson.sysapi.core.history.HistoryRepository
 import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.monitoring.MonitorManager
+import com.krillsson.sysapi.core.monitoring.MonitorableItem
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
@@ -73,12 +74,43 @@ class MonitorResolver(
         @Argument from: Instant,
         @Argument to: Instant
     ): List<MonitoredValueHistoryEntry> {
-        return historyRepository.getHistoryLimitedToDates(from, to).mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }
+        return when (monitor.type) {
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
+                webServerCheckService.getHistoryForWebServerBetweenTimestamps(UUID.fromString(monitor.monitoredItemId), from, to).map {
+                    MonitoredValueHistoryEntry(it.timeStamp, it.isSuccessful.toConditionalValue().asMonitoredValue())
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_RUNNING -> {
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
+                    MonitoredValueHistoryEntry(it.timestamp, true.toConditionalValue().asMonitoredValue())
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_MEMORY_SPACE -> {
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
+                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.memoryUsage.usageBytes.toNumericalValue().asMonitoredValue())
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_CPU_LOAD -> {
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
+                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue())
+                }
+            }
+
+            else -> historyRepository.getHistoryLimitedToDates(from, to).mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }
+        }
     }
 
     @SchemaMapping
     fun events(monitor: Monitor): List<Event> {
         return eventManager.eventsForMonitorId(monitor.id)
+    }
+
+    @SchemaMapping
+    fun monitoredItem(monitor: Monitor): MonitorableItem {
+        return monitorManager.getMonitorableItemForMonitor(monitor.id)
     }
 
     @SchemaMapping

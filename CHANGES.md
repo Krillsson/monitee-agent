@@ -1,5 +1,7 @@
 ### Unreleased
+- Feature: added `monitoredItem` API to Monitor (to support label)
 - Fix: HDD temperatures go missing
+- Fix: monitoring history for containers and webserverchecks was missing (failing detailed monitor view for those types)
 
 
 ### 0.36.0

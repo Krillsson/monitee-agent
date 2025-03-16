@@ -185,6 +185,7 @@ type Monitor {
     # estimated max value of monitored value. Useful while building UI's
     maxValue: MonitoredValue
     monitoredItemId: String
+    monitoredItem: MonitorableItem!
     history: [MonitoredValueHistoryEntry!]!
     events: [Event!]!
     pastEvents: [PastEvent!]!

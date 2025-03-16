@@ -84,6 +84,10 @@ class MonitorManager(
         return monitorInputCreator.getMonitorableItemForType(type)
     }
 
+    fun getMonitorableItemForMonitor(id: UUID): MonitorableItem {
+        return requireNotNull(getById(id)?.let { monitor -> monitorInputCreator.getMonitorableItemForMonitor(monitor) })
+    }
+
     fun monitorOfTypeByMonitoredItemId(type: Monitor.Type, monitoredItemId: String): Monitor<MonitoredValue>? {
         return activeMonitors.values.firstOrNull { it.second.type == type && it.second.config.monitoredItemId == monitoredItemId }?.second
     }
@@ -155,13 +159,9 @@ class MonitorManager(
     }
 
     private fun validate(monitor: Monitor<MonitoredValue>): Boolean {
+        val input = monitorInputCreator.createInput(listOf(monitor))
         return monitor.selectValue(
-            MonitorInput(
-                metrics.systemLoad(),
-                emptyList(),
-                emptyList(),
-                emptyList()
-            )
+            input
         ) != null
     }
 }
