@@ -24,6 +24,7 @@ class WebSecurityConfig {
 
         return http.authorizeHttpRequests { authorizationManagerRequestMatcherRegistry ->
             authorizationManagerRequestMatcherRegistry
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/**").authenticated()
         }
             .httpBasic(withDefaults())
