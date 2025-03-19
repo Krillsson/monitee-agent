@@ -1,4 +1,5 @@
 ### Unreleased
+- Feature: add healthcheck endpoint to support TrueNAS
 
 ### 0.37.0
 - Feature: added `monitoredItem` API to Monitor. To support showing monitored item name instead of id.
