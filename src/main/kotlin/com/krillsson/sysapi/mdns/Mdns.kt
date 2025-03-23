@@ -6,9 +6,8 @@ import com.krillsson.sysapi.util.EnvironmentUtils
 import com.krillsson.sysapi.util.logger
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.env.Environment
-import org.springframework.core.env.getProperty
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.stereotype.Service
 import javax.jmdns.JmDNS
@@ -19,15 +18,13 @@ import kotlin.time.measureTime
 class Mdns(
     private val configuration: YAMLConfigFile,
     private val connectivityCheckService: ConnectivityCheckService,
+    private val serverApplicationContext: ServletWebServerApplicationContext,
     private val threadPoolTaskExecutor: ThreadPoolTaskExecutor
 ) {
 
     private val logger by logger()
 
     lateinit var jmdns: JmDNS
-
-    @Autowired
-    private lateinit var env: Environment
 
     @PostConstruct
     fun start() {
@@ -37,25 +34,39 @@ class Mdns(
     }
 
     fun register() {
-        val address = connectivityCheckService.findLocalIp()
-        jmdns = JmDNS.create(address)
+        val localIp = connectivityCheckService.findLocalIp()
+        val connectorPorts: List<Pair<String, Int>> = connectorPorts()
+        jmdns = JmDNS.create(localIp)
         threadPoolTaskExecutor.execute {
-            listOf(
-                "http" to env.getProperty<Int>("http.port", 8080),
-                "https" to env.getProperty<Int>("server.port", 8443),
-            )
+            connectorPorts
                 // sorts https to be first
                 .sortedByDescending { it.first.length }
                 .forEach { (scheme, port) ->
                     val serviceType = "_$scheme._tcp.local"
                     val serviceName = EnvironmentUtils.hostName
-                    val result = measureTime {
-                        val serviceInfo = ServiceInfo.create(serviceType, serviceName, port, "GraphQL at /graphql")
-                        jmdns.registerService(serviceInfo)
+                    logger.info("Registering mDNS $serviceName $scheme:$port")
+                    try {
+                        val result = measureTime {
+                            val serviceInfo = ServiceInfo.create(serviceType, serviceName, port, "GraphQL at /graphql")
+                            jmdns.registerService(serviceInfo)
+                        }
+                        logger.info("Registered mDNS: $serviceType with name: $serviceName at port $port (took ${result.inWholeMilliseconds}ms)")
+                    } catch (e: Exception) {
+                        logger.error(
+                            "Failed to register mDNS: $serviceType with name: $serviceName at port $port. Message: ${e.message}",
+                            e
+                        )
                     }
-                    logger.info("Registered mDNS: $serviceType with name: $serviceName at port $port (took ${result.inWholeMilliseconds}ms)")
                 }
         }
+    }
+
+    private fun connectorPorts(): List<Pair<String, Int>> {
+        val factory = serverApplicationContext.getBean(TomcatServletWebServerFactory::class.java)
+        val additionalConnectors = factory.additionalTomcatConnectors.map { connector ->
+            connector.scheme to connector.port
+        }
+        return listOf("https" to factory.port) + additionalConnectors
     }
 
     @PreDestroy

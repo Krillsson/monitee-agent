@@ -1,4 +1,5 @@
 ### Unreleased
+- Fix: UPnP and mDNS now support passing the application ports as ENV vars, previously they were reading the config. 
 
 ### 0.37.2
 - Feature: add healthcheck endpoint to support TrueNAS

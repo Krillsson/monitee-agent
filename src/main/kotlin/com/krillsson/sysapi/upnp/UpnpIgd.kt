@@ -7,16 +7,16 @@ import jakarta.annotation.PreDestroy
 import org.bitlet.weupnp.GatewayDevice
 import org.bitlet.weupnp.GatewayDiscover
 import org.bitlet.weupnp.PortMappingEntry
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.core.env.Environment
-import org.springframework.core.env.getProperty
+import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext
 import org.springframework.stereotype.Service
 import java.net.InetAddress
 
 @Service
 class UpnpIgd(
-    private val configuration: YAMLConfigFile
-) {
+    private val configuration: YAMLConfigFile,
+    private val serverApplicationContext: ServletWebServerApplicationContext,
+    ) {
 
     private val logger by logger()
 
@@ -24,14 +24,11 @@ class UpnpIgd(
         private const val PROTOCOL = "TCP"
     }
 
-    @Autowired
-    private lateinit var env: Environment
-
     @PostConstruct
     fun start() {
         if (configuration.upnp.enabled) {
             try {
-                httpsPort()?.let { port ->
+                httpsPort().let { port ->
                     getActiveGateway()?.let { activeGW ->
                         logger.info("Attempting to open $port using UPnP-IGD")
                         val localAddress = activeGW.localAddress
@@ -114,7 +111,7 @@ class UpnpIgd(
     fun stop() {
         if (configuration.upnp.enabled) {
             try {
-                httpsPort()?.let { port ->
+                httpsPort().let { port ->
                     getActiveGateway()?.let { device ->
                         val availability = checkPortAvailability(device, port)
                         if (availability == PortMappingAvailability.AlreadyMappedToThisDevice) {
@@ -129,5 +126,7 @@ class UpnpIgd(
         }
     }
 
-    private fun httpsPort(): Int = env.getProperty<Int>("server.port", 8443)
+    private fun httpsPort(): Int {
+        return serverApplicationContext.getBean(TomcatServletWebServerFactory::class.java).port
+    }
 }
