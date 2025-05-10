@@ -27,8 +27,8 @@ windows:
   serviceManagement:
     enabled: true
 linux:
-# Incorrect CPU temp on Linux? Look for log output of LinuxSensorDiscovery
-# and put the identifier below (default on intel systems is thermal:x86_pkg_temp)
+  # Incorrect CPU temp on Linux? Look for log output of LinuxSensorDiscovery
+  # and put the identifier below (default on intel systems is thermal:x86_pkg_temp)
   # overrideCpuTempSensor: hwmon:coretemp
   journalLogs:
     enabled: true
@@ -63,12 +63,18 @@ mDNS:
 upnp:
   enabled: true
 forwardHttpToHttps: false
+graphQl:
+  # print slow queries and field resolving to the log
+  instrumentation: false
+# Keep in mind that this feature doesn't work well with proxies
+# It doesn't work domain names either
+# I recommend terminating the SSL in a proxy instead, or a cloudflare tunnel
 selfSignedCertificates:
   enabled: true
   ## automatically put external IP in CN
   populateCN: true
   ## automatically put internal IPs in SAN
   populateSAN: true
-  ## manually populate CN and SAN below
-  # commonName: sys-api.org
+  ## manually populate CN and SAN below (only supports IPs)
+  # commonName: 95.168.0.24
   # subjectAlternativeNames: [192.168.0.24, 10.8.0.24]

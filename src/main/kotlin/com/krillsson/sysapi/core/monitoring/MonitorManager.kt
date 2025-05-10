@@ -80,12 +80,24 @@ class MonitorManager(
         return activeMonitors[id]?.second
     }
 
+    fun getAllById(monitorIds: Collection<UUID>): List<Monitor<MonitoredValue>> {
+        return monitorIds.mapNotNull { id ->
+            activeMonitors[id]?.second
+        }
+    }
+
     fun getMonitorableItemForType(type: Monitor.Type): List<MonitorableItem> {
         return monitorInputCreator.getMonitorableItemForType(type)
     }
 
     fun getMonitorableItemForMonitor(id: UUID): MonitorableItem {
         return requireNotNull(getById(id)?.let { monitor -> monitorInputCreator.getMonitorableItemForMonitor(monitor) })
+    }
+
+    fun getMonitorableItemsForMonitors(ids: List<UUID>): List<Pair<UUID, MonitorableItem>> {
+        return getAllById(ids).map { monitor ->
+            monitor.id to monitorInputCreator.getMonitorableItemForMonitor(monitor)
+        }
     }
 
     fun monitorOfTypeByMonitoredItemId(type: Monitor.Type, monitoredItemId: String): Monitor<MonitoredValue>? {

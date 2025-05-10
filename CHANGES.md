@@ -1,50 +1,64 @@
 ### Unreleased
 
+- Fix: slow response times and poor performance when using monitors. And lots of "Long running query" messages in the
+  log
+- Feature: API instrumentation logging is now opt-in. Enable it via the graphql instrumentation entry in
+  configuration.yml
+
 ### 0.37.4
+
 - Fix: another crash related to mDNS on TrueNAS
 
 ### 0.37.3
-- Fix: UPnP and mDNS now support passing the application ports as ENV vars. Previously they were reading the config. 
+
+- Fix: UPnP and mDNS now support passing the application ports as ENV vars. Previously they were reading the config.
 
 ### 0.37.2
+
 - Feature: add healthcheck endpoint to support TrueNAS
-  - Set `management.endpoint.health.enabled=false` in application.properties to disable
+    - Set `management.endpoint.health.enabled=false` in application.properties to disable
 
 ### 0.37.0
+
 - Feature: added `monitoredItem` API to Monitor. To support showing monitored item name instead of id.
 - Fix: HDD temperatures go missing
 - Fix: monitoring history for containers and webserverchecks was missing (failing detailed monitor view for those types)
 
 ### 0.36.0
+
 - Feature: HDD temperatures
-  - Docker requirement: add devices you'd like to monitor. E.g: --device=/dev/sda
-  - Linux standalone requirement: depends on smartctl. `sudo apt-get install smartmontools`
-  - Windows caveat: appears to only work with SATA drives that have drive letters (so no NVMe drives)
+    - Docker requirement: add devices you'd like to monitor. E.g: --device=/dev/sda
+    - Linux standalone requirement: depends on smartctl. `sudo apt-get install smartmontools`
+    - Windows caveat: appears to only work with SATA drives that have drive letters (so no NVMe drives)
 - Fix: Add more safety checks so systemd is not enabled when it's not supported
 - Fix: survey Linux CPU temp sensors at startup and pick the most appropriate one. See configuration.yml to override it.
-- Fix: cleanup graphQLPlayGround config from configuration.yml use spring.graphql.graphiql.enabled in application.properties
+- Fix: cleanup graphQLPlayGround config from configuration.yml use spring.graphql.graphiql.enabled in
+  application.properties
 - Fix: InvalidFormatException: Cannot deserialize value of type com.github.dockerjava.api.model.Capability
 - Fix: Java.lang.IllegalArgumentException: MonitorManager requires initialization. Call initialize
 - Fix: Journalctl: invalid option -- “1”
 
 ### 0.35.1
+
 - Fix UpdateChecker not being run
 - Application now writes default application.properties and configuration.yml to /config directory if its missing
 
 ### 0.35.0
+
 - New feature: log files, container logs & the systemd journal are now paginated
-  - Read more about GraphQL pagination [here](https://graphql.org/learn/pagination/)
+    - Read more about GraphQL pagination [here](https://graphql.org/learn/pagination/)
 - New feature: GraphQL Subscription is available for realtime updates of log content
 
 ### 0.34.0
+
 - New feature: GraphQL Subscriptions
-  - Subscriptions enable server-side push of messages to the client
-  - All metrics are now available for subscription, see system.graphqls
+    - Subscriptions enable server-side push of messages to the client
+    - All metrics are now available for subscription, see system.graphqls
 
 ### 0.33.0
 
 - New API: Support killing process `killProcess(pid: Int, forcibly: Boolean)`
-  - Note: sys-API likely needs to run as root/admin to kill anything other than the current users processes
+    - Note: sys-API likely needs to run as root/admin to kill anything other than the current users processes
 - New API: `processByPid(pid: Int!)` to support the above. Note that the API will return null if the process is dead.
 - Past events are now trimmed to max 100 and according to configured history retention time
 

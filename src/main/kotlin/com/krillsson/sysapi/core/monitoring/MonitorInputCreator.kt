@@ -24,6 +24,8 @@ import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.util.logger
+import com.krillsson.sysapi.util.measureTimeMillis
 import org.springframework.stereotype.Component
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
@@ -38,6 +40,8 @@ class MonitorInputCreator(
     companion object {
         const val THEORETICAL_DRIVE_READ_SPEED_LIMIT_BYTES_PER_SECOND = 14_000L * 1024 * 1024
     }
+
+    private val logger by logger()
 
     private val networkTypes = listOf(
         Monitor.Type.NETWORK_DOWNLOAD_RATE,
@@ -121,117 +125,131 @@ class MonitorInputCreator(
     }
 
     fun getMonitorableItemForMonitor(monitor: Monitor<MonitoredValue>): MonitorableItem {
-        return when (monitor.type) {
-            Monitor.Type.FILE_SYSTEM_SPACE -> {
-                val fileSystemLoad =
-                    metrics.fileSystemMetrics().fileSystemLoads().first { it.id == monitor.config.monitoredItemId }
-                val fileSystem =
-                    metrics.fileSystemMetrics().fileSystems().first { it.id == monitor.config.monitoredItemId }
-                createFileSystemSpaceMonitorableItem(fileSystem, fileSystemLoad)
-            }
+        val (duration, item) = measureTimeMillis {
+            when (monitor.type) {
+                Monitor.Type.FILE_SYSTEM_SPACE -> {
+                    val fileSystemLoad =
+                        metrics.fileSystemMetrics().fileSystemLoads().first { it.id == monitor.config.monitoredItemId }
+                    val fileSystem =
+                        metrics.fileSystemMetrics().fileSystems().first { it.id == monitor.config.monitoredItemId }
+                    createFileSystemSpaceMonitorableItem(fileSystem, fileSystemLoad)
+                }
 
-            Monitor.Type.DISK_READ_RATE -> {
-                val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
-                val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
-                createDiskReadRateMonitorableItem(disk, diskLoad)
-            }
+                Monitor.Type.DISK_READ_RATE -> {
+                    val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
+                    val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
+                    createDiskReadRateMonitorableItem(disk, diskLoad)
+                }
 
-            Monitor.Type.DISK_TEMPERATURE -> {
-                val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
-                val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
-                createDiskTemperatureMonitorableItem(disk, diskLoad)
-            }
+                Monitor.Type.DISK_TEMPERATURE -> {
+                    val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
+                    val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
+                    createDiskTemperatureMonitorableItem(disk, diskLoad)
+                }
 
-            Monitor.Type.DISK_WRITE_RATE -> {
-                val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
-                val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
-                createDiskWriteRateMonitorableItem(disk, diskLoad)
-            }
+                Monitor.Type.DISK_WRITE_RATE -> {
+                    val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
+                    val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
+                    createDiskWriteRateMonitorableItem(disk, diskLoad)
+                }
 
-            Monitor.Type.NETWORK_UP -> {
-                val nicLoad =
-                    metrics.networkMetrics().networkInterfaceLoads().first { it.name == monitor.config.monitoredItemId }
-                val nic =
-                    metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
-                createNetworkUpMonitorableItem(nic, nicLoad)
-            }
+                Monitor.Type.NETWORK_UP -> {
+                    val nicLoad =
+                        metrics.networkMetrics().networkInterfaceLoads()
+                            .first { it.name == monitor.config.monitoredItemId }
+                    val nic =
+                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                    createNetworkUpMonitorableItem(nic, nicLoad)
+                }
 
-            Monitor.Type.NETWORK_UPLOAD_RATE -> {
-                val nicLoad =
-                    metrics.networkMetrics().networkInterfaceLoads().first { it.name == monitor.config.monitoredItemId }
-                val nic =
-                    metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
-                createNetworkUploadRateMonitorableItem(nic, nicLoad)
-            }
+                Monitor.Type.NETWORK_UPLOAD_RATE -> {
+                    val nicLoad =
+                        metrics.networkMetrics().networkInterfaceLoads()
+                            .first { it.name == monitor.config.monitoredItemId }
+                    val nic =
+                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                    createNetworkUploadRateMonitorableItem(nic, nicLoad)
+                }
 
-            Monitor.Type.NETWORK_DOWNLOAD_RATE -> {
-                val nicLoad =
-                    metrics.networkMetrics().networkInterfaceLoads().first { it.name == monitor.config.monitoredItemId }
-                val nic =
-                    metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
-                createNetworkDownloadRateMonitorableItem(nic, nicLoad)
-            }
+                Monitor.Type.NETWORK_DOWNLOAD_RATE -> {
+                    val nicLoad =
+                        metrics.networkMetrics().networkInterfaceLoads()
+                            .first { it.name == monitor.config.monitoredItemId }
+                    val nic =
+                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                    createNetworkDownloadRateMonitorableItem(nic, nicLoad)
+                }
 
-            Monitor.Type.CONTAINER_RUNNING -> {
-                val container =
-                    requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
-                createContainerRunningMonitorableItem(container)
-            }
+                Monitor.Type.CONTAINER_RUNNING -> {
+                    val container =
+                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                    createContainerRunningMonitorableItem(container)
+                }
 
-            Monitor.Type.CONTAINER_MEMORY_SPACE -> {
-                val container =
-                    requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
-                val containerStats =
-                    requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
-                createContainerMemorySpaceMonitorableItem(containerStats, container)
-            }
+                Monitor.Type.CONTAINER_MEMORY_SPACE -> {
+                    val container =
+                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                    val containerStats =
+                        requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
+                    createContainerMemorySpaceMonitorableItem(containerStats, container)
+                }
 
-            Monitor.Type.CONTAINER_CPU_LOAD -> {
-                val container =
-                    requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
-                val containerStats =
-                    requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
-                createContainerCpuLoadMonitorableItem(containerStats, container)
-            }
+                Monitor.Type.CONTAINER_CPU_LOAD -> {
+                    val container =
+                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                    val containerStats =
+                        requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
+                    createContainerCpuLoadMonitorableItem(containerStats, container)
+                }
 
-            Monitor.Type.PROCESS_MEMORY_SPACE -> {
-                val process = requireNotNull(
-                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0).getOrNull()
-                )
-                val memorySize = metrics.memoryMetrics().memoryInfo().totalBytes
-                createProcessMemorySpaceMonitorableItem(process, memorySize)
-            }
+                Monitor.Type.PROCESS_MEMORY_SPACE -> {
+                    val process = requireNotNull(
+                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                            .getOrNull()
+                    )
+                    val memorySize = metrics.memoryMetrics().memoryInfo().totalBytes
+                    createProcessMemorySpaceMonitorableItem(process, memorySize)
+                }
 
-            Monitor.Type.PROCESS_CPU_LOAD -> {
-                val process = requireNotNull(
-                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0).getOrNull()
-                )
-                createProcessCpuLoadMonitorableItem(process)
-            }
+                Monitor.Type.PROCESS_CPU_LOAD -> {
+                    val process = requireNotNull(
+                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                            .getOrNull()
+                    )
+                    createProcessCpuLoadMonitorableItem(process)
+                }
 
-            Monitor.Type.PROCESS_EXISTS -> {
-                val process = requireNotNull(
-                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0).getOrNull()
-                )
-                createProcessExistsMonitorableItem(process)
-            }
+                Monitor.Type.PROCESS_EXISTS -> {
+                    val process = requireNotNull(
+                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                            .getOrNull()
+                    )
+                    createProcessExistsMonitorableItem(process)
+                }
 
-            Monitor.Type.WEBSERVER_UP -> {
-                val webServerCheck =
-                    requireNotNull(webServerCheckService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
-                createWebserverUpMonitorableItem(webServerCheck)
-            }
+                Monitor.Type.WEBSERVER_UP -> {
+                    val webServerCheck =
+                        requireNotNull(webServerCheckService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
+                    createWebserverUpMonitorableItem(webServerCheck)
+                }
 
-            Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.CPU_LOAD -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.CPU_TEMP -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.MEMORY_SPACE -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.MEMORY_USED -> getMonitorableItemForType(monitor.type).first()
-            Monitor.Type.CONNECTIVITY -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.CPU_LOAD -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.CPU_TEMP -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.MEMORY_SPACE -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.MEMORY_USED -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.CONNECTIVITY -> getMonitorableItemForType(monitor.type).first()
+            }
         }
+        logger.debug(
+            "Took {} to fetch monitorable item for monitor {}",
+            "${duration.toInt()}ms",
+            monitor
+        )
+        return item
     }
 
     fun getMonitorableItemForType(type: Monitor.Type): List<MonitorableItem> {

@@ -1,5 +1,6 @@
 package com.krillsson.sysapi
 
+import SlowResolverWarningInstrumentation
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -27,6 +28,7 @@ import org.apache.catalina.connector.Connector
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.graphql.GraphQlSourceBuilderCustomizer
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
 import org.springframework.boot.web.server.WebServerFactoryCustomizer
 import org.springframework.context.annotation.Bean
@@ -60,6 +62,21 @@ const val SPRING_CONFIG = "application.properties"
 class SysApiConfiguration : AsyncConfigurer {
 
     val logger by logger()
+
+    @Bean
+    fun graphQlCustomizer(
+        slowResolverWarningInstrumentation: SlowResolverWarningInstrumentation,
+        configuration: YAMLConfigFile,
+    ): GraphQlSourceBuilderCustomizer {
+        return GraphQlSourceBuilderCustomizer { builder ->
+            if (configuration.graphQl.instrumentation) {
+                builder.instrumentation(listOf(slowResolverWarningInstrumentation))
+            }
+        }
+    }
+
+    @Bean
+    fun slowResolverWarningInstrumentation() = SlowResolverWarningInstrumentation()
 
     @Bean
     fun userConfigFile(): YAMLConfigFile {
@@ -146,7 +163,8 @@ class SysApiConfiguration : AsyncConfigurer {
                 platformSpecific,
                 configuration.metricsConfig.cache,
                 platform,
-                operatingSystem.asOperatingSystem())
+                operatingSystem.asOperatingSystem()
+            )
         } else {
             platformSpecific
         }

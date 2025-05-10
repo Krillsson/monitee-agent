@@ -93,7 +93,7 @@ open class DefaultNetworkMetrics(
                     isLoopback = it.queryNetworkInterface().isLoopback
                 } catch (e: SocketException) {
                     //ignore
-                    LOGGER.warn("Socket exception while queering for loopback parameter", e)
+                    LOGGER.warn("Socket exception while queering for loopback parameter ${it.name} ${e::class.java.simpleName}:${e.message}")
                 }
                 it.asNetworkInterface(isLoopback)
             }.toList()
@@ -112,7 +112,7 @@ open class DefaultNetworkMetrics(
                     isLoopback = it.queryNetworkInterface().isLoopback
                 } catch (e: SocketException) {
                     //ignore
-                    LOGGER.warn("Socket exception while queering for loopback parameter", e)
+                    LOGGER.warn("Socket exception while queering for loopback parameter ${it.name} ${e::class.java.simpleName}:${e.message}")
                 }
                 it.asNetworkInterface(isLoopback)
             })
@@ -124,7 +124,7 @@ open class DefaultNetworkMetrics(
             try {
                 up = it.queryNetworkInterface().isUp
             } catch (e: SocketException) {
-                LOGGER.warn("Error occurred while getting status for NIC", e)
+                LOGGER.warn("Error occurred while getting status for NIC ${it.name} ${e::class.java.simpleName}:${e.message}")
             }
             it.asNetworkInterfaceLoad(up, speedForInterfaceWithName(it.name))
         }.toList()

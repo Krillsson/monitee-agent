@@ -18,6 +18,7 @@ import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerManager
 import com.krillsson.sysapi.graphql.domain.*
 import org.springframework.graphql.data.method.annotation.Argument
+import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
 import java.time.Instant
@@ -41,26 +42,48 @@ class MonitorResolver(
         val longTimeAgo = OffsetDateTime.now().minusYears(3).toInstant()
         return when (monitor.type) {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
-                webServerCheckService.getHistoryForWebServerBetweenTimestamps(UUID.fromString(monitor.monitoredItemId), longTimeAgo, Instant.now()).map {
+                webServerCheckService.getHistoryForWebServerBetweenTimestamps(
+                    UUID.fromString(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now()
+                ).map {
                     MonitoredValueHistoryEntry(it.timeStamp, it.isSuccessful.toConditionalValue().asMonitoredValue())
                 }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_RUNNING -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), longTimeAgo, Instant.now()).map {
+                containersHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now()
+                ).map {
                     MonitoredValueHistoryEntry(it.timestamp, true.toConditionalValue().asMonitoredValue())
                 }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_MEMORY_SPACE -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), longTimeAgo, Instant.now()).map {
-                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.memoryUsage.usageBytes.toNumericalValue().asMonitoredValue())
+                containersHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now()
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.memoryUsage.usageBytes.toNumericalValue().asMonitoredValue()
+                    )
                 }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_CPU_LOAD -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), longTimeAgo, Instant.now()).map {
-                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue())
+                containersHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now()
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue()
+                    )
                 }
             }
 
@@ -76,30 +99,44 @@ class MonitorResolver(
     ): List<MonitoredValueHistoryEntry> {
         return when (monitor.type) {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
-                webServerCheckService.getHistoryForWebServerBetweenTimestamps(UUID.fromString(monitor.monitoredItemId), from, to).map {
+                webServerCheckService.getHistoryForWebServerBetweenTimestamps(
+                    UUID.fromString(monitor.monitoredItemId),
+                    from,
+                    to
+                ).map {
                     MonitoredValueHistoryEntry(it.timeStamp, it.isSuccessful.toConditionalValue().asMonitoredValue())
                 }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_RUNNING -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
-                    MonitoredValueHistoryEntry(it.timestamp, true.toConditionalValue().asMonitoredValue())
-                }
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to)
+                    .map {
+                        MonitoredValueHistoryEntry(it.timestamp, true.toConditionalValue().asMonitoredValue())
+                    }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_MEMORY_SPACE -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
-                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.memoryUsage.usageBytes.toNumericalValue().asMonitoredValue())
-                }
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to)
+                    .map {
+                        MonitoredValueHistoryEntry(
+                            it.timestamp,
+                            it.metrics.memoryUsage.usageBytes.toNumericalValue().asMonitoredValue()
+                        )
+                    }
             }
 
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_CPU_LOAD -> {
-                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to).map {
-                    MonitoredValueHistoryEntry(it.timestamp, it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue())
-                }
+                containersHistoryRepository.getHistoryLimitedToDates(requireNotNull(monitor.monitoredItemId), from, to)
+                    .map {
+                        MonitoredValueHistoryEntry(
+                            it.timestamp,
+                            it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue()
+                        )
+                    }
             }
 
-            else -> historyRepository.getHistoryLimitedToDates(from, to).mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }
+            else -> historyRepository.getHistoryLimitedToDates(from, to)
+                .mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }
         }
     }
 
@@ -108,9 +145,11 @@ class MonitorResolver(
         return eventManager.eventsForMonitorId(monitor.id)
     }
 
-    @SchemaMapping
-    fun monitoredItem(monitor: Monitor): MonitorableItem {
-        return monitorManager.getMonitorableItemForMonitor(monitor.id)
+    @BatchMapping(field = "monitoredItem", typeName = "Monitor")
+    fun monitoredItem(monitors: Collection<Monitor>): Map<Monitor, MonitorableItem> {
+        val itemIds = monitors.map { it.id }
+        val items = monitorManager.getMonitorableItemsForMonitors(itemIds).associateBy { it.first }
+        return monitors.associateWith { requireNotNull(items[it.id]?.second) }
     }
 
     @SchemaMapping
@@ -127,86 +166,99 @@ class MonitorResolver(
             ?.asMonitoredValue()
     }
 
-    @SchemaMapping
-    fun currentValue(monitor: Monitor): MonitoredValue? {
-        return when (monitor.type) {
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_RUNNING -> Selectors.forContainerConditionalMonitor(
-                monitor.type
-            )(
-                containerManager.containersWithIds(listOf(monitor.monitoredItemId.orEmpty())),
-                emptyList(),
-                monitor.monitoredItemId
-            )?.asMonitoredValue()
-
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_MEMORY_SPACE -> Selectors.forContainerNumericalMonitor(
-                monitor.type
-            )(
-                emptyList(),
-                listOfNotNull(containerManager.statsForContainer(monitor.monitoredItemId.orEmpty())),
-                monitor.monitoredItemId
-            )?.asMonitoredValue()
-
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_CPU_LOAD -> Selectors.forContainerFractionalMonitor(
-                monitor.type
-            )(
-                emptyList(),
-                listOfNotNull(containerManager.statsForContainer(monitor.monitoredItemId.orEmpty())),
-                monitor.monitoredItemId
-            )?.asMonitoredValue()
-
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
-                (webServerCheckService.getStatusForWebServer(UUID.fromString(monitor.monitoredItemId))?.responseCode == 200).toConditionalValue().asMonitoredValue()
-            }
-
-            else -> when (monitor.type.valueType) {
-                com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Numerical -> Selectors.forNumericalMonitorType(
-                    monitor.type
-                )(
-                    metrics.systemLoad(),
-                    monitor.monitoredItemId
-                )
-
-                com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Fractional -> Selectors.forFractionalMonitorType(
-                    monitor.type
-                )(
-                    metrics.systemLoad(),
-                    monitor.monitoredItemId
-                )
-
-                com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Conditional -> Selectors.forConditionalMonitorType(
-                    monitor.type
-                )(
-                    metrics.systemLoad(),
-                    monitor.monitoredItemId
-                )
-            }?.asMonitoredValue()
-        }
+    @BatchMapping(field = "currentValue", typeName = "Monitor")
+    fun currentValue(monitors: Collection<Monitor>): Map<Monitor, MonitoredValue?> {
+        val itemIds = monitors.map { it.id }
+        val items = monitorManager.getMonitorableItemsForMonitors(itemIds).associateBy { it.first }
+        return monitors.associateWith { requireNotNull(items[it.id]?.second?.currentValue?.asMonitoredValue()) }
     }
 
     private fun BasicHistorySystemLoadEntity.asMonitoredValueHistoryEntry(monitor: Monitor): MonitoredValueHistoryEntry? {
         val value: MonitoredValue? = when (monitor.type) {
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CPU_LOAD -> CpuMonitor.value(historyRepository.getCpuLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> LoadAverageMonitorOneMinute.value(historyRepository.getCpuLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> LoadAverageMonitorFiveMinutes.value(historyRepository.getCpuLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> LoadAverageMonitorFifteenMinutes.value(historyRepository.getCpuLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CPU_TEMP -> CpuTemperatureMonitor.value(historyRepository.getCpuLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.FILE_SYSTEM_SPACE -> FileSystemSpaceMonitor.value(historyRepository.getFileSystemLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CPU_LOAD -> CpuMonitor.value(
+                historyRepository.getCpuLoadById(
+                    id
+                )
+            ).asMonitoredValue()
 
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_READ_RATE -> DiskReadRateMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_WRITE_RATE -> DiskWriteRateMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor.value(historyRepository.getDiskLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> LoadAverageMonitorOneMinute.value(
+                historyRepository.getCpuLoadById(id)
+            ).asMonitoredValue()
 
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_SPACE -> MemorySpaceMonitor.value(historyRepository.getMemoryLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_USED -> MemoryUsedMonitor.value(historyRepository.getMemoryLoadById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_UP -> NetworkUpMonitor.value(historyRepository.getNetworkInterfaceLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_UPLOAD_RATE -> NetworkUploadRateMonitor.value(historyRepository.getNetworkInterfaceLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> LoadAverageMonitorFiveMinutes.value(
+                historyRepository.getCpuLoadById(id)
+            ).asMonitoredValue()
 
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_DOWNLOAD_RATE -> NetworkDownloadRateMonitor.value(historyRepository.getNetworkInterfaceLoadsById(id), monitor.monitoredItemId)?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> LoadAverageMonitorFifteenMinutes.value(
+                historyRepository.getCpuLoadById(id)
+            ).asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CPU_TEMP -> CpuTemperatureMonitor.value(
+                historyRepository.getCpuLoadById(
+                    id
+                )
+            ).asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.FILE_SYSTEM_SPACE -> FileSystemSpaceMonitor.value(
+                historyRepository.getFileSystemLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_READ_RATE -> DiskReadRateMonitor.value(
+                historyRepository.getDiskLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_WRITE_RATE -> DiskWriteRateMonitor.value(
+                historyRepository.getDiskLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor.value(
+                historyRepository.getDiskLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_SPACE -> MemorySpaceMonitor.value(
+                historyRepository.getMemoryLoadById(
+                    id
+                )
+            ).asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_USED -> MemoryUsedMonitor.value(
+                historyRepository.getMemoryLoadById(
+                    id
+                )
+            ).asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_UP -> NetworkUpMonitor.value(
+                historyRepository.getNetworkInterfaceLoadsById(
+                    id
+                ), monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_UPLOAD_RATE -> NetworkUploadRateMonitor.value(
+                historyRepository.getNetworkInterfaceLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_DOWNLOAD_RATE -> NetworkDownloadRateMonitor.value(
+                historyRepository.getNetworkInterfaceLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
             com.krillsson.sysapi.core.monitoring.Monitor.Type.PROCESS_MEMORY_SPACE -> NumericalValue(0L)
             com.krillsson.sysapi.core.monitoring.Monitor.Type.PROCESS_CPU_LOAD -> FractionalValue(0f)
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.PROCESS_EXISTS -> false.toConditionalValue().asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONNECTIVITY -> ConnectivityMonitor.value(historyRepository.getConnectivityById(id)).asMonitoredValue()
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.EXTERNAL_IP_CHANGED -> ExternalIpChangedMonitor.value(historyRepository.getConnectivityById(id))?.asMonitoredValue()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.PROCESS_EXISTS -> false.toConditionalValue()
+                .asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONNECTIVITY -> ConnectivityMonitor.value(
+                historyRepository.getConnectivityById(id)
+            ).asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.EXTERNAL_IP_CHANGED -> ExternalIpChangedMonitor.value(
+                historyRepository.getConnectivityById(id)
+            )?.asMonitoredValue()
 
             else -> throw IllegalStateException("Illegal type ${monitor.type.name}")
         }

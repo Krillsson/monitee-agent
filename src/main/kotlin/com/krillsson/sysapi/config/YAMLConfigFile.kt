@@ -21,17 +21,18 @@
 package com.krillsson.sysapi.config
 
 data class YAMLConfigFile(
-        val user: UserConfiguration,
-        val metricsConfig: MetricsConfiguration,
-        val windows: WindowsConfiguration,
-        val processes: ProcessesConfiguration = ProcessesConfiguration(),
-        val linux: LinuxConfiguration = LinuxConfiguration(),
-        val connectivityCheck: ConnectivityCheckConfiguration,
-        val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
-        val docker: DockerConfiguration,
-        val forwardHttpToHttps: Boolean,
-        val logReader: LogReaderConfiguration = LogReaderConfiguration(),
-        val selfSignedCertificates: SelfSignedCertificateConfiguration,
-        val mDNS: MdnsConfiguration = MdnsConfiguration(false),
-        val upnp: UpnpIgdConfiguration = UpnpIgdConfiguration(false)
+    val user: UserConfiguration,
+    val metricsConfig: MetricsConfiguration,
+    val windows: WindowsConfiguration,
+    val processes: ProcessesConfiguration = ProcessesConfiguration(),
+    val linux: LinuxConfiguration = LinuxConfiguration(),
+    val connectivityCheck: ConnectivityCheckConfiguration,
+    val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
+    val docker: DockerConfiguration,
+    val forwardHttpToHttps: Boolean,
+    val graphQl: GraphQlConfiguration = GraphQlConfiguration(),
+    val logReader: LogReaderConfiguration = LogReaderConfiguration(),
+    val selfSignedCertificates: SelfSignedCertificateConfiguration,
+    val mDNS: MdnsConfiguration = MdnsConfiguration(false),
+    val upnp: UpnpIgdConfiguration = UpnpIgdConfiguration(false)
 )
