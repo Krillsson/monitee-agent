@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: application failed to start with "there was no ServletWebServerFactory bean defined in the context."
+
 ### 0.37.5
 
 - Fix: slow response times and poor performance when using monitors. And lots of "Long running query" messages in the

@@ -157,12 +157,16 @@ shadowJar {
     mergeServiceFiles()
     exclude 'META-INF/*.DSA'
     exclude 'META-INF/*.RSA'
+    append 'META-INF/spring.tooling'
     append 'META-INF/spring.handlers'
     append 'META-INF/spring.schemas'
-    append 'META-INF/spring.tooling'
+    append 'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
     archiveVersion.set('')
     transform(PropertiesFileTransformer) {
-        paths = ['META-INF/spring.factories']
+        paths = [
+                'META-INF/spring.factories',
+                'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+        ]
         mergeStrategy = "append"
     }
 }
