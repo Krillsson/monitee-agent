@@ -27,6 +27,7 @@ data class YAMLConfigFile(
     val processes: ProcessesConfiguration = ProcessesConfiguration(),
     val linux: LinuxConfiguration = LinuxConfiguration(),
     val connectivityCheck: ConnectivityCheckConfiguration,
+    val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
     val docker: DockerConfiguration,
     val forwardHttpToHttps: Boolean,

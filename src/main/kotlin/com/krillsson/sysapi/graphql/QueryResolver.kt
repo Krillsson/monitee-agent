@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.BuildConfig
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
@@ -17,15 +18,17 @@ import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerManager
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
-import com.krillsson.sysapi.windows.WindowsManager
+import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.util.EnvironmentUtils
+import com.krillsson.sysapi.windows.WindowsManager
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.stereotype.Controller
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.*
+import oshi.software.os.OperatingSystem as OshiOsOperatingSystem
 
 @Controller
 class QueryResolver(
@@ -34,16 +37,23 @@ class QueryResolver(
     private val historyRepository: HistoryRepository,
     private val genericEventRepository: GenericEventRepository,
     private val operatingSystem: OperatingSystem,
+    private val oshiOperatingSystem: OshiOsOperatingSystem,
     private val platform: Platform,
-    private val meta: Meta,
     private val containerManager: ContainerManager,
     private val webServerCheckService: WebServerCheckService,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
+    private val serverIdService: ServerIdService
 ) {
 
     @QueryMapping
-    fun meta(): Meta = meta
+    fun meta(): Meta = Meta(
+        version = BuildConfig.APP_VERSION,
+        buildDate = BuildConfig.BUILD_TIME.toString(),
+        processId = oshiOperatingSystem.processId,
+        serverId = serverIdService.serverId,
+        endpoints = emptyList(),
+    )
 
     @QueryMapping
     fun system(): System = System(EnvironmentUtils.hostName, operatingSystem, platform)
@@ -54,7 +64,10 @@ class QueryResolver(
     }
 
     @QueryMapping
-    fun historyBetweenDates(@Argument from: OffsetDateTime, @Argument to: OffsetDateTime): List<BasicHistorySystemLoadEntity> {
+    fun historyBetweenDates(
+        @Argument from: OffsetDateTime,
+        @Argument to: OffsetDateTime
+    ): List<BasicHistorySystemLoadEntity> {
         return historyRepository.getHistoryLimitedToDates(from?.toInstant(), to?.toInstant())
     }
 
@@ -72,8 +85,12 @@ class QueryResolver(
     fun monitorById(@Argument id: String): Monitor? {
         return monitorManager.getById(UUID.fromString(id))?.asMonitor()
     }
+
     @QueryMapping
-    fun monitorOfTypeByMonitoredItemId(@Argument type: com.krillsson.sysapi.core.monitoring.Monitor.Type, @Argument monitoredItemId: String): Monitor? {
+    fun monitorOfTypeByMonitoredItemId(
+        @Argument type: com.krillsson.sysapi.core.monitoring.Monitor.Type,
+        @Argument monitoredItemId: String
+    ): Monitor? {
         return monitorManager.monitorOfTypeByMonitoredItemId(type, monitoredItemId)?.asMonitor()
     }
 
@@ -84,12 +101,12 @@ class QueryResolver(
     fun monitorableItemsForType(@Argument input: MonitorableItemsInput): MonitorableItemsOutput {
         val items = monitorManager.getMonitorableItemForType(input.type).map {
             MonitorableItem(
-                    it.id,
-                    it.name,
-                    it.description,
-                    it.maxValue.asMonitoredValue(),
-                    it.currentValue.asMonitoredValue(),
-                    it.type
+                it.id,
+                it.name,
+                it.description,
+                it.maxValue.asMonitoredValue(),
+                it.currentValue.asMonitoredValue(),
+                it.type
             )
         }
         return MonitorableItemsOutput(items)
@@ -130,13 +147,13 @@ class QueryResolver(
         return when (val status = containerManager.status) {
             Status.Available -> DockerAvailable
             Status.Disabled -> DockerUnavailable(
-                    "The docker support is currently disabled. You can change this in configuration.yml",
-                    isDisabled = true
+                "The docker support is currently disabled. You can change this in configuration.yml",
+                isDisabled = true
             )
 
             is Status.Unavailable -> DockerUnavailable(
-                    "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
-                    isDisabled = false
+                "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
+                isDisabled = false
             )
         }
     }
@@ -150,7 +167,7 @@ class QueryResolver(
             windowsEventLogManager
         } else {
             WindowsManagementAccessUnavailable(
-                    "Not supported by system"
+                "Not supported by system"
             )
         }
     }

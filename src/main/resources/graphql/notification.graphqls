@@ -1,0 +1,15 @@
+extend type Query {
+    notificationServices: NotificationServicesInfo!
+}
+
+type NotificationServicesInfo{
+    serverId: String,
+    ntfy: NtfyInfo!
+}
+
+
+type NtfyInfo{
+    enabled: Boolean
+    ntfyAppTopicDeeplink: String
+    topic: String,
+}

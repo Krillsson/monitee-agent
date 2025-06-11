@@ -24,6 +24,7 @@ type Meta {
     version: String!
     buildDate: String!
     processId: Int!
+    serverId: UUID!
     endpoints: [String!]!
 }
 

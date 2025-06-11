@@ -56,7 +56,12 @@ updateCheck:
   enabled: true
   address: https://api.github.com
   user: krillsson
-  repo: sys-api
+  repo: monitee-agent
+notifications:
+  ntfy:
+    enabled: false
+    url: "https://ntfy.sh"
+    # topic: my-custom-globally-unique-topic
 # advertise service in local network for easier client setup
 mDNS:
   enabled: true

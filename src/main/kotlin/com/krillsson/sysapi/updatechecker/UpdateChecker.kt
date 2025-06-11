@@ -4,6 +4,8 @@ import com.krillsson.sysapi.BuildConfig
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.genericevents.GenericEventRepository
 import com.krillsson.sysapi.core.genericevents.UpdateAvailable
+import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.notifications.NotificationManager
 import com.krillsson.sysapi.util.logger
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -16,6 +18,7 @@ class UpdateChecker(
     private val config: YAMLConfigFile,
     private val repository: GenericEventRepository,
     private val githubApiService: GithubApiService,
+    private val notificationManager: NotificationManager
 ) {
     private val logger by logger()
 
@@ -53,6 +56,7 @@ class UpdateChecker(
                 publishDate = release.published_at
             )
             repository.add(newEvent)
+            notificationManager.notify(newEvent.asNotification())
         } else {
             logger.debug("Event already exists: new update available current: $currentVersion, remote: $remoteVersion")
         }
@@ -82,4 +86,15 @@ class UpdateChecker(
             null
         }
     }
+}
+
+private fun UpdateAvailable.asNotification(): Notification {
+    return Notification.GenericEvent.UpdateAvailable(
+        id = id,
+        timestamp = timestamp,
+        currentVersion = currentVersion,
+        newVersion = newVersion,
+        downloadUrl = downloadUrl,
+        publishDate = publishDate
+    )
 }

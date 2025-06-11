@@ -1,10 +1,13 @@
 package com.krillsson.sysapi.core.monitoring
 
+import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
 import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.monitoring.MonitorFactory.createMonitor
 import com.krillsson.sysapi.core.monitoring.event.EventManager
+import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.notifications.NotificationManager
 import com.krillsson.sysapi.util.logger
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
@@ -22,7 +25,8 @@ class MonitorManager(
     private val repository: MonitorRepository,
     private val monitoredItemMissingChecker: MonitoredItemMissingChecker,
     private val clock: Clock,
-    private val monitorInputCreator: MonitorInputCreator
+    private val monitorInputCreator: MonitorInputCreator,
+    private val notificationManager: NotificationManager
 ) {
 
     val logger by logger()
@@ -56,6 +60,7 @@ class MonitorManager(
                     isOverThreshold
                 )
                 event?.let {
+                    notificationManager.notify(it.asNotification())
                     eventManager.add(it)
                 }
             }
@@ -175,6 +180,18 @@ class MonitorManager(
         return monitor.selectValue(
             input
         ) != null
+    }
+
+    private fun Event.asNotification(): Notification.OngoingEvent {
+        return Notification.OngoingEvent(
+            id = id,
+            monitorId = monitorId,
+            monitoredItemId = monitoredItemId,
+            monitorType = monitorType,
+            startTime = startTime,
+            threshold = threshold,
+            value = value
+        )
     }
 }
 

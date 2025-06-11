@@ -179,11 +179,11 @@ type MonitoredValueHistoryEntry {
 type Monitor {
     id: UUID!
     inertiaInSeconds: Int!
-    type: MonitorType
+    type: MonitorType!
     threshold: MonitoredValue!
     currentValue: MonitoredValue
     # estimated max value of monitored value. Useful while building UI's
-    maxValue: MonitoredValue
+    maxValue: MonitoredValue!
     monitoredItemId: String
     monitoredItem: MonitorableItem!
     history: [MonitoredValueHistoryEntry!]!

@@ -44,6 +44,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,
     SlowResolverWarningInstrumentation::class,
+    NotificationsConfiguration::class,
+    NotificationsConfiguration.NtfyConfiguration::class,
 )
 // https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/JNI/
 // Failed to parse docker config.json

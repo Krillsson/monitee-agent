@@ -15,8 +15,8 @@ import com.krillsson.sysapi.core.metrics.defaultimpl.DiskReadWriteRateMeasuremen
 import com.krillsson.sysapi.core.metrics.defaultimpl.NetworkUploadDownloadRateMeasurementManager
 import com.krillsson.sysapi.core.metrics.linux.LinuxMetrics
 import com.krillsson.sysapi.core.metrics.windows.WindowsMetrics
-import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.graphql.scalars.ScalarTypes
+import com.krillsson.sysapi.notifications.ntfy.NtfyApi
 import com.krillsson.sysapi.tls.CertificateNamesCreator
 import com.krillsson.sysapi.tls.SelfSignedCertificateManager
 import com.krillsson.sysapi.updatechecker.GithubApiService
@@ -193,14 +193,6 @@ class SysApiConfiguration : AsyncConfigurer {
     fun operatingSystem(systemInfo: SystemInfo) = systemInfo.operatingSystem.asOperatingSystem()
 
     @Bean
-    fun meta(os: OperatingSystem) = Meta(
-        version = BuildConfig.APP_VERSION,
-        buildDate = BuildConfig.BUILD_TIME.toString(),
-        processId = os.processId,
-        endpoints = emptyList(),
-    )
-
-    @Bean
     fun platform() = SystemInfo.getCurrentPlatform().asPlatform()
 
     @Bean
@@ -210,6 +202,15 @@ class SysApiConfiguration : AsyncConfigurer {
             .addConverterFactory(JacksonConverterFactory.create(mapper))
             .build()
             .create(GithubApiService::class.java)
+    }
+
+    @Bean
+    fun ntfyApi(yamlConfigFile: YAMLConfigFile, mapper: ObjectMapper): NtfyApi {
+        return Retrofit.Builder()
+            .baseUrl(yamlConfigFile.notifications.ntfy.url)
+            .addConverterFactory(JacksonConverterFactory.create(mapper))
+            .build()
+            .create(NtfyApi::class.java)
     }
 
     @Bean
