@@ -28,7 +28,7 @@ class NotificationManager(
 
     fun notify(notification: Notification) {
         for (service in notificationServices) {
-            logger.debug("Sending {} to {}", notification, service::class.simpleName)
+            logger.info("Sending {} to {}", notification, service::class.simpleName)
             service.notify(notification.asNotificationParameters())
         }
     }
@@ -39,7 +39,7 @@ class NotificationManager(
             title = title,
             message = message,
             clickUrl = deeplinkCreator.createDeeplink(this),
-            if (this is Notification.OngoingEvent) 5 else 3
+            if (this is Notification.OngoingEvent) 4 else 3
         )
     }
 }

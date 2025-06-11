@@ -50,9 +50,9 @@ class OngoingEventFormatter(
             val formattedThreshold = threshold.format(monitorType)
             val formattedValue = value.format(monitorType)
             return when (monitorType) {
-                Monitor.Type.CPU_LOAD -> "CPU load went above $formattedThreshold to $formattedValue"
-                Monitor.Type.CPU_TEMP -> "CPU temperature went above $formattedThreshold to $formattedValue"
-                Monitor.Type.MEMORY_SPACE -> "Available working memory went below $formattedThreshold to $formattedValue"
+                Monitor.Type.CPU_LOAD -> "Load went above $formattedThreshold to $formattedValue"
+                Monitor.Type.CPU_TEMP -> "Temperature went above $formattedThreshold to $formattedValue"
+                Monitor.Type.MEMORY_SPACE -> "Memory went below $formattedThreshold to $formattedValue"
                 Monitor.Type.NETWORK_UP -> "NIC $monitoredItemId went $formattedThreshold to $formattedValue"
                 Monitor.Type.NETWORK_UPLOAD_RATE -> "Upload rate on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.NETWORK_DOWNLOAD_RATE -> "Download rate on $monitoredItemId went above $formattedThreshold to $formattedValue"

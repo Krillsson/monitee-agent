@@ -6,21 +6,20 @@ import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.Body
 import retrofit2.http.POST
-import retrofit2.http.Path
 
 interface NtfyApi {
     /**
      * Send a notification to a topic
      */
-    @POST("{topic}")
+    @POST(".")
     fun sendNotification(
-        @Path("topic") topic: String,
         @Body notification: Notification
     ): Call<ResponseBody>
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     data class Notification(
         val title: String? = null,
+        val topic: String,
         val message: String,
         val priority: Int? = null, // 1-5, 1=min, 3=default, 5=max
         val tags: List<String>? = null,
