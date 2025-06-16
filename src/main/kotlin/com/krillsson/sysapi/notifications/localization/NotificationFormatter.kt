@@ -8,19 +8,19 @@ class NotificationFormatter(
     private val genericEventFormatter: GenericEventFormatter,
     private val ongoingEventFormatter: OngoingEventFormatter
 ) {
-    fun formatNotification(notification: Notification): Pair<String, String> {
+    fun formatNotification(notification: Notification, serverName: String): Pair<String, String> {
         return when (notification) {
             is Notification.OngoingEvent -> ongoingEventFormatter.formatOngoingEventTitle(
-                notification
+                notification, serverName
             ) to ongoingEventFormatter.formatOngoingEventDescription(
                 notification
             )
 
             is Notification.GenericEvent.MonitoredItemMissing -> genericEventFormatter.formatMonitoredItemMissingTitle(
-                notification
+                notification, serverName
             ) to genericEventFormatter.formatMonitoredItemMissingDescription(notification)
 
-            is Notification.GenericEvent.UpdateAvailable -> genericEventFormatter.formatUpdateEventTitle() to genericEventFormatter.formatUpdateEventDescription(
+            is Notification.GenericEvent.UpdateAvailable -> genericEventFormatter.formatUpdateEventTitle(serverName) to genericEventFormatter.formatUpdateEventDescription(
                 notification
             )
         }

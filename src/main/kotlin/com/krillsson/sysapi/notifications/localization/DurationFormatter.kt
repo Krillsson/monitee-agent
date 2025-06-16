@@ -8,24 +8,24 @@ import java.util.*
 
 @Component
 class DurationFormatter {
-    fun formatDuration(uptime: Double): String {
+    fun formatDuration(uptime: Long): String {
         var uptime = uptime
-        uptime *= 1000.0
+        uptime *= 1000
         val fmtI: NumberFormat = DecimalFormat("###,###", DecimalFormatSymbols(Locale.ENGLISH))
         val fmtD: NumberFormat = DecimalFormat(
             "###,##",
             DecimalFormatSymbols(Locale.ENGLISH)
         )
-        uptime /= 1000.0
+        uptime /= 1000
         if (uptime < 60) {
             return fmtD.format(uptime) + " seconds"
         }
-        uptime /= 60.0
+        uptime /= 60
         if (uptime < 60) {
             val minutes = uptime.toLong()
             return fmtI.format(minutes) + if (minutes > 1) " minutes" else " minutes"
         }
-        uptime /= 60.0
+        uptime /= 60
         if (uptime < 24) {
             val hours = uptime.toLong()
             val minutes = ((uptime - hours) * 60).toLong()
@@ -35,9 +35,9 @@ class DurationFormatter {
             }
             return s
         }
-        uptime /= 24.0
-        val days = uptime.toLong()
-        val hours = ((uptime - days) * 24).toLong()
+        uptime /= 24
+        val days = uptime
+        val hours = ((uptime - days) * 24)
         var s = fmtI.format(days) + if (days > 1) " days" else " days"
         if (hours != 0L) {
             s += " " + fmtI.format(hours) + if (hours > 1) " hours" else " hours"

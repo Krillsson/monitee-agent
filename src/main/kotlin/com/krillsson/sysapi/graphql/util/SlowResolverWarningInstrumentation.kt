@@ -1,3 +1,4 @@
+import com.krillsson.sysapi.config.YAMLConfigFile
 import graphql.execution.instrumentation.InstrumentationContext
 import graphql.execution.instrumentation.InstrumentationState
 import graphql.execution.instrumentation.SimplePerformantInstrumentation
@@ -6,7 +7,7 @@ import org.slf4j.LoggerFactory
 import java.time.Instant
 
 
-class SlowResolverWarningInstrumentation : SimplePerformantInstrumentation() {
+class SlowResolverWarningInstrumentation(private val config: YAMLConfigFile) : SimplePerformantInstrumentation() {
 
     private val logger = LoggerFactory.getLogger(SlowResolverWarningInstrumentation::class.java)
     private val thresholdMs = 200L
@@ -15,8 +16,10 @@ class SlowResolverWarningInstrumentation : SimplePerformantInstrumentation() {
         parameters: InstrumentationFieldFetchParameters,
         state: InstrumentationState?
     ): InstrumentationContext<Any> {
+        if (!config.graphQl.instrumentation) {
+            return NO_OP
+        }
         val startTime: Instant? = Instant.now()
-
         return object : InstrumentationContext<Any> {
             override fun onDispatched() {
             }
@@ -40,6 +43,13 @@ class SlowResolverWarningInstrumentation : SimplePerformantInstrumentation() {
                     )
                 }
             }
+        }
+    }
+
+    companion object {
+        val NO_OP = object : InstrumentationContext<Any> {
+            override fun onDispatched() = Unit
+            override fun onCompleted(result: Any?, t: Throwable?) = Unit
         }
     }
 }

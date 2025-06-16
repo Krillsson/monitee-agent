@@ -60,7 +60,7 @@ class MonitorManager(
                     isOverThreshold
                 )
                 event?.let {
-                    notificationManager.notify(it.asNotification())
+                    notificationManager.notify(it.asNotification(monitor.config.inertia))
                     eventManager.add(it)
                 }
             }
@@ -182,7 +182,7 @@ class MonitorManager(
         ) != null
     }
 
-    private fun Event.asNotification(): Notification.OngoingEvent {
+    private fun Event.asNotification(inertia: Duration): Notification.OngoingEvent {
         return Notification.OngoingEvent(
             id = id,
             monitorId = monitorId,
@@ -190,6 +190,7 @@ class MonitorManager(
             monitorType = monitorType,
             startTime = startTime,
             threshold = threshold,
+            inertia = inertia,
             value = value
         )
     }

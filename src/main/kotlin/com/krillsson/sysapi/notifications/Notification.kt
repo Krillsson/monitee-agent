@@ -2,6 +2,7 @@ package com.krillsson.sysapi.notifications
 
 import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -13,7 +14,8 @@ sealed interface Notification {
         val monitorType: Monitor.Type,
         val startTime: Instant,
         val threshold: MonitoredValue,
-        val value: MonitoredValue
+        val value: MonitoredValue,
+        val inertia: Duration
     ) : Notification
 
     sealed interface GenericEvent : Notification {

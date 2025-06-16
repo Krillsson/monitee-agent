@@ -2,6 +2,7 @@ package com.krillsson.sysapi.notifications
 
 data class NotificationServiceInfo(
     val serverId: String,
+    val serverName: String,
     val ntfy: NtfyInfo
 )
 

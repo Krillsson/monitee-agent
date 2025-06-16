@@ -58,8 +58,9 @@ updateCheck:
   user: krillsson
   repo: monitee-agent
 notifications:
+  # serverName: MyServer
   ntfy:
-    enabled: false
+    enabled: true
     url: "https://ntfy.sh"
     # topic: my-custom-globally-unique-topic
 # advertise service in local network for easier client setup

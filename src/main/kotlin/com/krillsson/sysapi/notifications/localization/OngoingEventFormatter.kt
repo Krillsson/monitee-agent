@@ -8,36 +8,38 @@ import org.springframework.stereotype.Component
 @Component
 class OngoingEventFormatter(
     val temperatureFormatter: TemperatureFormatter,
-    val byteFormatter: ByteFormatter
+    val byteFormatter: ByteFormatter,
+    val durationFormatter: DurationFormatter,
 ) {
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
+        serverName: String,
     ): String {
         return with(notification) {
             when (monitorType) {
-                Monitor.Type.CPU_LOAD -> "CPU load alerting"
-                Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> "Load Average 1m alerting"
-                Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> "Load Average 5m alerting"
-                Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "Load Average 10m alerting"
-                Monitor.Type.CPU_TEMP -> "CPU temperature alerting"
-                Monitor.Type.FILE_SYSTEM_SPACE -> "Space on $monitoredItemId alerting"
-                Monitor.Type.DISK_READ_RATE -> "Read rate on $monitoredItemId alerting"
-                Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId alerting"
-                Monitor.Type.DISK_WRITE_RATE -> "Write rate on $monitoredItemId alerting"
-                Monitor.Type.MEMORY_SPACE -> "Memory space alerting"
-                Monitor.Type.MEMORY_USED -> "Memory usage alerting"
-                Monitor.Type.NETWORK_UP -> "Network $monitoredItemId alerting"
-                Monitor.Type.NETWORK_UPLOAD_RATE -> "Upload on $monitoredItemId alerting"
-                Monitor.Type.NETWORK_DOWNLOAD_RATE -> "Download on $monitoredItemId alerting"
-                Monitor.Type.CONTAINER_RUNNING -> "Container $monitoredItemId alerting"
-                Monitor.Type.CONTAINER_MEMORY_SPACE -> "Memory space $monitoredItemId alerting"
-                Monitor.Type.CONTAINER_CPU_LOAD -> "CPU load on $monitoredItemId alerting"
-                Monitor.Type.PROCESS_MEMORY_SPACE -> "Memory usage on $monitoredItemId alerting"
-                Monitor.Type.PROCESS_CPU_LOAD -> "CPU usage on $monitoredItemId alerting"
-                Monitor.Type.PROCESS_EXISTS -> "Process $monitoredItemId alerting"
-                Monitor.Type.CONNECTIVITY -> "Connectivity alerting"
-                Monitor.Type.WEBSERVER_UP -> "Webserver $monitoredItemId alerting"
-                Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed"
+                Monitor.Type.CPU_LOAD -> "CPU load too high on $serverName"
+                Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> "Load avg. 1m too high on $serverName"
+                Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> "Load avg. 5m too high on $serverName"
+                Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "Load avg. 15m too high on $serverName"
+                Monitor.Type.CPU_TEMP -> "CPU temp. too high on $serverName"
+                Monitor.Type.FILE_SYSTEM_SPACE -> "Space too low on $serverName"
+                Monitor.Type.DISK_READ_RATE -> "Disk read rate too high $serverName"
+                Monitor.Type.DISK_TEMPERATURE -> "Disk temp. too high on $serverName"
+                Monitor.Type.DISK_WRITE_RATE -> "Disk write rate too high on $serverName"
+                Monitor.Type.MEMORY_SPACE -> "Memory space too low on $serverName"
+                Monitor.Type.MEMORY_USED -> "Memory usage too high on $serverName"
+                Monitor.Type.NETWORK_UP -> "Network down $serverName"
+                Monitor.Type.NETWORK_UPLOAD_RATE -> "Upload too high on $serverName"
+                Monitor.Type.NETWORK_DOWNLOAD_RATE -> "Download too high on $serverName"
+                Monitor.Type.CONTAINER_RUNNING -> "Container stopped on $serverName"
+                Monitor.Type.CONTAINER_MEMORY_SPACE -> "Container memory usage too high on $serverName"
+                Monitor.Type.CONTAINER_CPU_LOAD -> "Container CPU load too high on $serverName"
+                Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory usage too high on $serverName"
+                Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage too high on $serverName"
+                Monitor.Type.PROCESS_EXISTS -> "Process stopped on $serverName"
+                Monitor.Type.CONNECTIVITY -> "Connection is down on $serverName"
+                Monitor.Type.WEBSERVER_UP -> "Webserver is down on $serverName"
+                Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed on $serverName"
             }
         }
 

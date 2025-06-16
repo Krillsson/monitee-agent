@@ -23,14 +23,14 @@ class DeeplinkCreator(
     }
 
     fun ongoingEvent(monitorId: UUID): String {
-        return createMoniteeDeeplink(serverIdService.serverId) {
+        return createMoniteeDeeplink {
             addPathSegment("monitor")
             addPathSegment(monitorId.toString())
         }
     }
 
     fun monitoredItemMissing(): String {
-        return createMoniteeDeeplink(serverIdService.serverId) {
+        return createMoniteeDeeplink {
             addPathSegment("events")
         }
     }
@@ -39,11 +39,12 @@ class DeeplinkCreator(
         return "https://github.com/${updateCheckConfiguration.user}/${updateCheckConfiguration.repo}/releases/latest"
     }
 
-    private fun createMoniteeDeeplink(serverId: UUID, builder: HttpUrl.Builder.() -> Unit = {}): String {
+    private fun createMoniteeDeeplink(builder: HttpUrl.Builder.() -> Unit = {}): String {
         HttpUrl.Builder().apply {
             scheme("https")
             host("monitee.app")
-            addPathSegment(serverId.toString())
+            addPathSegment("server")
+            addPathSegment(serverIdService.serverId.toString())
             builder(this)
         }.build().let { url ->
             return url.toString()

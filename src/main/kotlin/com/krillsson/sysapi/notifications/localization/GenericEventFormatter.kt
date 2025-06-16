@@ -10,7 +10,7 @@ import java.time.format.DateTimeFormatter
 @Component
 class GenericEventFormatter {
 
-    fun formatUpdateEventTitle(): String {
+    fun formatUpdateEventTitle(serverName: String): String {
         return "New monitee-agent version available for ${EnvironmentUtils.hostName}"
     }
 
@@ -23,7 +23,7 @@ class GenericEventFormatter {
 
     }
 
-    fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing): String {
+    fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing, serverName: String): String {
         return "Monitored item missing from ${EnvironmentUtils.hostName}"
     }
 

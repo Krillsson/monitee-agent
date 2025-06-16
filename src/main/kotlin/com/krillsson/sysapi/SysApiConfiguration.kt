@@ -69,14 +69,13 @@ class SysApiConfiguration : AsyncConfigurer {
         configuration: YAMLConfigFile,
     ): GraphQlSourceBuilderCustomizer {
         return GraphQlSourceBuilderCustomizer { builder ->
-            if (configuration.graphQl.instrumentation) {
-                builder.instrumentation(listOf(slowResolverWarningInstrumentation))
-            }
+            builder.instrumentation(listOf(slowResolverWarningInstrumentation))
         }
     }
 
     @Bean
-    fun slowResolverWarningInstrumentation() = SlowResolverWarningInstrumentation()
+    fun slowResolverWarningInstrumentation(configuration: YAMLConfigFile) =
+        SlowResolverWarningInstrumentation(configuration)
 
     @Bean
     fun userConfigFile(): YAMLConfigFile {
