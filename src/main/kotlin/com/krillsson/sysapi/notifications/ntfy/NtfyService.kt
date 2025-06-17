@@ -59,10 +59,10 @@ class NtfyService(
         try {
             val response = ntfyApi.sendNotification(notification).execute()
 
-            if (!response.isSuccessful) {
-                logger.error("Failed to send notification: ${response.code()} ${response.errorBody()?.string()}")
+            if (response.isSuccessful) {
+                logger.debug("Successfully sent notification: ${response.code()} ${response.body()?.string()}")
             } else {
-                logger.info("Successfully sent notification: ${response.code()} ${response.body()?.string()}")
+                logger.error("Failed to send notification: ${response.code()} ${response.errorBody()?.string()}")
             }
         } catch (e: IOException) {
             // Log the error
