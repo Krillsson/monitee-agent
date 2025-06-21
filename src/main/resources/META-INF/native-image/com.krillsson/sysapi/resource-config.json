@@ -237,6 +237,8 @@
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/SysAPIApplication$$Lambda/0x000000f801f36de8.class\\E"
   }, {
+    "pattern":"\\Qcom/krillsson/sysapi/SysAPIApplication$$Lambda/0x000001f001f98000.class\\E"
+  }, {
     "pattern":"\\Qcom/krillsson/sysapi/SysAPIApplication$$Lambda/0x000001f801f5f2b8.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/SysAPIApplication$$Lambda/0x0000020001f80f10.class\\E"
@@ -372,6 +374,14 @@
     "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000000f80174a7a8.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000000f801d6ba40.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000001f00173fc00.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000001f001744250.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000001f001e050f8.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000001f001e05318.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/SysApiConfiguration$$Lambda/0x000001f80172e000.class\\E"
   }, {
@@ -737,6 +747,8 @@
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/graphql/NetworkInterfaceResolver.class\\E"
   }, {
+    "pattern":"\\Qcom/krillsson/sysapi/graphql/NotificationServicesInfoResolver.class\\E"
+  }, {
     "pattern":"\\Qcom/krillsson/sysapi/graphql/OngoingEventResolver.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/graphql/PastEventEventResolver.class\\E"
@@ -811,6 +823,42 @@
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/mdns/Mdns.class\\E"
   }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/DeeplinkCreator.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/Notification$GenericEvent.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/Notification.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/NotificationManager.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/NotificationService.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/ByteFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/DurationFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/GenericEventFormatter$WhenMappings.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/GenericEventFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/NotificationFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/OngoingEventFormatter$WhenMappings.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/OngoingEventFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/TemperatureFormatter$Companion.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/TemperatureFormatter$WhenMappings.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/localization/TemperatureFormatter.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/ntfy/NtfyApi.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/ntfy/NtfyService$Companion.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/notifications/ntfy/NtfyService.class\\E"
+  }, {
     "pattern":"\\Qcom/krillsson/sysapi/persistence/JsonFile$Companion.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/persistence/JsonFile.class\\E"
@@ -826,6 +874,10 @@
     "pattern":"\\Qcom/krillsson/sysapi/security/WebSecurityConfig$$SpringCGLIB$$0.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/security/WebSecurityConfig.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/serverid/ServerIdService$Companion.class\\E"
+  }, {
+    "pattern":"\\Qcom/krillsson/sysapi/serverid/ServerIdService.class\\E"
   }, {
     "pattern":"\\Qcom/krillsson/sysapi/systemd/CommandResult.class\\E"
   }, {
@@ -1145,7 +1197,11 @@
   }, {
     "pattern":"\\Qjdk/proxy2/$Proxy193.class\\E"
   }, {
+    "pattern":"\\Qjdk/proxy2/$Proxy195.class\\E"
+  }, {
     "pattern":"\\Qjdk/proxy2/$Proxy199.class\\E"
+  }, {
+    "pattern":"\\Qjdk/proxy2/$Proxy201.class\\E"
   }, {
     "pattern":"\\Qjndi.properties\\E"
   }, {
@@ -1445,6 +1501,8 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/LazyInitializationExcludeFilter$$Lambda/0x000000f801f68688.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/LazyInitializationExcludeFilter$$Lambda/0x000001f001fc0ae0.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/LazyInitializationExcludeFilter$$Lambda/0x000001f801fc8230.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/LazyInitializationExcludeFilter$$Lambda/0x0000020001faa898.class\\E"
@@ -1528,6 +1586,8 @@
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/endpoint/jackson/JacksonEndpointAutoConfiguration$$Lambda/0x000000e001dfc880.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/endpoint/jackson/JacksonEndpointAutoConfiguration$$Lambda/0x000000f801d87220.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/endpoint/jackson/JacksonEndpointAutoConfiguration$$Lambda/0x000001f001e0cdd8.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/endpoint/jackson/JacksonEndpointAutoConfiguration$$Lambda/0x000001f801dd3028.class\\E"
   }, {
@@ -1887,6 +1947,8 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/web/servlet/ServletManagementContextAutoConfiguration$$Lambda/0x000000f801f5ed88.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/web/servlet/ServletManagementContextAutoConfiguration$$Lambda/0x000001f001fb6e18.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/web/servlet/ServletManagementContextAutoConfiguration$$Lambda/0x000001f801f7d1f0.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/actuate/autoconfigure/web/servlet/ServletManagementContextAutoConfiguration$$Lambda/0x0000020001fa48b0.class\\E"
@@ -2189,6 +2251,10 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/data/web/SpringDataWebAutoConfiguration$$Lambda/0x000000f801f3d220.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/data/web/SpringDataWebAutoConfiguration$$Lambda/0x000001f001f9d598.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/data/web/SpringDataWebAutoConfiguration$$Lambda/0x000001f001f9e2f8.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/data/web/SpringDataWebAutoConfiguration$$Lambda/0x000001f801f648d0.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/data/web/SpringDataWebAutoConfiguration$$Lambda/0x000001f801f65630.class\\E"
@@ -2277,6 +2343,8 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/GraphQlAutoConfiguration$GraphQlDataAutoConfiguration$$Lambda/0x000000f801e01bb0.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/GraphQlAutoConfiguration$GraphQlDataAutoConfiguration$$Lambda/0x000001f001e7ce40.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/GraphQlAutoConfiguration$GraphQlDataAutoConfiguration$$Lambda/0x000001f801e459e0.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/GraphQlAutoConfiguration$GraphQlDataAutoConfiguration$$Lambda/0x0000020001e66538.class\\E"
@@ -2329,6 +2397,8 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlQueryByExampleAutoConfiguration$$Lambda/0x000000f801e02400.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlQueryByExampleAutoConfiguration$$Lambda/0x000001f001e7d6a0.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlQueryByExampleAutoConfiguration$$Lambda/0x000001f801e46240.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlQueryByExampleAutoConfiguration$$Lambda/0x0000020001e66d98.class\\E"
@@ -2372,6 +2442,8 @@
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlReactiveQueryByExampleAutoConfiguration$$Lambda/0x000000e001e6d530.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlReactiveQueryByExampleAutoConfiguration$$Lambda/0x000000f801e02620.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlReactiveQueryByExampleAutoConfiguration$$Lambda/0x000001f001e7d8c0.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/graphql/data/GraphQlReactiveQueryByExampleAutoConfiguration$$Lambda/0x000001f801e46460.class\\E"
   }, {
@@ -2479,6 +2551,8 @@
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$$Lambda/0x000000f801f37008.class\\E"
   }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$$Lambda/0x000001f001f98220.class\\E"
+  }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$$Lambda/0x000001f801f5f4d8.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$$Lambda/0x0000020001f81130.class\\E"
@@ -2528,6 +2602,8 @@
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration$$Lambda/0x000000e001f878f0.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration$$Lambda/0x000000f801f37228.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration$$Lambda/0x000001f001f98440.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration$$Lambda/0x000001f801f5f6f8.class\\E"
   }, {
@@ -2666,6 +2742,8 @@
     "pattern":"\\Qorg/springframework/boot/autoconfigure/jdbc/metadata/DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration$$Lambda/0x000000e00182dad8.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/jdbc/metadata/DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration$$Lambda/0x000000f801842388.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/boot/autoconfigure/jdbc/metadata/DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration$$Lambda/0x000001f001833be8.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/boot/autoconfigure/jdbc/metadata/DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration$$Lambda/0x000001f801825d38.class\\E"
   }, {
@@ -3658,6 +3736,8 @@
     "pattern":"\\Qorg/springframework/web/servlet/handler/HandlerMappingIntrospector$$Lambda/0x000000e001f83978.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/web/servlet/handler/HandlerMappingIntrospector$$Lambda/0x000000f801f332b0.class\\E"
+  }, {
+    "pattern":"\\Qorg/springframework/web/servlet/handler/HandlerMappingIntrospector$$Lambda/0x000001f001f94420.class\\E"
   }, {
     "pattern":"\\Qorg/springframework/web/servlet/handler/HandlerMappingIntrospector$$Lambda/0x000001f801f5b780.class\\E"
   }, {

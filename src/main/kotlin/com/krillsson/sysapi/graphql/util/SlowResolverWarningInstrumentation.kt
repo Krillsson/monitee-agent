@@ -4,9 +4,11 @@ import graphql.execution.instrumentation.InstrumentationState
 import graphql.execution.instrumentation.SimplePerformantInstrumentation
 import graphql.execution.instrumentation.parameters.InstrumentationFieldFetchParameters
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import java.time.Instant
 
 
+@Component
 class SlowResolverWarningInstrumentation(private val config: YAMLConfigFile) : SimplePerformantInstrumentation() {
 
     private val logger = LoggerFactory.getLogger(SlowResolverWarningInstrumentation::class.java)

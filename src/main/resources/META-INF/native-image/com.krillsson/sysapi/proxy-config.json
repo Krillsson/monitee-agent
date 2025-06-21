@@ -33,6 +33,9 @@
     "interfaces":["com.krillsson.sysapi.core.webservicecheck.WebServerHistoryEntryRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
   },
   {
+    "interfaces":["com.krillsson.sysapi.notifications.ntfy.NtfyApi"]
+  },
+  {
     "interfaces":["com.krillsson.sysapi.updatechecker.GithubApiService"]
   },
   {
