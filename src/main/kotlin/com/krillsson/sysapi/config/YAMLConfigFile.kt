@@ -35,5 +35,6 @@ data class YAMLConfigFile(
     val logReader: LogReaderConfiguration = LogReaderConfiguration(),
     val selfSignedCertificates: SelfSignedCertificateConfiguration,
     val mDNS: MdnsConfiguration = MdnsConfiguration(false),
+    val formatting: FormattingConfiguration = FormattingConfiguration(),
     val upnp: UpnpIgdConfiguration = UpnpIgdConfiguration(false)
 )
