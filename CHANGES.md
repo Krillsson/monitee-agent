@@ -1,5 +1,8 @@
 ### Unreleased
 
+- Fix: addressed excessive RAM usage by capping heap size in JVM options
+- Feature: customize temperature unit in notifications. See formatting section in the configuration.yml file.
+
 ### 0.38.0
 
 - Feature: [Ntfy](https://ntfy.sh/) notifications support. 
