@@ -10,7 +10,7 @@ class SmartCtl(val mapper: ObjectMapper) {
 
     companion object {
         private const val COMMAND = "smartctl"
-        private const val QUERY_SMART_DATA = "$COMMAND -jA %s"
+        private const val QUERY_SMART_DATA = "$COMMAND -n standby -jA %s"
     }
 
     private val logger by logger()
