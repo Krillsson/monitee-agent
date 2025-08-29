@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.Statistics
+import com.github.dockerjava.api.model.Volume
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientConfigDelegate
@@ -266,10 +267,66 @@ class DockerClient(
         }
     }
 
+    fun rePullImageForContainer(containerId: String): Boolean {
+        return try {
+            val inspection = client.inspectContainerCmd(containerId).exec()
+            val imageName = inspection.config.image
+            if (imageName.isNullOrBlank()) {
+                LOGGER.error("Image name is null for container $containerId")
+                return false
+            }
+            client.pullImageCmd(imageName).start().awaitCompletion(60, TimeUnit.SECONDS)
+            LOGGER.info("Successfully pulled image $imageName for container $containerId")
+            true
+        } catch (e: Exception) {
+            LOGGER.error("Failed to pull image for container $containerId", e)
+            false
+        }
+    }
+
+    fun reCreateContainer(containerId: String, pullLatest: Boolean = true): Boolean {
+        return try {
+            val inspection = client.inspectContainerCmd(containerId).exec()
+            val imageName = inspection.config.image
+            if (imageName.isNullOrBlank()) {
+                LOGGER.error("Image name is null for container $containerId")
+                return false
+            }
+            val env = inspection.config.env?.toList().orEmpty()
+            val cmd = inspection.config.cmd?.toList().orEmpty()
+            val exposedPorts =
+                inspection.config.exposedPorts ?: emptyArray<com.github.dockerjava.api.model.ExposedPort>()
+            val hostConfig = inspection.hostConfig
+            val volumes = inspection.volumes.orEmpty().map { Volume(it.toString()) }
+            val labels = inspection.config.labels.orEmpty()
+            val name = inspection.name?.removePrefix("/") ?: "recreated-$containerId"
+
+            // Stop and remove the old container
+            client.stopContainerCmd(containerId).exec()
+            client.removeContainerCmd(containerId).exec()
+
+            // Optionally pull the latest image
+            if (pullLatest) {
+                client.pullImageCmd(imageName).start().awaitCompletion(60, TimeUnit.SECONDS)
+            }
+
+            // Create new container with same config
+            val createCmd = client.createContainerCmd(imageName)
+                .withEnv(env)
+                .withCmd(*cmd.toTypedArray())
+                .withExposedPorts(*exposedPorts)
+                .withHostConfig(hostConfig)
+                .withLabels(labels)
+                .withVolumes(volumes)
+                .withName(name)
+            val newContainer = createCmd.exec()
+            client.startContainerCmd(newContainer.id).exec()
+            LOGGER.info("Successfully re-created container $containerId as ${newContainer.id}")
+            true
+        } catch (e: Exception) {
+            LOGGER.error("Failed to re-create container $containerId", e)
+            false
+        }
+    }
+
 }
-
-
-
-
-
-
