@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: prevent spinning up disks while querying for temperature using smartctl
+
 ### 0.39.0
 
 - Fix: addressed excessive RAM usage by capping heap size in JVM options
