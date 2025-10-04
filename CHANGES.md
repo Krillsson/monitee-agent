@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: resolve start and end timestamps being swapped for past events
+
 ### 0.39.1
 
 - Fix: prevent spinning up disks while querying for temperature using smartctl
