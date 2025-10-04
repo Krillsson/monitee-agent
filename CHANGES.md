@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: also delete associated monitors while deleting a webserver check
+
 ### 0.39.1
 
 - Fix: prevent spinning up disks while querying for temperature using smartctl

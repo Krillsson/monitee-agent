@@ -91,7 +91,7 @@ class QueryResolver(
         @Argument type: com.krillsson.sysapi.core.monitoring.Monitor.Type,
         @Argument monitoredItemId: String
     ): Monitor? {
-        return monitorManager.monitorOfTypeByMonitoredItemId(type, monitoredItemId)?.asMonitor()
+        return monitorManager.monitorOfTypeByMonitoredItemId(type, monitoredItemId).firstOrNull()?.asMonitor()
     }
 
     @QueryMapping

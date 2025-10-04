@@ -105,11 +105,13 @@ class MonitorManager(
         }
     }
 
-    fun monitorOfTypeByMonitoredItemId(type: Monitor.Type, monitoredItemId: String): Monitor<MonitoredValue>? {
-        return activeMonitors.values.firstOrNull { it.second.type == type && it.second.config.monitoredItemId == monitoredItemId }?.second
+    fun monitorOfTypeByMonitoredItemId(type: Monitor.Type, monitoredItemId: String): List<Monitor<MonitoredValue>> {
+        return activeMonitors.values.filter { it.second.type == type && it.second.config.monitoredItemId == monitoredItemId }
+            .map { it.second }
     }
 
     fun add(inertia: Duration, type: Monitor.Type, threshold: MonitoredValue, itemId: String?): UUID {
+        logger.info("Adding monitoring for {}{} with grace period of {}", type.name, itemId.orEmpty(), inertia)
         val config = MonitorConfig(itemId, threshold, inertia)
         val monitor = createMonitor(type, UUID.randomUUID(), config)
         return if (validate(monitor)) {
@@ -141,13 +143,30 @@ class MonitorManager(
     }
 
     fun remove(id: UUID): Boolean {
+        logger.debug("Removing monitor {}", id)
         val removed = activeMonitors.remove(id)
-
+        if (removed != null) {
+            logger.info(
+                "Removed monitor {} {} ({})",
+                removed.second.type.name,
+                removed.second.config.monitoredItemId.orEmpty(),
+                removed.second.id
+            )
+        } else {
+            logger.warn("No monitor with id {} found", id)
+        }
         removed?.let {
             persist()
             eventManager.removeEventsForMonitorId(id)
         }
         return removed != null
+    }
+
+    fun removeMonitorOfTypeByMonitoredItemId(type: Monitor.Type, id: String) {
+        logger.info("Removing all {} monitors associated with {}", type.name, id)
+        monitorOfTypeByMonitoredItemId(type, id).forEach { monitor ->
+            remove(monitor.id)
+        }
     }
 
     private fun reportItemMissingForMonitor(monitor: Monitor<MonitoredValue>, value: MonitoredValue?) {
