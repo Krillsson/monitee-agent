@@ -1,8 +1,12 @@
 package com.krillsson.sysapi.core.webservicecheck
 
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.core.monitoring.Monitor
+import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.util.logger
 import okhttp3.*
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +35,13 @@ class WebServerCheckService(
         .connectTimeout(20, TimeUnit.SECONDS)
         .build();
     private val purgeConfig = yamlConfigFile.metricsConfig.history.purging
+
+    private lateinit var monitorManager: MonitorManager
+
+    @Autowired
+    fun setMonitorManager(@Lazy monitorManager: MonitorManager) {
+        this.monitorManager = monitorManager
+    }
 
     @Scheduled(fixedRate = 30, timeUnit = TimeUnit.SECONDS)
     @Transactional
@@ -138,11 +149,9 @@ class WebServerCheckService(
     @Transactional
     fun removeWebServerById(id: UUID): Boolean {
         val entity = repository.findById(id)
-        entity.ifPresent {
-            repository.delete(it)
-        }
         if (entity.isPresent) {
             logger.debug("Deleting webserver check: ${entity.get().url}")
+            monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.WEBSERVER_UP, id.toString())
             repository.delete(entity.get())
             historyRepository.deleteByWebServerCheckId(id)
         } else {

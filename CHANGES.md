@@ -1,6 +1,7 @@
 ### Unreleased
 
 - Fix: resolve start and end timestamps being swapped for past events
+- Fix: also delete associated monitors while deleting a webserver check
 
 ### 0.39.1
 
