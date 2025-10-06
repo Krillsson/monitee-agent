@@ -53,14 +53,14 @@ class SmartCtl(val mapper: ObjectMapper) {
         val jsonFormatVersion: List<Int>,
         @JsonProperty("local_time")
         val localTime: LocalTime,
-        @JsonProperty("power_cycle_count")
-        val powerCycleCount: Int,
-        @JsonProperty("power_on_time")
-        val powerOnTime: PowerOnTime,
         @JsonProperty("smartctl")
         val smartctl: Smartctl,
 
         */
+        @JsonProperty("power_cycle_count")
+        val powerCycleCount: Int?,
+        @JsonProperty("power_on_time")
+        val powerOnTime: PowerOnTime?,
         @JsonProperty("temperature")
         val temperature: Temperature
     ) {
