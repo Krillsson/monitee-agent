@@ -1,10 +1,12 @@
 package com.krillsson.sysapi.bash
 
 import com.krillsson.sysapi.util.logger
+import org.springframework.stereotype.Component
 import kotlin.getValue
 import kotlin.text.toFloatOrNull
 import kotlin.text.toIntOrNull
 
+@Component
 class Upsc {
     private val logger by logger()
 
@@ -64,6 +66,5 @@ class Upsc {
             val description: String,
         )
     }
-
 
 }

@@ -26,6 +26,7 @@ data class YAMLConfigFile(
     val windows: WindowsConfiguration,
     val processes: ProcessesConfiguration = ProcessesConfiguration(),
     val linux: LinuxConfiguration = LinuxConfiguration(),
+    val ups: UpsConfiguration = UpsConfiguration(),
     val connectivityCheck: ConnectivityCheckConfiguration,
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
