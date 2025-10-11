@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Fix: also delete associated monitors while deleting a webserver check
 - Fix: resolve start and end timestamps being swapped for past events
 - Fix: also delete associated monitors while deleting a webserver check
 
