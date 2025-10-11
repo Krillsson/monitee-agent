@@ -121,13 +121,13 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                         stateChangedAt = null
                         eventId = UUID.randomUUID()
                         ongoingEvent = OngoingEvent(
-                            eventId!!,
-                            monitor.id,
-                            config.monitoredItemId,
-                            monitor.type,
-                            now,
-                            config.threshold,
-                            value
+                            id = eventId!!,
+                            monitorId = monitor.id,
+                            monitoredItemId = config.monitoredItemId,
+                            monitorType = monitor.type,
+                            startTime = now,
+                            threshold = config.threshold,
+                            value = value
                         )
                         event = ongoingEvent
                     } else { //Outside before inertia -> Outside before inertia
@@ -180,8 +180,8 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                             id = eventId!!,
                             monitorId = monitor.id,
                             monitoredItemId = config.monitoredItemId,
-                            startTime = now,
-                            endTime = ongoingEvent!!.startTime,
+                            startTime = ongoingEvent!!.startTime,
+                            endTime = now,
                             type = monitor.type,
                             threshold = config.threshold,
                             endValue = value,

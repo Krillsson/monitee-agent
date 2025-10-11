@@ -59,29 +59,29 @@ class EventRepository(private val store: EventStore) {
     private fun Event.asStoredEvent(): EventStore.StoredEvent {
         return when (this) {
             is PastEvent -> EventStore.StoredEvent(
-                id,
-                monitorId,
-                monitoredItemId,
-                startTime.toOffsetDateTime(),
-                endTime.toOffsetDateTime(),
-                monitorType,
-                threshold.asDouble(),
-                value.asDouble(),
-                startValue.asDouble(),
-                EventStore.StoredEvent.Type.PAST,
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                startTime = startTime.toOffsetDateTime(),
+                endTime = endTime.toOffsetDateTime(),
+                monitorType = monitorType,
+                threshold = threshold.asDouble(),
+                value = value.asDouble(),
+                startValue = startValue.asDouble(),
+                type = EventStore.StoredEvent.Type.PAST,
             )
 
             is OngoingEvent -> EventStore.StoredEvent(
-                id,
-                monitorId,
-                monitoredItemId,
-                startTime.toOffsetDateTime(),
-                null,
-                monitorType,
-                threshold.asDouble(),
-                value.asDouble(),
-                null,
-                EventStore.StoredEvent.Type.ONGOING
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                startTime = startTime.toOffsetDateTime(),
+                endTime = null,
+                monitorType = monitorType,
+                threshold = threshold.asDouble(),
+                value = value.asDouble(),
+                startValue = null,
+                type = EventStore.StoredEvent.Type.ONGOING
             )
 
             else -> throw IllegalArgumentException("Unknown event type encountered $this")
