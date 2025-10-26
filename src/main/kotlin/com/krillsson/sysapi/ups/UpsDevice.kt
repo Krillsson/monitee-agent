@@ -1,9 +1,6 @@
-package com.krillsson.sysapi.nut
+package com.krillsson.sysapi.ups
 
-import com.krillsson.sysapi.bash.Upsc.Test
-import kotlin.text.toIntOrNull
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 data class UpsDevice(
     val name: String,

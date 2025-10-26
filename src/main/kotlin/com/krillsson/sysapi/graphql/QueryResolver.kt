@@ -15,10 +15,10 @@ import com.krillsson.sysapi.core.webservicecheck.OneOffWebserverResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckHistoryEntry
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
-import com.krillsson.sysapi.nut.NutUpsService
+import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.util.EnvironmentUtils
@@ -40,12 +40,12 @@ class QueryResolver(
     private val operatingSystem: OperatingSystem,
     private val oshiOperatingSystem: OshiOsOperatingSystem,
     private val platform: Platform,
-    private val containerManager: ContainerManager,
+    private val containerService: ContainerService,
     private val webServerCheckService: WebServerCheckService,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
-    private val upsService: NutUpsService
+    private val upsService: UpsService
 ) {
 
     @QueryMapping
@@ -146,7 +146,7 @@ class QueryResolver(
 
     @QueryMapping
     fun docker(): Docker {
-        return when (val status = containerManager.status) {
+        return when (val status = containerService.status) {
             Status.Available -> DockerAvailable
             Status.Disabled -> DockerUnavailable(
                 "The docker support is currently disabled. You can change this in configuration.yml",
@@ -163,12 +163,12 @@ class QueryResolver(
     @QueryMapping
     fun upsInfo(): UpsInfo {
         return when(val status = upsService.status()){
-            NutUpsService.Status.Available -> UpsInfoAvailable
-            NutUpsService.Status.Disabled -> UpsInfoUnavailable(
+            UpsService.Status.Available -> UpsInfoAvailable
+            UpsService.Status.Disabled -> UpsInfoUnavailable(
                 "The UPS support is currently disabled. You can change this in the configuration.yml",
                 isDisabled = true
             )
-            is NutUpsService.Status.Unavailable -> UpsInfoUnavailable(
+            is UpsService.Status.Unavailable -> UpsInfoUnavailable(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = true
             )

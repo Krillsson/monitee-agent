@@ -23,7 +23,7 @@ import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.measureTimeMillis
 import org.springframework.stereotype.Component
@@ -33,7 +33,7 @@ import kotlin.jvm.optionals.getOrNull
 @Component
 class MonitorInputCreator(
     private val metrics: Metrics,
-    private val containerManager: ContainerManager,
+    private val containerService: ContainerService,
     private val webServerCheckService: WebServerCheckService
 ) {
 
@@ -113,8 +113,8 @@ class MonitorInputCreator(
             motherboardHealth = metrics.motherboardMetrics().motherboardHealth()
         )
         val containers =
-            if (containerIds.isNotEmpty()) containerManager.containersWithIds(containerIds) else emptyList()
-        val containersStats = containerStatisticsIds.mapNotNull { id -> containerManager.statsForContainer(id) }
+            if (containerIds.isNotEmpty()) containerService.containersWithIds(containerIds) else emptyList()
+        val containersStats = containerStatisticsIds.mapNotNull { id -> containerService.statsForContainer(id) }
 
         return MonitorInput(
             load,
@@ -182,23 +182,23 @@ class MonitorInputCreator(
 
                 Monitor.Type.CONTAINER_RUNNING -> {
                     val container =
-                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                        requireNotNull(containerService.container(requireNotNull(monitor.config.monitoredItemId)))
                     createContainerRunningMonitorableItem(container)
                 }
 
                 Monitor.Type.CONTAINER_MEMORY_SPACE -> {
                     val container =
-                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                        requireNotNull(containerService.container(requireNotNull(monitor.config.monitoredItemId)))
                     val containerStats =
-                        requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
+                        requireNotNull(containerService.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
                     createContainerMemorySpaceMonitorableItem(containerStats, container)
                 }
 
                 Monitor.Type.CONTAINER_CPU_LOAD -> {
                     val container =
-                        requireNotNull(containerManager.container(requireNotNull(monitor.config.monitoredItemId)))
+                        requireNotNull(containerService.container(requireNotNull(monitor.config.monitoredItemId)))
                     val containerStats =
-                        requireNotNull(containerManager.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
+                        requireNotNull(containerService.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
                     createContainerCpuLoadMonitorableItem(containerStats, container)
                 }
 
@@ -363,14 +363,14 @@ class MonitorInputCreator(
             }
 
             Monitor.Type.CONTAINER_RUNNING -> {
-                containerManager.containers().map {
+                containerService.containers().map {
                     createContainerRunningMonitorableItem(it)
                 }
             }
 
             Monitor.Type.CONTAINER_MEMORY_SPACE -> {
-                val stats = containerManager.containerStats().associateBy { it.id }
-                containerManager.containers().mapNotNull { container ->
+                val stats = containerService.containerStats().associateBy { it.id }
+                containerService.containers().mapNotNull { container ->
                     stats[container.id]?.let { statistics ->
                         createContainerMemorySpaceMonitorableItem(statistics, container)
                     }
@@ -378,8 +378,8 @@ class MonitorInputCreator(
             }
 
             Monitor.Type.CONTAINER_CPU_LOAD -> {
-                val stats = containerManager.containerStats().associateBy { it.id }
-                containerManager.containers().mapNotNull { container ->
+                val stats = containerService.containerStats().associateBy { it.id }
+                containerService.containers().mapNotNull { container ->
                     stats[container.id]?.let { statistics ->
                         createContainerCpuLoadMonitorableItem(statistics, container)
                     }

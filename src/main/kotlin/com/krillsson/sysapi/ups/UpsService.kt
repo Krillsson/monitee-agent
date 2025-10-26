@@ -1,4 +1,4 @@
-package com.krillsson.sysapi.nut
+package com.krillsson.sysapi.ups
 
 import com.krillsson.sysapi.bash.Upsc
 import com.krillsson.sysapi.config.YAMLConfigFile
@@ -6,7 +6,7 @@ import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 
 @Service
-class NutUpsService(
+class UpsService(
     private val upsc: Upsc,
     configuration: YAMLConfigFile
 ) {

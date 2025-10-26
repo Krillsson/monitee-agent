@@ -11,7 +11,6 @@ import com.krillsson.sysapi.core.domain.docker.Command
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
-import com.krillsson.sysapi.core.history.ContainersHistoryRepository
 import com.krillsson.sysapi.graphql.domain.DockerLogMessageConnection
 import com.krillsson.sysapi.graphql.domain.DockerLogMessageEdge
 import com.krillsson.sysapi.graphql.domain.PageInfo
@@ -24,7 +23,7 @@ import java.time.Instant
 import java.util.*
 
 @Service
-class ContainerManager(
+class ContainerService(
     private val dockerClient: DockerClient,
     private val config: YAMLConfigFile,
     private val containersHistoryRepository: ContainersHistoryRepository,
