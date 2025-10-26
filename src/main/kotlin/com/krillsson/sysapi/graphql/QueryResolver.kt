@@ -19,6 +19,7 @@ import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.ups.UpsService
+import com.krillsson.sysapi.nut.NutUpsService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.util.EnvironmentUtils
@@ -45,7 +46,7 @@ class QueryResolver(
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
-    private val upsService: UpsService
+    private val upsService: NutUpsService
 ) {
 
     @QueryMapping
@@ -159,6 +160,7 @@ class QueryResolver(
             )
         }
     }
+
 
     @QueryMapping
     fun upsInfo(): UpsInfo {
