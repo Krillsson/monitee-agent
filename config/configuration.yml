@@ -43,6 +43,10 @@ logReader:
   # - data # sys-API data directory. You can enable log to file in application.properties
   # - /var/log # Linux log directory
 # docker management and metrics support
+ups:
+  enabled: false
+  host: "localhost"
+  port: 3493
 docker:
   enabled: true
   #  cache:

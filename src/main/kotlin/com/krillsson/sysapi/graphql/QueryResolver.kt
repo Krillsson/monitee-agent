@@ -18,6 +18,7 @@ import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerManager
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
+import com.krillsson.sysapi.nut.NutUpsService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.util.EnvironmentUtils
@@ -43,7 +44,8 @@ class QueryResolver(
     private val webServerCheckService: WebServerCheckService,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
-    private val serverIdService: ServerIdService
+    private val serverIdService: ServerIdService,
+    private val upsService: NutUpsService
 ) {
 
     @QueryMapping
@@ -154,6 +156,21 @@ class QueryResolver(
             is Status.Unavailable -> DockerUnavailable(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = false
+            )
+        }
+    }
+
+    @QueryMapping
+    fun upsInfo(): UpsInfo {
+        return when(val status = upsService.status()){
+            NutUpsService.Status.Available -> UpsInfoAvailable
+            NutUpsService.Status.Disabled -> UpsInfoUnavailable(
+                "The UPS support is currently disabled. You can change this in the configuration.yml",
+                isDisabled = true
+            )
+            is NutUpsService.Status.Unavailable -> UpsInfoUnavailable(
+                "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
+                isDisabled = true
             )
         }
     }
