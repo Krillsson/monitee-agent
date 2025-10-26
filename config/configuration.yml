@@ -34,10 +34,8 @@ linux:
   # and put the identifier below (default on intel systems is thermal:x86_pkg_temp)
   # overrideCpuTempSensor: hwmon:coretemp
   journalLogs:
-    # Requires journalctl command to be available
     enabled: true
   systemDaemonServiceManagement:
-    # Requires systemctl command to be available
     enabled: true
 logReader:
   files: [ ]
@@ -46,9 +44,7 @@ logReader:
   # - /var/log # Linux log directory
 # docker management and metrics support
 ups:
-  # Requires upsc command to be available
   enabled: false
-  # Docker image users puts the local IP of the server here (e.g "192.168.0.35")
   host: "localhost"
   port: 3493
 docker:

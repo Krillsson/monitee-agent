@@ -7,19 +7,11 @@ union UpsInfo = UpsInfoAvailable | UpsInfoUnavailable
 type UpsInfoAvailable {
     upsDevices: [UpsDevice!]!
     upsDeviceById(id: String!): UpsDevice
-    metricsForUps(id: String!): UpsDeviceMetrics
-    upsMetricsHistoryBetweenTimestamps(id: String!, from: Instant!, to: Instant!): [UpsDeviceMetricsHistoryEntry!]!
 }
 
 type UpsInfoUnavailable {
     reason: String!
     isDisabled: Boolean
-}
-
-type UpsDeviceMetricsHistoryEntry {
-    id: String!
-    timestamp: Instant!
-    metrics: UpsDeviceMetrics!
 }
 
 type UpsDevice {
