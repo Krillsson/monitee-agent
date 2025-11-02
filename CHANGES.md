@@ -1,5 +1,9 @@
 ### Unreleased
 
+- Feature: Integration with NUT (Network UPS Tools)
+  - List devices using `upsDevices` query method
+  - Historical data is available via the `upsMetricsHistoryBetweenTimestamps` query method
+  - Two new monitor types added: "UPS Load" and "UPS Operational"
 - Fix: also delete associated monitors while deleting a webserver check
 - Fix: resolve start and end timestamps being swapped for past events
 - Fix: also delete associated monitors while deleting a webserver check
