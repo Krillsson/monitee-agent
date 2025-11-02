@@ -56,6 +56,8 @@ class GenericEventFormatter {
             Monitor.Type.DISK_TEMPERATURE -> "Drive — Temperature"
             Monitor.Type.MEMORY_USED -> "Memory — Usage"
             Monitor.Type.PROCESS_CPU_LOAD -> "Process — CPU usage"
+            Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS — Operating normally"
+            Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS — Load percent"
         }
     }
 }

@@ -59,6 +59,14 @@ data class UpsDevice(
         val powerLoadVA: Int?,
         val upsStatus: List<Status>,
     ) {
+        companion object{
+            val normalStates = listOf(
+                UpsDevice.Status.OnLine
+            )
+        }
+
+        fun isOperatingNormally() = upsStatus.all { it in normalStates }
+
         data class BatteryMetrics(
             val capacity: Float?,
             val chargePercent: Int?,

@@ -33,7 +33,9 @@ abstract class Monitor<out T : MonitoredValue> {
         PROCESS_EXISTS(ValueType.Conditional),
         CONNECTIVITY(ValueType.Conditional),
         WEBSERVER_UP(ValueType.Conditional),
-        EXTERNAL_IP_CHANGED(ValueType.Conditional)
+        EXTERNAL_IP_CHANGED(ValueType.Conditional),
+        UPS_OPERATING_NORMALLY(ValueType.Conditional),
+        UPS_LOAD_PERCENTAGE(ValueType.Numerical)
     }
 
     enum class ValueType {

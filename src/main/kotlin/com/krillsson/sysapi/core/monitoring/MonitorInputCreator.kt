@@ -21,9 +21,12 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
+import com.krillsson.sysapi.core.monitoring.monitors.UpsOperatingNormallyMonitor
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.ups.UpsDevice
+import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.measureTimeMillis
 import org.springframework.stereotype.Component
@@ -34,7 +37,8 @@ import kotlin.jvm.optionals.getOrNull
 class MonitorInputCreator(
     private val metrics: Metrics,
     private val containerService: ContainerService,
-    private val webServerCheckService: WebServerCheckService
+    private val webServerCheckService: WebServerCheckService,
+    private val upsService: UpsService,
 ) {
 
     companion object {
@@ -116,11 +120,13 @@ class MonitorInputCreator(
             if (containerIds.isNotEmpty()) containerService.containersWithIds(containerIds) else emptyList()
         val containersStats = containerStatisticsIds.mapNotNull { id -> containerService.statsForContainer(id) }
 
+        val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
         return MonitorInput(
             load,
             containers,
             containersStats,
-            webserverChecks
+            webserverChecks,
+            upsDeviceMetrics
         )
     }
 
@@ -242,6 +248,14 @@ class MonitorInputCreator(
                 Monitor.Type.MEMORY_SPACE -> getMonitorableItemForType(monitor.type).first()
                 Monitor.Type.MEMORY_USED -> getMonitorableItemForType(monitor.type).first()
                 Monitor.Type.CONNECTIVITY -> getMonitorableItemForType(monitor.type).first()
+                Monitor.Type.UPS_OPERATING_NORMALLY -> {
+                    val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
+                    createMonitorIsOperatingNormallyItem(device)
+                }
+                Monitor.Type.UPS_LOAD_PERCENTAGE -> {
+                    val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
+                    createUpsLoadPercentageMonitoredItem(device)
+                }
             }
         }
         logger.debug(
@@ -443,8 +457,34 @@ class MonitorInputCreator(
                     }
                 }
             }
+
+            Monitor.Type.UPS_OPERATING_NORMALLY -> upsService.upsDevices().map {
+                createMonitorIsOperatingNormallyItem(it)
+            }
+            Monitor.Type.UPS_LOAD_PERCENTAGE -> upsService.upsDevices().map {
+                createUpsLoadPercentageMonitoredItem(it)
+            }
         }
     }
+
+    private fun createMonitorIsOperatingNormallyItem(device: UpsDevice): MonitorableItem = MonitorableItem(
+        id = device.id,
+        name = device.name,
+        description = "${device.name} is operating normally",
+        maxValue = true.toConditionalValue(),
+        currentValue = device.metrics.isOperatingNormally()
+            .toConditionalValue(),
+        type = Monitor.Type.UPS_OPERATING_NORMALLY
+    )
+
+    private fun createUpsLoadPercentageMonitoredItem(device: UpsDevice): MonitorableItem = MonitorableItem(
+        id = device.id,
+        name = device.name,
+        description = "${device.name} is operating normally",
+        maxValue = MonitoredValue.NumericalValue(100),
+        currentValue = device.metrics.loadPercent?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
+        type = Monitor.Type.UPS_LOAD_PERCENTAGE
+    )
 
     private fun createDiskTemperatureMonitorableItem(
         it: Disk,
