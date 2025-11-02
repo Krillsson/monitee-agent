@@ -1,5 +1,4 @@
--- Flyway migration for UPS metrics history (SQLite, matching container history datatypes)
-CREATE TABLE UpsMetricsHistory (
+CREATE TABLE UpsMetricsHistoryEntity (
     id char(36) PRIMARY KEY,
     upsId VARCHAR(255) NOT NULL,
     timestamp datetime NOT NULL,
@@ -22,4 +21,4 @@ CREATE TABLE UpsMetricsHistory (
     upsStatus VARCHAR(255)
 );
 
-CREATE INDEX IF NOT EXISTS upsMetricsHistoryIndex ON upsMetricsHistory (upsId, timestamp);
+CREATE INDEX IF NOT EXISTS upsMetricsHistoryIndex ON UpsMetricsHistoryEntity (upsId, timestamp);
