@@ -39,24 +39,10 @@ class SmartCtl(val mapper: ObjectMapper) {
     }
 
     data class Output(
-        /*
-
-        Some of these values are not passed all the time,
-        so they need to be verified before usage and made nullable,
-        we are only interested in temperature for now.
-
         @JsonProperty("ata_smart_attributes")
-        val ataSmartAttributes: AtaSmartAttributes,
-        @JsonProperty("device")
-        val device: Device,
-        @JsonProperty("json_format_version")
-        val jsonFormatVersion: List<Int>,
-        @JsonProperty("local_time")
-        val localTime: LocalTime,
-        @JsonProperty("smartctl")
-        val smartctl: Smartctl,
-
-        */
+        val ataSmartAttributes: AtaSmartAttributes?, // now nullable
+        @JsonProperty("nvme_smart_health_information_log")
+        val nvmeSmartHealthInformationLog: NvmeSmartHealthLog?,
         @JsonProperty("power_cycle_count")
         val powerCycleCount: Int?,
         @JsonProperty("power_on_time")
@@ -116,56 +102,45 @@ class SmartCtl(val mapper: ObjectMapper) {
             }
         }
 
-        data class Device(
-            @JsonProperty("info_name")
-            val infoName: String,
-            @JsonProperty("name")
-            val name: String,
-            @JsonProperty("protocol")
-            val protocol: String,
-            @JsonProperty("type")
-            val type: String
-        )
-
-        data class LocalTime(
-            @JsonProperty("asctime")
-            val asctime: String,
-            @JsonProperty("time_t")
-            val timeT: Int
-        )
-
-        data class PowerOnTime(
-            @JsonProperty("hours")
-            val hours: Int
-        )
-
-        data class Smartctl(
-            @JsonProperty("argv")
-            val argv: List<String>,
-            @JsonProperty("build_info")
-            val buildInfo: String,
-            @JsonProperty("drive_database_version")
-            val driveDatabaseVersion: DriveDatabaseVersion,
-            @JsonProperty("exit_status")
-            val exitStatus: Int,
-            @JsonProperty("platform_info")
-            val platformInfo: String,
-            @JsonProperty("pre_release")
-            val preRelease: Boolean,
-            @JsonProperty("svn_revision")
-            val svnRevision: String,
-            @JsonProperty("version")
-            val version: List<Int>
-        ) {
-            data class DriveDatabaseVersion(
-                @JsonProperty("string")
-                val string: String
-            )
-        }
-
         data class Temperature(
             @JsonProperty("current")
             val current: Int
         )
+
+        data class NvmeSmartHealthLog(
+            @JsonProperty("percentage_used") val percentage_used: Int?,
+            @JsonProperty("data_units_read") val data_units_read: Long?,
+            @JsonProperty("data_units_written") val data_units_written: Long?,
+            @JsonProperty("media_errors") val media_errors: Long?,
+            @JsonProperty("num_err_log_entries") val num_err_log_entries: Long?,
+            @JsonProperty("unsafe_shutdowns") val unsafe_shutdowns: Long?,
+            @JsonProperty("controller_busy_time") val controller_busy_time: Long? // minutes
+        )
+
+        data class PowerOnTime(@JsonProperty("hours") val hours: Int)
+        data class Device(
+            @JsonProperty("info_name") val infoName: String,
+            @JsonProperty("name") val name: String,
+            @JsonProperty("protocol") val protocol: String,
+            @JsonProperty("type") val type: String
+        )
+
+        data class LocalTime(
+            @JsonProperty("asctime") val asctime: String,
+            @JsonProperty("time_t") val timeT: Int
+        )
+
+        data class Smartctl(
+            @JsonProperty("argv") val argv: List<String>,
+            @JsonProperty("build_info") val buildInfo: String,
+            @JsonProperty("drive_database_version") val driveDatabaseVersion: DriveDatabaseVersion,
+            @JsonProperty("exit_status") val exitStatus: Int,
+            @JsonProperty("platform_info") val platformInfo: String,
+            @JsonProperty("pre_release") val preRelease: Boolean,
+            @JsonProperty("svn_revision") val svnRevision: String,
+            @JsonProperty("version") val version: List<Int>
+        ) {
+            data class DriveDatabaseVersion(@JsonProperty("string") val string: String)
+        }
     }
 }
