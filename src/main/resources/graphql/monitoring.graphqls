@@ -8,6 +8,7 @@ extend type Query {
     pastEvents: [PastEvent!]!
     ongoingEvents: [OngoingEvent!]!
     monitorableItemsForType(input: MonitorableItemsInput): MonitorableItemsOutput!
+    enumEntriesForMonitorType(type: MonitorType!): [EnumEntry!]!
     webServerChecks: [WebserverCheck!]!
     webServerCheckById(id: UUID!): WebserverCheck
     oneOffWebserverCheck(url: String!): OneOffWebserverCheck!
@@ -18,10 +19,12 @@ extend type Mutation {
     createNumericalValueMonitor(input: CreateNumericalMonitorInput) : CreateMonitorOutput
     createConditionalValueMonitor(input: CreateConditionalMonitorInput) : CreateMonitorOutput
     createFractionalValueMonitor(input: CreateFractionMonitorInput) : CreateMonitorOutput
+    createEnumValueMonitor(input: CreateEnumMonitorInput): CreateMonitorOutput
     deleteMonitor(input: DeleteMonitorInput) : DeleteMonitorOutput
     updateNumericalValueMonitor(input: UpdateNumericalValueMonitorInput) : UpdateMonitorOutput
     updateFractionalValueMonitor(input: UpdateFractionalValueMonitorInput) : UpdateMonitorOutput
     updateConditionalValueMonitor(input: UpdateConditionalValueMonitorInput) : UpdateMonitorOutput
+    updateEnumValueMonitor(input: UpdateEnumMonitorInput): UpdateMonitorOutput
     deleteEvent(input: DeleteEventInput) : DeleteEventOutput
     deleteEventsForMonitor(input: DeleteEventsForMonitorInput) : DeleteEventOutput
     deletePastEventsForMonitor(input: DeleteEventsForMonitorInput): DeleteEventOutput
@@ -72,6 +75,17 @@ input CreateConditionalMonitorInput {
     monitoredItemId: String
 }
 
+input CreateEnumMonitorInput {
+    inertiaInSeconds: Int!
+    type: MonitorType!
+    threshold: String!
+    # Drives: serial or name (ignoring case)
+    # NIC's: name or MAC address (ignoring case)
+    # Process: process ID
+    # Docker: full container ID (ignoring case)
+    monitoredItemId: String
+}
+
 input UpdateNumericalValueMonitorInput {
     monitorId: UUID!
     inertiaInSeconds: Int
@@ -88,6 +102,12 @@ input UpdateConditionalValueMonitorInput {
     monitorId: UUID!
     inertiaInSeconds: Int
     threshold: Boolean
+}
+
+input UpdateEnumMonitorInput {
+    monitorId: UUID!
+    inertiaInSeconds: Int
+    threshold: String
 }
 
 type CreateMonitorOutput {
@@ -155,7 +175,7 @@ type DeleteWebServerCheckOutput{
 }
 
 
-union MonitoredValue = NumericalValue | FractionalValue | ConditionalValue
+union MonitoredValue = NumericalValue | FractionalValue | ConditionalValue | EnumEntry
 
 type NumericalValue {
     number: Long
@@ -167,6 +187,11 @@ type FractionalValue {
 
 type ConditionalValue {
     condition: Boolean
+}
+
+type EnumEntry {
+    name: String!
+    ordinal: Int!
 }
 
 type MonitoredValueHistoryEntry {

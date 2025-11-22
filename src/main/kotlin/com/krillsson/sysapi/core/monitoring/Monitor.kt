@@ -34,6 +34,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CONNECTIVITY(ValueType.Conditional),
         WEBSERVER_UP(ValueType.Conditional),
         EXTERNAL_IP_CHANGED(ValueType.Conditional),
+        SMART_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),
         UPS_LOAD_PERCENTAGE(ValueType.Numerical)
     }
@@ -41,7 +42,8 @@ abstract class Monitor<out T : MonitoredValue> {
     enum class ValueType {
         Numerical,
         Fractional,
-        Conditional
+        Conditional,
+        Enum
     }
 
     abstract fun selectValue(event: MonitorInput): T?
