@@ -3,6 +3,7 @@ package com.krillsson.sysapi.core.monitoring
 import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
 import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.monitors.*
+import com.krillsson.sysapi.smart.HealthStatus
 import java.util.*
 
 object MonitorFactory {
@@ -111,6 +112,11 @@ object MonitorFactory {
             Monitor.Type.UPS_LOAD_PERCENTAGE -> UpsLoadPercentageMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
+            Monitor.Type.SMART_HEALTH -> SmartHealthStatusMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.EnumValue<HealthStatus>>
             )
         }
     }

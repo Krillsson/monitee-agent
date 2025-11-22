@@ -18,6 +18,10 @@ sealed class MonitoredValue {
     data class ConditionalValue(
         val value: Boolean
     ) : MonitoredValue()
+
+    data class EnumValue<E : Enum<E>>(
+        val value: E
+    ) : MonitoredValue()
 }
 
 fun Long.toNumericalValue() = MonitoredValue.NumericalValue(this)

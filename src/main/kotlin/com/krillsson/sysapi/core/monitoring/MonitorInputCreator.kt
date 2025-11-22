@@ -256,6 +256,7 @@ class MonitorInputCreator(
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createUpsLoadPercentageMonitoredItem(device)
                 }
+                Monitor.Type.SMART_HEALTH -> TODO()
             }
         }
         logger.debug(
@@ -464,6 +465,8 @@ class MonitorInputCreator(
             Monitor.Type.UPS_LOAD_PERCENTAGE -> upsService.upsDevices().map {
                 createUpsLoadPercentageMonitoredItem(it)
             }
+
+            Monitor.Type.SMART_HEALTH -> TODO()
         }
     }
 
