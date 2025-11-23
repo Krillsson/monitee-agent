@@ -15,11 +15,12 @@ import com.krillsson.sysapi.core.webservicecheck.OneOffWebserverResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckHistoryEntry
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
+import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.EnvironmentUtils
 import com.krillsson.sysapi.windows.WindowsManager
 import org.springframework.graphql.data.method.annotation.Argument
@@ -39,11 +40,12 @@ class QueryResolver(
     private val operatingSystem: OperatingSystem,
     private val oshiOperatingSystem: OshiOsOperatingSystem,
     private val platform: Platform,
-    private val containerManager: ContainerManager,
+    private val containerManager: ContainerService,
     private val webServerCheckService: WebServerCheckService,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
-    private val serverIdService: ServerIdService
+    private val serverIdService: ServerIdService,
+    private val upsService: UpsService
 ) {
 
     @QueryMapping
@@ -154,6 +156,21 @@ class QueryResolver(
             is Status.Unavailable -> DockerUnavailable(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = false
+            )
+        }
+    }
+
+    @QueryMapping
+    fun upsInfo(): UpsInfo {
+        return when(val status = upsService.status()){
+            UpsService.Status.Available -> UpsInfoAvailable
+            UpsService.Status.Disabled -> UpsInfoUnavailable(
+                "The UPS support is currently disabled. You can change this in the configuration.yml",
+                isDisabled = true
+            )
+            is UpsService.Status.Unavailable -> UpsInfoUnavailable(
+                "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
+                isDisabled = true
             )
         }
     }

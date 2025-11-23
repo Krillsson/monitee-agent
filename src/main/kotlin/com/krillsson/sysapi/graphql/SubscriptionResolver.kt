@@ -7,7 +7,7 @@ import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.metrics.Metrics
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
 import com.krillsson.sysapi.serverid.ServerIdService
@@ -23,7 +23,7 @@ class SubscriptionResolver(
     val metrics: Metrics,
     val operatingSystem: OperatingSystem,
     val logFileService: LogFileService,
-    val containerManager: ContainerManager,
+    val containerService: ContainerService,
     val serverIdService: ServerIdService,
     val systemDaemonManager: SystemDaemonManager
 ) {
@@ -78,7 +78,7 @@ class SubscriptionResolver(
 
     @SubscriptionMapping
     fun tailContainerLogs(@Argument containerId: String, @Argument after: String?, @Argument reverse: Boolean?) =
-        containerManager.tailContainerLogs(containerId, after, reverse)
+        containerService.tailContainerLogs(containerId, after, reverse)
 
     @SubscriptionMapping
     fun tailJournalLogs(@Argument serviceName: String, @Argument after: String?, @Argument reverse: Boolean?) =

@@ -3,7 +3,7 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.docker.State
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ReadLogsCommandResult
 import com.krillsson.sysapi.graphql.domain.*
 import org.springframework.graphql.data.method.annotation.Argument
@@ -14,16 +14,16 @@ import java.time.OffsetDateTime
 
 @Controller
 @SchemaMapping(typeName = "DockerAvailable")
-class DockerResolver(val containerManager: ContainerManager) {
+class DockerResolver(val containerService: ContainerService) {
 
     @SchemaMapping
-    fun containers() = containerManager.containers()
+    fun containers() = containerService.containers()
     @SchemaMapping
-    fun container(@Argument id: String) = containerManager.container(id)
+    fun container(@Argument id: String) = containerService.container(id)
 
     @SchemaMapping
     fun runningContainers() =
-        containerManager.containers().filter { it.state == State.RUNNING }
+        containerService.containers().filter { it.state == State.RUNNING }
 
     @SchemaMapping
     fun readLogsForContainer(
@@ -35,7 +35,7 @@ class DockerResolver(val containerManager: ContainerManager) {
         to: OffsetDateTime?
     ): ReadLogsForContainerOutput {
         return when (val result =
-            containerManager.readLogsForContainer(containerId, from?.toInstant(), to?.toInstant())) {
+            containerService.readLogsForContainer(containerId, from?.toInstant(), to?.toInstant())) {
             is ReadLogsCommandResult.Success -> ReadLogsForContainerOutputSucceeded(result.lines)
             is ReadLogsCommandResult.Failed -> ReadLogsForContainerOutputFailed(
                 result.error.message ?: result.error.toString()
@@ -55,7 +55,7 @@ class DockerResolver(val containerManager: ContainerManager) {
         @Argument
         to: Instant?
     ): ReadLogsForContainerOutput {
-        return when (val result = containerManager.readLogsForContainer(containerId, from, to)) {
+        return when (val result = containerService.readLogsForContainer(containerId, from, to)) {
             is ReadLogsCommandResult.Success -> ReadLogsForContainerOutputSucceeded(result.lines)
             is ReadLogsCommandResult.Failed -> ReadLogsForContainerOutputFailed(
                 result.error.message ?: result.error.toString()
@@ -75,7 +75,7 @@ class DockerResolver(val containerManager: ContainerManager) {
         @Argument last: Int?,
         @Argument reverse: Boolean?
     ): DockerLogMessageConnection {
-        return containerManager.openContainerLogsConnection(
+        return containerService.openContainerLogsConnection(
             containerId = containerId,
             after = after,
             before = before,
@@ -87,7 +87,7 @@ class DockerResolver(val containerManager: ContainerManager) {
 
     @SchemaMapping
     fun metricsForContainer(@Argument containerId: String): ContainerMetrics? {
-        return containerManager.statsForContainer(containerId)
+        return containerService.statsForContainer(containerId)
     }
 
     @SchemaMapping
@@ -96,7 +96,7 @@ class DockerResolver(val containerManager: ContainerManager) {
         @Argument from: Instant,
         @Argument to: Instant
     ): List<ContainerMetricsHistoryEntry> {
-        return containerManager.containerMetricsHistoryBetweenTimestamps(
+        return containerService.containerMetricsHistoryBetweenTimestamps(
             containerId, from, to
         )
     }

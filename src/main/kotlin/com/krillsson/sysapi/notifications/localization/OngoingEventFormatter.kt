@@ -40,6 +40,8 @@ class OngoingEventFormatter(
                 Monitor.Type.CONNECTIVITY -> "Connection is down on $serverName"
                 Monitor.Type.WEBSERVER_UP -> "Webserver is down on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed on $serverName"
+                Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load too high on UPS $serverName"
+                Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"
             }
         }
 
@@ -93,6 +95,8 @@ class OngoingEventFormatter(
 
                 Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is not responding with 200/OK"
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
+                Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
+                Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"
             }
         }
 
@@ -146,6 +150,10 @@ class OngoingEventFormatter(
 
             Monitor.Type.WEBSERVER_UP -> if ((this as MonitoredValue.ConditionalValue).value) "up" else "down"
             Monitor.Type.DISK_TEMPERATURE -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
+            Monitor.Type.UPS_OPERATING_NORMALLY -> if ((this as MonitoredValue.ConditionalValue).value) "operating normally" else "not operating normally"
+            Monitor.Type.UPS_LOAD_PERCENTAGE -> formatPercent(
+                (this as MonitoredValue.NumericalValue).value.toFloat()
+            )
         }
     }
 
