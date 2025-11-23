@@ -53,6 +53,11 @@ type DockerAvailable {
     openDockerLogMessageConnection(containerId: String! after: String, before: String, first: Int, last: Int, reverse: Boolean): DockerLogMessageConnection!
 }
 
+type DockerUnavailable{
+    reason: String!
+    isDisabled: Boolean
+}
+
 type DockerLogLine {
     line: String!
 }
@@ -66,12 +71,6 @@ type DockerLogLineConnection {
     totalCount: Int!
     edges: [DockerLogLineEdge!]!
     pageInfo: PageInfo!
-}
-
-
-type DockerUnavailable{
-    reason: String!
-    isDisabled: Boolean
 }
 
 enum DockerContainerState {

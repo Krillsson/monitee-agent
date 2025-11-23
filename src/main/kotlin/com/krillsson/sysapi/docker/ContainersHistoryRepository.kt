@@ -1,7 +1,9 @@
-package com.krillsson.sysapi.core.history
+package com.krillsson.sysapi.docker
 
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
+import com.krillsson.sysapi.core.history.asContainerStatisticsHistoryEntry
+import com.krillsson.sysapi.core.history.asEntity
 import com.krillsson.sysapi.core.history.db.ContainerStatisticsDAO
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.measureTimeMillis

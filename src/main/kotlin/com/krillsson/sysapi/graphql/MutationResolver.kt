@@ -9,7 +9,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.webservicecheck.AddWebServerResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerManager
+import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.graphql.mutations.*
 import com.krillsson.sysapi.windows.WindowsManager
 import com.krillsson.sysapi.windows.services.WindowsServiceCommandResult
@@ -26,7 +26,7 @@ class MutationResolver(
     private val monitorManager: MonitorManager,
     private val eventManager: EventManager,
     private val genericEventRepository: GenericEventRepository,
-    private val containerManager: ContainerManager,
+    private val containerService: ContainerService,
     private val systemDaemonManager: SystemDaemonManager,
     private val windowsManager: WindowsManager,
     private val processKiller: ProcessKillerService,
@@ -35,7 +35,7 @@ class MutationResolver(
 
     @MutationMapping
     fun performDockerContainerCommand(@Argument input: PerformDockerContainerCommandInput): PerformDockerContainerCommandOutput {
-        val result = containerManager.performCommandWithContainer(
+        val result = containerService.performCommandWithContainer(
             Command(input.containerId, input.command)
         )
 

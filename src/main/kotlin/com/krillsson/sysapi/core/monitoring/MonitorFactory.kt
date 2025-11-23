@@ -103,6 +103,15 @@ object MonitorFactory {
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>
             )
+
+            Monitor.Type.UPS_OPERATING_NORMALLY -> UpsOperatingNormallyMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.ConditionalValue>
+            )
+            Monitor.Type.UPS_LOAD_PERCENTAGE -> UpsLoadPercentageMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
         }
     }
 }

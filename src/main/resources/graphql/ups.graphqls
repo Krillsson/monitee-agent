@@ -1,0 +1,109 @@
+extend type Query {
+    upsInfo: UpsInfo!
+}
+
+union UpsInfo = UpsInfoAvailable | UpsInfoUnavailable
+
+type UpsInfoAvailable {
+    upsDevices: [UpsDevice!]!
+    upsDeviceById(id: String!): UpsDevice
+}
+
+type UpsInfoUnavailable {
+    reason: String!
+    isDisabled: Boolean
+}
+
+type UpsDevice {
+    id: String!
+    name: String!
+    description: String!
+    manufacturer: String
+    model: String
+    serial: String
+    type: String
+    firmwareVersion: String
+    driverName: String
+    driverVersion: String
+    realPowerNominalWatts: Int
+    powerNominalVA: Int
+    battery: UpsDeviceBattery
+    outlets: [UpsDeviceOutlet!]!
+    test: UpsDeviceTest
+    metrics: UpsDeviceMetrics!
+}
+
+type UpsDeviceBattery {
+    voltageNominal: Float
+    chargerType: String
+    type: String
+}
+
+type UpsDeviceOutlet {
+    id: Int
+    desc: String
+    status: String
+    switchable: String
+    delayShutdownSeconds: Int
+    delayStartSeconds: Int
+}
+
+type UpsDeviceTest {
+    testIntervalSeconds: Int
+    result: String
+}
+
+type UpsDeviceMetrics {
+    batteryMetrics: UpsDeviceBatteryMetrics
+    inputMetrics: UpsDeviceInputMetrics
+    outputMetrics: UpsDeviceOutputMetrics
+    loadPercent: Int
+    realPowerLoadWatts: Int
+    powerLoadVA: Int
+    upsStatus: [UpsDeviceStatus!]!
+}
+
+type UpsDeviceBatteryMetrics {
+    capacity: Float
+    chargePercent: Int
+    runtimeSeconds: Int
+    voltage: Float
+    voltageNominal: Float
+    chargerStatus: String
+}
+
+type UpsDeviceInputMetrics {
+    current: Float
+    frequency: Float
+    voltage: Float
+}
+
+type UpsDeviceOutputMetrics {
+    current: Float
+    frequency: Float
+    powerFactor: Float
+    voltage: Float
+}
+
+type UpsDeviceStatus {
+    status: UpsStatus,
+    description: String!
+}
+
+enum UpsStatus {
+    OnLine,
+    OnBattery,
+    LowBattery,
+    HighBattery,
+    ReplaceBattery,
+    Charging,
+    Discharging,
+    Bypass,
+    Calibrating,
+    Offline,
+    Overload,
+    Trimming,
+    Boosting,
+    ForcedShutdown,
+    Unknown
+}

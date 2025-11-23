@@ -43,6 +43,13 @@ logReader:
   # - data # sys-API data directory. You can enable log to file in application.properties
   # - /var/log # Linux log directory
 # docker management and metrics support
+ups:
+  enabled: false
+  # Requires upsc command to be available on host machine
+  # Docker image users put their local server IP here
+  # Host machine also need to run NUT
+  host: "localhost"
+  port: 3493
 docker:
   enabled: true
   #  cache:

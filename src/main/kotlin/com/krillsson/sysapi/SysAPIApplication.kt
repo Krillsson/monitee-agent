@@ -30,6 +30,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     MdnsConfiguration::class,
     MetricsConfiguration::class,
     MonitorConfiguration::class,
+    UpsConfiguration::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,
     UpdateCheckConfiguration::class,
