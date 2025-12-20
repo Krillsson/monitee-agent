@@ -1,6 +1,5 @@
 package com.krillsson.sysapi.core.monitoring
 
-import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.smart.HealthStatus
 import java.util.*
@@ -113,7 +112,6 @@ object MonitorFactory {
                 config as MonitorConfig<MonitoredValue.NumericalValue>
             )
 
-            Monitor.Type.SMART_HEALTH -> SmartHealthStatusMonitor(
             Monitor.Type.DISK_SMART_HEALTH -> DiskSmartHealthMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.EnumValue<HealthStatus>>
