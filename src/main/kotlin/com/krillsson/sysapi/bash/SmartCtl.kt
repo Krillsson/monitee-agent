@@ -19,7 +19,7 @@ class SmartCtl(
 
     private val logger by logger()
 
-    private val config = yamlConfigFile.smartConfig
+    private val config = yamlConfigFile.smart
 
     fun supportsCommand() = Bash.checkIfCommandExists(COMMAND).getOrNull() ?: false
 
