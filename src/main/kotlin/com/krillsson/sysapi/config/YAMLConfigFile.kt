@@ -31,6 +31,7 @@ data class YAMLConfigFile(
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
     val docker: DockerConfiguration,
+    val smart: SmartConfig = SmartConfig(),
     val forwardHttpToHttps: Boolean,
     val graphQl: GraphQlConfiguration = GraphQlConfiguration(),
     val logReader: LogReaderConfiguration = LogReaderConfiguration(),
