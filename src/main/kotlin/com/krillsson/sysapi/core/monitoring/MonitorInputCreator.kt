@@ -10,10 +10,6 @@ import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.domain.memory.MemoryLoad
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
-import com.krillsson.sysapi.core.domain.monitor.toConditionalValue
-import com.krillsson.sysapi.core.domain.monitor.toFractionalValue
-import com.krillsson.sysapi.core.domain.monitor.toNumericalValue
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.core.domain.network.NetworkInterface
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
@@ -21,10 +17,10 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
-import com.krillsson.sysapi.core.monitoring.monitors.UpsOperatingNormallyMonitor
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.logger
@@ -256,7 +252,11 @@ class MonitorInputCreator(
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createUpsLoadPercentageMonitoredItem(device)
                 }
-                Monitor.Type.SMART_HEALTH -> TODO()
+                Monitor.Type.DISK_SMART_HEALTH -> {
+                    val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
+                    val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
+                    createDiskSmartHealthMonitorableItem(disk, diskLoad)
+                }
             }
         }
         logger.debug(
@@ -459,14 +459,21 @@ class MonitorInputCreator(
                 }
             }
 
+            Monitor.Type.DISK_SMART_HEALTH ->  {
+                val diskLoads = metrics.diskMetrics().diskLoads().associateBy { it.name }
+                metrics.diskMetrics().disks().mapNotNull {
+                    diskLoads[it.name]?.let { load ->
+                        createDiskSmartHealthMonitorableItem(it, load)
+                    }
+                }
+            }
+
             Monitor.Type.UPS_OPERATING_NORMALLY -> upsService.upsDevices().map {
                 createMonitorIsOperatingNormallyItem(it)
             }
             Monitor.Type.UPS_LOAD_PERCENTAGE -> upsService.upsDevices().map {
                 createUpsLoadPercentageMonitoredItem(it)
             }
-
-            Monitor.Type.SMART_HEALTH -> TODO()
         }
     }
 
@@ -498,6 +505,18 @@ class MonitorInputCreator(
         description = it.serial,
         maxValue = MonitoredValue.NumericalValue(120),
         currentValue = load.temperature?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
+        type = Monitor.Type.DISK_TEMPERATURE
+    )
+
+    private fun createDiskSmartHealthMonitorableItem(
+        it: Disk,
+        load: DiskLoad
+    ) = MonitorableItem(
+        id = it.name,
+        name = it.name,
+        description = it.serial,
+        maxValue = MonitoredValue.NumericalValue(120),
+        currentValue = load.health?.status?.toEnumValue() ?: HealthStatus.HEALTHY.toEnumValue(),
         type = Monitor.Type.DISK_TEMPERATURE
     )
 

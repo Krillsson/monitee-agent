@@ -1,6 +1,6 @@
 package com.krillsson.sysapi.core.domain.event
 
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
 import java.time.Instant
 import java.util.*

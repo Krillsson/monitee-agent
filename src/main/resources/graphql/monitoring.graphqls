@@ -8,7 +8,7 @@ extend type Query {
     pastEvents: [PastEvent!]!
     ongoingEvents: [OngoingEvent!]!
     monitorableItemsForType(input: MonitorableItemsInput): MonitorableItemsOutput!
-    enumEntriesForMonitorType(type: MonitorType!): [EnumEntry!]!
+    monitorableEnums: [MonitorableEnum]!
     webServerChecks: [WebserverCheck!]!
     webServerCheckById(id: UUID!): WebserverCheck
     oneOffWebserverCheck(url: String!): OneOffWebserverCheck!
@@ -79,10 +79,6 @@ input CreateEnumMonitorInput {
     inertiaInSeconds: Int!
     type: MonitorType!
     threshold: String!
-    # Drives: serial or name (ignoring case)
-    # NIC's: name or MAC address (ignoring case)
-    # Process: process ID
-    # Docker: full container ID (ignoring case)
     monitoredItemId: String
 }
 
@@ -106,6 +102,7 @@ input UpdateConditionalValueMonitorInput {
 
 input UpdateEnumMonitorInput {
     monitorId: UUID!
+    type: MonitorType!
     inertiaInSeconds: Int
     threshold: String
 }
@@ -175,7 +172,7 @@ type DeleteWebServerCheckOutput{
 }
 
 
-union MonitoredValue = NumericalValue | FractionalValue | ConditionalValue | EnumEntry
+union MonitoredValue = NumericalValue | FractionalValue | ConditionalValue | EnumValue
 
 type NumericalValue {
     number: Long
@@ -189,9 +186,14 @@ type ConditionalValue {
     condition: Boolean
 }
 
-type EnumEntry {
+type EnumValue {
     name: String!
     ordinal: Int!
+}
+
+type MonitorableEnum{
+    type: MonitorType!
+    entries: [EnumValue!]!
 }
 
 type MonitoredValueHistoryEntry {
@@ -243,7 +245,8 @@ enum MonitorType {
     LOAD_AVERAGE_FIVE_MINUTES,
     LOAD_AVERAGE_FIFTEEN_MINUTES,
     UPS_OPERATING_NORMALLY,
-    UPS_LOAD_PERCENTAGE
+    UPS_LOAD_PERCENTAGE,
+    DISK_SMART_HEALTH
 }
 
 type MonitorableItem {

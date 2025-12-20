@@ -11,6 +11,7 @@ import com.krillsson.sysapi.core.history.HistoryRepository
 import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
+import com.krillsson.sysapi.core.monitoring.toEnumEntries
 import com.krillsson.sysapi.core.webservicecheck.OneOffWebserverResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckHistoryEntry
@@ -115,6 +116,27 @@ class QueryResolver(
     }
 
     @QueryMapping
+    fun monitorableEnums(): List<MonitorableEnum> {
+        return com.krillsson.sysapi.core.monitoring.Monitor.Type.entries
+            .filter { it.valueType == com.krillsson.sysapi.core.monitoring.Monitor.ValueType.Enum }
+            .mapNotNull { type ->
+                val entries = type.toEnumEntries()
+                entries?.let {
+                    MonitorableEnum(
+                        type,
+                        entries.map {
+                            EnumValue(
+                                it.name,
+                                it.ordinal
+                            )
+                        }
+                    )
+                }
+            }
+    }
+
+
+    @QueryMapping
     fun eventById(@Argument id: String): Event? {
         return eventManager.getAll().firstOrNull { it.id == UUID.fromString(id) }
     }
@@ -162,12 +184,13 @@ class QueryResolver(
 
     @QueryMapping
     fun upsInfo(): UpsInfo {
-        return when(val status = upsService.status()){
+        return when (val status = upsService.status()) {
             UpsService.Status.Available -> UpsInfoAvailable
             UpsService.Status.Disabled -> UpsInfoUnavailable(
                 "The UPS support is currently disabled. You can change this in the configuration.yml",
                 isDisabled = true
             )
+
             is UpsService.Status.Unavailable -> UpsInfoUnavailable(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = true

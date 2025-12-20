@@ -1,21 +1,23 @@
 package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.core.domain.docker.Command
-import com.krillsson.sysapi.core.domain.monitor.toConditionalValue
-import com.krillsson.sysapi.core.domain.monitor.toFractionalValue
-import com.krillsson.sysapi.core.domain.monitor.toNumericalValue
 import com.krillsson.sysapi.core.genericevents.GenericEventRepository
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
+import com.krillsson.sysapi.core.monitoring.toConditionalValue
+import com.krillsson.sysapi.core.monitoring.toEnumEntries
+import com.krillsson.sysapi.core.monitoring.toEnumValueFromString
+import com.krillsson.sysapi.core.monitoring.toFractionalValue
+import com.krillsson.sysapi.core.monitoring.toNumericalValue
+import com.krillsson.sysapi.core.pkill.ProcessKillerService
 import com.krillsson.sysapi.core.webservicecheck.AddWebServerResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.graphql.mutations.*
-import com.krillsson.sysapi.windows.WindowsManager
-import com.krillsson.sysapi.windows.services.WindowsServiceCommandResult
-import com.krillsson.sysapi.core.pkill.ProcessKillerService
 import com.krillsson.sysapi.systemd.CommandResult
 import com.krillsson.sysapi.systemd.SystemDaemonManager
+import com.krillsson.sysapi.windows.WindowsManager
+import com.krillsson.sysapi.windows.services.WindowsServiceCommandResult
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.MutationMapping
 import org.springframework.stereotype.Controller
@@ -115,6 +117,23 @@ class MutationResolver(
     }
 
     @MutationMapping
+    fun createEnumValueMonitor(@Argument input: CreateEnumMonitorInput): CreateMonitorOutput {
+        val entries = input.type.toEnumEntries()
+        val threshold = entries?.let { input.threshold.toEnumValueFromString(entries) }
+        val created = threshold?.let {
+            val createdId = monitorManager.add(
+                Duration.ofSeconds(input.inertiaInSeconds.toLong()),
+                input.type,
+                threshold,
+                input.monitoredItemId
+            )
+            CreateMonitorOutput(createdId)
+        }
+        return created
+            ?: throw IllegalArgumentException("Unable to create monitor for ${input.type} with value ${input.monitoredItemId}")
+    }
+
+    @MutationMapping
     fun deleteMonitor(@Argument input: DeleteMonitorInput): DeleteMonitorOutput {
         val removed = monitorManager.remove(input.monitorId)
         return DeleteMonitorOutput(removed)
@@ -155,6 +174,21 @@ class MutationResolver(
                 input.monitorId,
                 input.inertiaInSeconds?.toLong()?.let { Duration.ofSeconds(it) },
                 input.threshold?.toConditionalValue()
+            )
+            UpdateMonitorOutputSucceeded(updatedMonitorId)
+        } catch (exception: Exception) {
+            UpdateMonitorOutputFailed(exception.message ?: "Unknown reason")
+        }
+    }
+
+    @MutationMapping
+    fun updateEnumValueMonitor(@Argument input: UpdateEnumMonitorInput): UpdateMonitorOutput {
+        return try {
+            val threshold = input.type.toEnumEntries()?.let { input.threshold?.toEnumValueFromString(it) }
+            val updatedMonitorId = monitorManager.update(
+                input.monitorId,
+                input.inertiaInSeconds?.toLong()?.let { Duration.ofSeconds(it) },
+                threshold
             )
             UpdateMonitorOutputSucceeded(updatedMonitorId)
         } catch (exception: Exception) {

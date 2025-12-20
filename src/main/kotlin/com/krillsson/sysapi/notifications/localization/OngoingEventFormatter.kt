@@ -1,8 +1,9 @@
 package com.krillsson.sysapi.notifications.localization
 
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.smart.HealthStatus
 import org.springframework.stereotype.Component
 
 @Component
@@ -28,7 +29,7 @@ class OngoingEventFormatter(
                 Monitor.Type.DISK_WRITE_RATE -> "Disk write rate too high on $serverName"
                 Monitor.Type.MEMORY_SPACE -> "Memory space too low on $serverName"
                 Monitor.Type.MEMORY_USED -> "Memory usage too high on $serverName"
-                Monitor.Type.NETWORK_UP -> "Network down $serverName"
+                Monitor.Type.NETWORK_UP -> "Network down on $serverName"
                 Monitor.Type.NETWORK_UPLOAD_RATE -> "Upload too high on $serverName"
                 Monitor.Type.NETWORK_DOWNLOAD_RATE -> "Download too high on $serverName"
                 Monitor.Type.CONTAINER_RUNNING -> "Container stopped on $serverName"
@@ -42,6 +43,7 @@ class OngoingEventFormatter(
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load too high on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"
+                Monitor.Type.DISK_SMART_HEALTH -> "Disk unhealthy on $serverName"
             }
         }
 
@@ -75,6 +77,7 @@ class OngoingEventFormatter(
                 Monitor.Type.FILE_SYSTEM_SPACE -> "Space on $monitoredItemId went below $formattedThreshold to $formattedValue"
                 Monitor.Type.DISK_READ_RATE -> "Read rate on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.DISK_WRITE_RATE -> "Write rate on $monitoredItemId went above $formattedThreshold to $formattedValue"
+                Monitor.Type.DISK_SMART_HEALTH -> "Health on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> "1m load average went above $formattedThreshold to $formattedValue"
                 Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> "5m load average went above $formattedThreshold to $formattedValue"
                 Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "15m load average went above $formattedThreshold to $formattedValue"
@@ -154,6 +157,10 @@ class OngoingEventFormatter(
             Monitor.Type.UPS_LOAD_PERCENTAGE -> formatPercent(
                 (this as MonitoredValue.NumericalValue).value.toFloat()
             )
+
+            Monitor.Type.DISK_SMART_HEALTH -> {
+                (this as MonitoredValue.EnumValue<HealthStatus>).value.name.lowercase()
+            }
         }
     }
 

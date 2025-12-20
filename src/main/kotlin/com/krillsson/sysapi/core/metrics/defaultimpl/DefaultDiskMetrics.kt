@@ -100,8 +100,16 @@ open class DefaultDiskMetrics(
     private fun createDiskLoad(diskStore: HWDiskStore): DiskLoad {
         val metrics = diskMetrics(diskStore)
         val speed: DiskSpeed = requireNotNull(diskSpeedForStore(diskStore).orElse(DiskSpeed(-1, -1)))
-        val temperature = diskSensors.getDiskTemperature(diskStore)
-        return DiskLoad(diskStore.name, getSerial(diskStore), temperature, metrics, speed)
+        val smartData = diskSensors.getSmartData(diskStore)
+        val health = smartData?.let { diskSensors.getDiskHealth(smartData) }
+        return DiskLoad(
+            name = diskStore.name,
+            serial = getSerial(diskStore),
+            values = metrics,
+            speed = speed,
+            smartData = smartData,
+            health = health
+        )
     }
 
     private fun getSerial(d: HWDiskStore): String {

@@ -4,11 +4,12 @@ import com.krillsson.sysapi.core.domain.cpu.CoreLoad
 import com.krillsson.sysapi.core.domain.cpu.CpuHealth
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
-import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
 import com.krillsson.sysapi.core.domain.history.SystemHistoryEntry
 import com.krillsson.sysapi.core.domain.sensors.HealthData
 import com.krillsson.sysapi.core.history.db.*
+import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.smart.SmartData
 
 fun HistorySystemLoadEntity.asSystemHistoryEntry(): SystemHistoryEntry {
     return SystemHistoryEntry(
@@ -43,9 +44,10 @@ fun DiskLoad.asDiskLoad(): com.krillsson.sysapi.core.domain.disk.DiskLoad {
     return com.krillsson.sysapi.core.domain.disk.DiskLoad(
         name,
         serial,
-        temperature,
         values.asValues(),
-        speed.asSpeed()
+        speed.asSpeed(),
+        smartData = smart?.asDomain(),
+        health = health?.asDomain()
     )
 }
 
@@ -151,8 +153,8 @@ fun com.krillsson.sysapi.core.history.db.CoreLoad.asCoreLoad(): CoreLoad {
     )
 }
 
-fun ContainerStatisticsEntity.asContainerStatisticsHistoryEntry(): ContainerMetricsHistoryEntry {
-    return ContainerMetricsHistoryEntry(
+fun ContainerStatisticsEntity.asContainerStatisticsHistoryEntry(): com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry {
+    return com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry(
             containerId,
             timestamp,
             asContainerStatistics()
@@ -205,5 +207,64 @@ private fun ThrottlingData.asThrottlingData(): com.krillsson.sysapi.core.domain.
             periods = periods,
             throttledPeriods = throttledPeriods,
             throttledTime = throttledTime
+    )
+}
+
+// SmartData & DeviceHealth converters
+
+private fun SmartDataEmbedded.asDomain(): SmartData? {
+    return when (deviceType) {
+        SmartDataEmbedded.SmartType.HDD -> SmartData.Hdd(
+            name = "HDD",
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            rawAttributes = emptyMap(),
+            reallocatedSectors = hddReallocatedSectors,
+            pendingSectors = hddPendingSectors,
+            uncorrectableSectors = hddUncorrectableSectors,
+            offlineUncorrectable = hddOfflineUncorrectable,
+            spinRetryCount = hddSpinRetryCount,
+            seekErrorRate = hddSeekErrorRate,
+            udmaCrcErrors = hddUdmaCrcErrors
+        )
+        SmartDataEmbedded.SmartType.SATA_SSD -> SmartData.SataSsd(
+            name = "SATA SSD",
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            rawAttributes = emptyMap(),
+            percentageUsed = ssdPercentageUsed,
+            wearLevelingCount = ssdWearLevelingCount,
+            availableReservedSpace = ssdAvailableReservedSpace,
+            totalWriteGiB = ssdTotalWriteGiB,
+            totalReadGiB = ssdTotalReadGiB,
+            mediaErrors = ssdMediaErrors,
+            uncorrectableErrors = ssdUncorrectableErrors,
+            udmaCrcErrors = ssdUdmaCrcErrors
+        )
+        SmartDataEmbedded.SmartType.NVME -> SmartData.Nvme(
+            name = "NVMe",
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            rawAttributes = emptyMap(),
+            percentageUsed = nvmePercentageUsed,
+            dataUnitsRead = nvmeDataUnitsRead,
+            dataUnitsWritten = nvmeDataUnitsWritten,
+            mediaErrors = nvmeMediaErrors,
+            numErrLogEntries = nvmeNumErrLogEntries,
+            unsafeShutdowns = nvmeUnsafeShutdowns,
+            controllerBusyTimeMinutes = nvmeControllerBusyTimeMinutes,
+            vendorData = emptyMap()
+        )
+        null -> null
+    }
+}
+
+private fun DeviceHealth.asDomain(): com.krillsson.sysapi.smart.DeviceHealth {
+    return com.krillsson.sysapi.smart.DeviceHealth(
+        status = healthStatus?.let { HealthStatus.valueOf(it) }?: HealthStatus.HEALTHY,
+        messages = healthMessages.orEmpty()
     )
 }

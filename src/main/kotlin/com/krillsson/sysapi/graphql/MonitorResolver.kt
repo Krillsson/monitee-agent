@@ -3,9 +3,9 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
-import com.krillsson.sysapi.core.domain.monitor.toConditionalValue
-import com.krillsson.sysapi.core.domain.monitor.toFractionalValue
-import com.krillsson.sysapi.core.domain.monitor.toNumericalValue
+import com.krillsson.sysapi.core.monitoring.toConditionalValue
+import com.krillsson.sysapi.core.monitoring.toFractionalValue
+import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.history.HistoryRepository
 import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
 import com.krillsson.sysapi.core.metrics.Metrics
@@ -14,11 +14,9 @@ import com.krillsson.sysapi.core.monitoring.MonitorableItem
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainersHistoryRepository
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.ups.UpsMetricsHistoryRepository
-import com.krillsson.sysapi.ups.UpsService
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -98,7 +96,7 @@ class MonitorResolver(
                     MonitoredValueHistoryEntry(
                         it.timestamp,
                         it.metrics.loadPercent?.toNumericalValue()?.asMonitoredValue()
-                            ?: com.krillsson.sysapi.core.domain.monitor.MonitoredValue.NumericalValue(-1)
+                            ?: com.krillsson.sysapi.core.monitoring.MonitoredValue.NumericalValue(-1)
                                 .asMonitoredValue()
                     )
                 }
@@ -163,6 +161,34 @@ class MonitorResolver(
                             it.metrics.cpuUsage.usagePercentTotal.toFractionalValue().asMonitoredValue()
                         )
                     }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.UPS_LOAD_PERCENTAGE -> {
+                upsMetricsHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    from,
+                    to
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.loadPercent?.toNumericalValue()?.asMonitoredValue()
+                            ?: com.krillsson.sysapi.core.monitoring.MonitoredValue.NumericalValue(-1)
+                                .asMonitoredValue()
+                    )
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.UPS_OPERATING_NORMALLY -> {
+                upsMetricsHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    from,
+                    to
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.isOperatingNormally().toConditionalValue().asMonitoredValue()
+                    )
+                }
             }
 
             else -> historyRepository.getHistoryLimitedToDates(from, to)
@@ -248,7 +274,10 @@ class MonitorResolver(
                 historyRepository.getDiskLoadsById(id),
                 monitor.monitoredItemId
             )?.asMonitoredValue()
-
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_SMART_HEALTH -> DiskSmartHealthMonitor.value(
+                historyRepository.getDiskLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
             com.krillsson.sysapi.core.monitoring.Monitor.Type.MEMORY_SPACE -> MemorySpaceMonitor.value(
                 historyRepository.getMemoryLoadById(
                     id
