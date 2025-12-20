@@ -1,6 +1,5 @@
 package com.krillsson.sysapi.core.monitoring
 
-import com.krillsson.sysapi.core.domain.monitor.*
 import org.springframework.stereotype.Component
 
 @Component
