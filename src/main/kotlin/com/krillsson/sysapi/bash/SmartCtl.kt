@@ -2,30 +2,45 @@ package com.krillsson.sysapi.bash
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Component
 
 @Component
-class SmartCtl(val mapper: ObjectMapper) {
+class SmartCtl(
+    val mapper: ObjectMapper,
+    val yamlConfigFile: YAMLConfigFile,
+) {
 
     companion object {
         private const val COMMAND = "smartctl"
-        private const val QUERY_SMART_DATA = "$COMMAND -n standby -jA %s"
+        private const val QUERY_SMART_DATA = "$COMMAND -n standby%s -jA %s"
     }
 
     private val logger by logger()
+
+    private val config = yamlConfigFile.smartConfig
 
     fun supportsCommand() = Bash.checkIfCommandExists(COMMAND).getOrNull() ?: false
 
     fun getSmartData(deviceName: String): Output? {
         return try {
-            val result = Bash.executeToText(QUERY_SMART_DATA.format(deviceName))
+            val result = Bash.executeToText(createCommand(deviceName))
             val json = result.getOrNull()?.convertJsonStringToSmartData(deviceName)
             json
         } catch (exception: Throwable) {
             logger.error("Unable to execute command for device $deviceName", exception)
             null
         }
+    }
+
+    private fun createCommand(deviceName: String): String {
+        val additionalFlags = config
+            .additionalDeviceFlags
+            .firstOrNull { it.device == deviceName }
+            ?.flags?.let { " $it" }.orEmpty()
+
+        return QUERY_SMART_DATA.format(additionalFlags, deviceName)
     }
 
     private fun String.convertJsonStringToSmartData(deviceName: String): Output? {

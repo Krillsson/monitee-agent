@@ -50,6 +50,10 @@ ups:
   # Host machine also need to run NUT
   host: "localhost"
   port: 3493
+#smart:
+#  additionalDeviceFlags:
+#    - device: "/dev/sda"
+#      flags: "-d sntasmedia"
 docker:
   enabled: true
   #  cache:
