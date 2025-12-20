@@ -3,11 +3,13 @@ package com.krillsson.sysapi.core.monitoring.event
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
-import com.krillsson.sysapi.core.domain.monitor.toConditionalValue
-import com.krillsson.sysapi.core.domain.monitor.toFractionalValue
-import com.krillsson.sysapi.core.domain.monitor.toNumericalValue
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.toConditionalValue
+import com.krillsson.sysapi.core.monitoring.toEnumValue
+import com.krillsson.sysapi.core.monitoring.toFractionalValue
+import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.monitoring.Monitor
+import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.util.toOffsetDateTime
 import org.springframework.stereotype.Component
 
@@ -53,6 +55,12 @@ class EventRepository(private val store: EventStore) {
             Monitor.ValueType.Numerical -> mapper(this).toNumericalValue()
             Monitor.ValueType.Fractional -> mapper(this).toFractionalValue()
             Monitor.ValueType.Conditional -> mapper(this).toConditionalValue()
+            Monitor.ValueType.Enum -> {
+                when(monitorType){
+                    Monitor.Type.DISK_SMART_HEALTH -> mapper(this).toEnumValue(HealthStatus.entries)
+                    else -> throw IllegalStateException("Mapping missing for $monitorType")
+                }
+            }
         }
     }
 
@@ -93,6 +101,7 @@ class EventRepository(private val store: EventStore) {
             is MonitoredValue.ConditionalValue -> if (value) 1.0 else 0.0
             is MonitoredValue.FractionalValue -> value.toDouble()
             is MonitoredValue.NumericalValue -> value.toDouble()
+            is MonitoredValue.EnumValue<*> -> value.ordinal.toDouble()
         }
     }
 }

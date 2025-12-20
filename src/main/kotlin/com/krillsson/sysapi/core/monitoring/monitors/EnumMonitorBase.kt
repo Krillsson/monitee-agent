@@ -1,7 +1,7 @@
 package com.krillsson.sysapi.core.monitoring.monitors
 
-import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.MonitorConfig
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.domain.system.SystemInfo
 import com.krillsson.sysapi.core.monitoring.Monitor
 import java.util.*

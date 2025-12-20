@@ -22,3 +22,10 @@ data class CreateConditionalMonitorInput(
         val threshold: Boolean,
         val monitoredItemId: String?
 )
+
+data class CreateEnumMonitorInput(
+    val inertiaInSeconds: Int,
+    val type: Monitor.Type,
+    val threshold: String,
+    val monitoredItemId: String?
+)

@@ -4,8 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
-import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import org.slf4j.LoggerFactory
 import java.time.Clock
 import java.time.Duration

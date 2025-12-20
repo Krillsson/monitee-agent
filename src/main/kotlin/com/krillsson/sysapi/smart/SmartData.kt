@@ -1,12 +1,12 @@
 package com.krillsson.sysapi.smart
 
-sealed class StorageDevice(
-    open val name: String,
-    open val temperatureCelsius: Int?,
-    open val powerOnHours: Long?,
-    open val powerCycleCount: Long?,
-    open val rawAttributes: Map<Int, SmartAttribute>
-) {
+sealed interface SmartData {
+
+    val name: String
+    val temperatureCelsius: Int?
+    val powerOnHours: Long?
+    val powerCycleCount: Long?
+    val rawAttributes: Map<Int, SmartAttribute>
 
     data class SmartAttribute(
         val id: Int,
@@ -30,7 +30,8 @@ sealed class StorageDevice(
         val spinRetryCount: Long?,
         val seekErrorRate: Long?,
         val udmaCrcErrors: Long?,
-    ) : StorageDevice(name, temperatureCelsius, powerOnHours, powerCycleCount, rawAttributes)
+    ) : SmartData {
+    }
 
     data class Nvme(
         override val name: String,
@@ -47,7 +48,7 @@ sealed class StorageDevice(
         val unsafeShutdowns: Long?,
         val controllerBusyTimeMinutes: Long?,
         val vendorData: Map<String, Any>
-    ) : StorageDevice(name, temperatureCelsius, powerOnHours, powerCycleCount, rawAttributes)
+    ) : SmartData
 
     data class SataSsd(
         override val name: String,
@@ -69,5 +70,5 @@ sealed class StorageDevice(
         val mediaErrors: Long?,
         val uncorrectableErrors: Long?,
         val udmaCrcErrors: Long?
-    ) : StorageDevice(name, temperatureCelsius, powerOnHours, powerCycleCount, rawAttributes)
+    ) : SmartData
 }

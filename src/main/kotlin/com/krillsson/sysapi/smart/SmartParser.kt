@@ -4,11 +4,13 @@ import com.krillsson.sysapi.bash.SmartCtl
 import org.springframework.stereotype.Component
 
 @Component
-class SmartParser {
+class SmartParser(
+    private val healthAnalyzerService: HealthAnalyzerService
+) {
 
     private enum class DriveType { HDD, SATA_SSD, NVME }
 
-    fun parse(deviceName: String, json: SmartCtl.Output): StorageDevice {
+    fun parse(deviceName: String, json: SmartCtl.Output): SmartData {
         val attrs = parseAttributes(json)
         val driveType = detectDriveType(json, attrs)
         return when (driveType) {
@@ -18,10 +20,10 @@ class SmartParser {
         }
     }
 
-    private fun parseAttributes(json: SmartCtl.Output): Map<Int, StorageDevice.SmartAttribute> {
+    private fun parseAttributes(json: SmartCtl.Output): Map<Int, SmartData.SmartAttribute> {
         val ata = json.ataSmartAttributes ?: return emptyMap()
         return ata.table.associate { t ->
-            t.id to StorageDevice.SmartAttribute(
+            t.id to SmartData.SmartAttribute(
                 id = t.id,
                 name = t.name,
                 raw = t.raw.value,
@@ -31,7 +33,7 @@ class SmartParser {
         }
     }
 
-    private fun detectDriveType(json: SmartCtl.Output, attrs: Map<Int, StorageDevice.SmartAttribute>): DriveType {
+    private fun detectDriveType(json: SmartCtl.Output, attrs: Map<Int, SmartData.SmartAttribute>): DriveType {
         if (json.nvmeSmartHealthInformationLog != null) return DriveType.NVME
 
         return when {
@@ -41,9 +43,9 @@ class SmartParser {
         }
     }
 
-    private fun parseNvme(deviceName: String, json: SmartCtl.Output): StorageDevice.Nvme {
+    private fun parseNvme(deviceName: String, json: SmartCtl.Output): SmartData.Nvme {
         val log = json.nvmeSmartHealthInformationLog
-        return StorageDevice.Nvme(
+        return SmartData.Nvme(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),
@@ -63,9 +65,9 @@ class SmartParser {
     private fun parseHdd(
         deviceName: String,
         json: SmartCtl.Output,
-        attrs: Map<Int, StorageDevice.SmartAttribute>
-    ): StorageDevice.Hdd {
-        return StorageDevice.Hdd(
+        attrs: Map<Int, SmartData.SmartAttribute>
+    ): SmartData.Hdd {
+        return SmartData.Hdd(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),
@@ -85,12 +87,12 @@ class SmartParser {
     private fun parseSataSsd(
         deviceName: String,
         json: SmartCtl.Output,
-        attrs: Map<Int, StorageDevice.SmartAttribute>
-    ): StorageDevice.SataSsd {
+        attrs: Map<Int, SmartData.SmartAttribute>
+    ): SmartData.SataSsd {
 
         fun lbaToGiB(value: Long): Long = (value * 512L) / (1024L * 1024L * 1024L)
 
-        return StorageDevice.SataSsd(
+        return SmartData.SataSsd(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),

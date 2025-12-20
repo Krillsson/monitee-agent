@@ -4,6 +4,7 @@ import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
 import com.krillsson.sysapi.core.domain.history.SystemHistoryEntry
 import com.krillsson.sysapi.core.history.db.*
+import com.krillsson.sysapi.smart.SmartData
 import java.time.Instant
 import java.util.*
 
@@ -48,9 +49,11 @@ private fun com.krillsson.sysapi.core.domain.disk.DiskLoad.asDiskLoad(id: UUID):
         id,
         name,
         serial,
-        temperature,
+        smartData?.temperatureCelsius?.toDouble(),
         values.asDiskValues(),
-        speed.asSpeed()
+        speed.asSpeed(),
+        smart = smartData?.asEmbedded(),
+        health = health?.asEmbedded()
     )
 }
 
@@ -242,4 +245,58 @@ private fun com.krillsson.sysapi.core.domain.docker.CpuUsage.asCpuUsageEntity():
 
 private fun com.krillsson.sysapi.core.domain.docker.ThrottlingData.asThrottlingDataEntity(): ThrottlingData {
     return ThrottlingData(periods, throttledPeriods, throttledTime)
+}
+
+// SmartData & DeviceHealth converters
+
+private fun SmartData.asEmbedded(): SmartDataEmbedded {
+    return when (this) {
+        is SmartData.Hdd -> SmartDataEmbedded(
+            deviceType = SmartDataEmbedded.SmartType.HDD,
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            hddReallocatedSectors = reallocatedSectors,
+            hddPendingSectors = pendingSectors,
+            hddUncorrectableSectors = uncorrectableSectors,
+            hddOfflineUncorrectable = offlineUncorrectable,
+            hddSpinRetryCount = spinRetryCount,
+            hddSeekErrorRate = seekErrorRate,
+            hddUdmaCrcErrors = udmaCrcErrors
+        )
+        is SmartData.SataSsd -> SmartDataEmbedded(
+            deviceType = SmartDataEmbedded.SmartType.SATA_SSD,
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            ssdPercentageUsed = percentageUsed,
+            ssdWearLevelingCount = wearLevelingCount,
+            ssdAvailableReservedSpace = availableReservedSpace,
+            ssdTotalWriteGiB = totalWriteGiB,
+            ssdTotalReadGiB = totalReadGiB,
+            ssdMediaErrors = mediaErrors,
+            ssdUncorrectableErrors = uncorrectableErrors,
+            ssdUdmaCrcErrors = udmaCrcErrors
+        )
+        is SmartData.Nvme -> SmartDataEmbedded(
+            deviceType = SmartDataEmbedded.SmartType.NVME,
+            temperatureCelsius = temperatureCelsius,
+            powerOnHours = powerOnHours,
+            powerCycleCount = powerCycleCount,
+            nvmePercentageUsed = percentageUsed,
+            nvmeDataUnitsRead = dataUnitsRead,
+            nvmeDataUnitsWritten = dataUnitsWritten,
+            nvmeMediaErrors = mediaErrors,
+            nvmeNumErrLogEntries = numErrLogEntries,
+            nvmeUnsafeShutdowns = unsafeShutdowns,
+            nvmeControllerBusyTimeMinutes = controllerBusyTimeMinutes
+        )
+    }
+}
+
+private fun com.krillsson.sysapi.smart.DeviceHealth.asEmbedded(): DeviceHealth {
+    return DeviceHealth(
+        healthStatus = status.name,
+        healthMessages = messages
+    )
 }

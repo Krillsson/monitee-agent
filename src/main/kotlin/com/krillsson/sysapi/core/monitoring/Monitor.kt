@@ -1,7 +1,6 @@
 package com.krillsson.sysapi.core.monitoring
 
-import com.krillsson.sysapi.core.domain.monitor.MonitorConfig
-import com.krillsson.sysapi.core.domain.monitor.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.domain.system.SystemInfo
 import java.util.*
 
@@ -34,7 +33,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CONNECTIVITY(ValueType.Conditional),
         WEBSERVER_UP(ValueType.Conditional),
         EXTERNAL_IP_CHANGED(ValueType.Conditional),
-        SMART_HEALTH(ValueType.Enum),
+        DISK_SMART_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),
         UPS_LOAD_PERCENTAGE(ValueType.Numerical)
     }

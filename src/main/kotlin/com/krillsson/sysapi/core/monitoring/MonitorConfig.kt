@@ -1,4 +1,4 @@
-package com.krillsson.sysapi.core.domain.monitor
+package com.krillsson.sysapi.core.monitoring
 
 import java.time.Duration
 

@@ -1,24 +1,46 @@
 package com.krillsson.sysapi.smart
 
+import org.springframework.stereotype.Component
+
 enum class HealthStatus { HEALTHY, WARNING, FAILING, CRITICAL }
 data class DeviceHealth(val status: HealthStatus, val messages: List<String>)
 
-interface HealthAnalyzer<T : StorageDevice> {
+interface HealthAnalyzer<T : SmartData> {
     fun analyze(device: T): DeviceHealth
 }
 
-class SimpleHddHealthAnalyzer : HealthAnalyzer<StorageDevice.Hdd> {
-    override fun analyze(device: StorageDevice.Hdd): DeviceHealth {
+@Component
+class HealthAnalyzerService(
+    private val ssdHealthAnalyzer: SimpleSsdHealthAnalyzer,
+    private val hddHealthAnalyzer: SimpleHddHealthAnalyzer,
+    private val nvmeHealthAnalyzer: SimpleNvmeHealthAnalyzer
+) {
+    fun analyze(device: SmartData): DeviceHealth {
+        return when (device) {
+            is SmartData.Hdd -> hddHealthAnalyzer.analyze(device)
+            is SmartData.Nvme -> nvmeHealthAnalyzer.analyze(device)
+            is SmartData.SataSsd -> ssdHealthAnalyzer.analyze(device)
+        }
+    }
+}
+
+@Component
+class SimpleHddHealthAnalyzer : HealthAnalyzer<SmartData.Hdd> {
+    override fun analyze(device: SmartData.Hdd): DeviceHealth {
         val messages = mutableListOf<String>()
         var status = HealthStatus.HEALTHY
 
         device.reallocatedSectors?.let {
-            if (it > 100) {
-                status = HealthStatus.CRITICAL
-                messages.add("High reallocated sectors: $it")
-            } else if (it > 0) {
-                status = maxOfStatus(status, HealthStatus.WARNING)
-                messages.add("Reallocated sectors: $it")
+            when {
+                it > 100 -> {
+                    status = HealthStatus.CRITICAL
+                    messages.add("High reallocated sectors: $it")
+                }
+                it > 0 -> {
+                    status = maxOfStatus(status, HealthStatus.WARNING)
+                    messages.add("Reallocated sectors: $it")
+                }
+                else -> {}
             }
         }
 
@@ -53,67 +75,69 @@ class SimpleHddHealthAnalyzer : HealthAnalyzer<StorageDevice.Hdd> {
     }
 }
 
-class SimpleSsdHealthAnalyzer : HealthAnalyzer<StorageDevice.SataSsd> {
-    override fun analyze(device: StorageDevice.SataSsd): DeviceHealth {
-        val msgs = mutableListOf<String>()
+@Component
+class SimpleSsdHealthAnalyzer : HealthAnalyzer<SmartData.SataSsd> {
+    override fun analyze(device: SmartData.SataSsd): DeviceHealth {
+        val messages = mutableListOf<String>()
         var status = HealthStatus.HEALTHY
 
         device.percentageUsed?.let {
             // percent used meaning depends on vendor (often "life left" vs used). we assume 0..100 used %
             if (it >= 95) {
                 status = HealthStatus.WARNING
-                msgs.add("SSD near rated endurance: $it%")
+                messages.add("SSD near rated endurance: $it%")
             }
             if (it >= 100) {
                 status = HealthStatus.CRITICAL
-                msgs.add("SSD reports 100% life used")
+                messages.add("SSD reports 100% life used")
             }
         }
 
         device.uncorrectableErrors?.let {
             if (it > 0) {
                 status = HealthStatus.CRITICAL
-                msgs.add("Uncorrectable errors: $it - risk of data loss")
+                messages.add("Uncorrectable errors: $it - risk of data loss")
             }
         }
 
         device.totalWriteGiB?.let {
-            msgs.add("Total writes: ${it} GiB")
+            messages.add("Total writes: ${it} GiB")
         }
 
-        if (msgs.isEmpty()) msgs.add("No immediate SSD SMART warnings detected")
-        return DeviceHealth(status, msgs)
+        if (messages.isEmpty()) messages.add("No immediate SSD SMART warnings detected")
+        return DeviceHealth(status, messages)
     }
 }
 
-class SimpleNvmeHealthAnalyzer : HealthAnalyzer<StorageDevice.Nvme> {
-    override fun analyze(device: StorageDevice.Nvme): DeviceHealth {
-        val msgs = mutableListOf<String>()
+@Component
+class SimpleNvmeHealthAnalyzer : HealthAnalyzer<SmartData.Nvme> {
+    override fun analyze(device: SmartData.Nvme): DeviceHealth {
+        val messages = mutableListOf<String>()
         var status = HealthStatus.HEALTHY
 
         device.percentageUsed?.let {
             if (it >= 95) {
-                msgs.add("NVMe near rated endurance: $it%")
+                messages.add("NVMe near rated endurance: $it%")
                 status = HealthStatus.WARNING
             }
             if (it >= 100) {
-                msgs.add("NVMe reports 100% life used")
+                messages.add("NVMe reports 100% life used")
                 status = HealthStatus.CRITICAL
             }
         }
 
         device.mediaErrors?.let {
             if (it > 0) {
-                msgs.add("Media errors: $it")
+                messages.add("Media errors: $it")
                 status = HealthStatus.CRITICAL
             }
         }
 
         device.numErrLogEntries?.let {
-            if (it > 0) msgs.add("Error log entries: $it")
+            if (it > 0) messages.add("Error log entries: $it")
         }
 
-        if (msgs.isEmpty()) msgs.add("No immediate NVMe SMART warnings detected")
-        return DeviceHealth(status, msgs)
+        if (messages.isEmpty()) messages.add("No immediate NVMe SMART warnings detected")
+        return DeviceHealth(status, messages)
     }
 }

@@ -1,7 +1,6 @@
 package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.core.domain.monitor.*
-import com.krillsson.sysapi.persistence.Store
 import org.springframework.stereotype.Component
 
 @Component
@@ -48,6 +47,7 @@ class MonitorRepository(private val store: MonitorStore) {
             is MonitoredValue.ConditionalValue -> if (value) 1.0 else 0.0
             is MonitoredValue.FractionalValue -> value.toDouble()
             is MonitoredValue.NumericalValue -> value.toDouble()
+            is MonitoredValue.EnumValue<*> -> value.ordinal.toDouble()
         }
     }
 }
