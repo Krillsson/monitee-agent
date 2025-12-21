@@ -197,6 +197,78 @@ type DiskMetrics {
     writes: Int!
     writeBytes: Long!
     currentReadWriteRate: DiskReadWriteRate!
+    smartData: SmartData
+    health: DeviceHealth
+}
+
+# SMART
+
+enum HealthStatus {
+    HEALTHY
+    WARNING
+    FAILING
+    CRITICAL
+}
+
+type DeviceHealth {
+    status: HealthStatus!
+    messages: [String!]!
+}
+
+"""Common SMART data. Concrete subtype depends on the detected device type."""
+interface SmartData {
+    name: String!
+    temperatureCelsius: Int
+    powerOnHours: Long
+    powerCycleCount: Long
+}
+
+type HddSmartData implements SmartData {
+    name: String!
+    temperatureCelsius: Int
+    powerOnHours: Long
+    powerCycleCount: Long
+
+    reallocatedSectors: Long
+    pendingSectors: Long
+    uncorrectableSectors: Long
+    offlineUncorrectable: Long
+    spinRetryCount: Long
+    seekErrorRate: Long
+    udmaCrcErrors: Long
+}
+
+type SataSsdSmartData implements SmartData {
+    name: String!
+    temperatureCelsius: Int
+    powerOnHours: Long
+    powerCycleCount: Long
+
+    percentageUsed: Int
+    wearLevelingCount: Int
+    availableReservedSpace: Int
+
+    totalWriteGiB: Long
+    totalReadGiB: Long
+
+    mediaErrors: Long
+    uncorrectableErrors: Long
+    udmaCrcErrors: Long
+}
+
+type NvmeSmartData implements SmartData {
+    name: String!
+    temperatureCelsius: Int
+    powerOnHours: Long
+    powerCycleCount: Long
+
+    percentageUsed: Int
+    dataUnitsRead: Long
+    dataUnitsWritten: Long
+    mediaErrors: Long
+    numErrLogEntries: Long
+    unsafeShutdowns: Long
+    controllerBusyTimeMinutes: Long
 }
 
 type DiskReadWriteRate {

@@ -1,0 +1,65 @@
+# Example: query disk metrics including SMART and health
+#
+# Note: `smartData` is an interface, so you must use inline fragments to access
+# subtype-specific fields.
+
+query DiskMetricsWithSmartQuery {
+  system {
+    disks {
+      id
+      name
+      serial
+      metrics {
+        id
+        name
+        temperature
+        currentReadWriteRate {
+          readBytesPerSecond
+          writeBytesPerSecond
+        }
+        health {
+          status
+          messages
+        }
+        smartData {
+          name
+          temperatureCelsius
+          powerOnHours
+          powerCycleCount
+
+          ... on HddSmartData {
+            reallocatedSectors
+            pendingSectors
+            uncorrectableSectors
+            offlineUncorrectable
+            spinRetryCount
+            seekErrorRate
+            udmaCrcErrors
+          }
+
+          ... on SataSsdSmartData {
+            percentageUsed
+            wearLevelingCount
+            availableReservedSpace
+            totalWriteGiB
+            totalReadGiB
+            mediaErrors
+            uncorrectableErrors
+            udmaCrcErrors
+          }
+
+          ... on NvmeSmartData {
+            percentageUsed
+            dataUnitsRead
+            dataUnitsWritten
+            mediaErrors
+            numErrLogEntries
+            unsafeShutdowns
+            controllerBusyTimeMinutes
+          }
+        }
+      }
+    }
+  }
+}
+
