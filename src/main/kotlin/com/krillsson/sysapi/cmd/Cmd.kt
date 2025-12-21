@@ -59,7 +59,7 @@ object Cmd {
         // `where /q <command>` returns 0 if found, else 1.
         val commandLine = CommandLine(CMD_EXECUTABLE)
         commandLine.addArgument("/C")
-        commandLine.addArgument("where /q ${'$'}command")
+        commandLine.addArgument("where /q $command")
         return try {
             val resultHandler = executeWithWatchdog(timeoutAmountMillis, commandLine)
             Result.success(resultHandler.exitValue == 0)
@@ -96,7 +96,7 @@ object Cmd {
 
                     process.inputStream.bufferedReader().useLines { lines ->
                         lines.forEach { line ->
-                            logger.debug("Result: $$line")
+                            logger.debug("Result: $line")
                             emitter.next(line)
                         }
                     }
