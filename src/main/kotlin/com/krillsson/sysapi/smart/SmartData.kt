@@ -30,8 +30,7 @@ sealed interface SmartData {
         val spinRetryCount: Long?,
         val seekErrorRate: Long?,
         val udmaCrcErrors: Long?,
-    ) : SmartData {
-    }
+    ) : SmartData
 
     data class Nvme(
         override val name: String,
