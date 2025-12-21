@@ -221,6 +221,23 @@ interface SmartData {
     temperatureCelsius: Int
     powerOnHours: Long
     powerCycleCount: Long
+
+    """Raw SMART attributes as reported by smartctl. Modeled as a list because GraphQL has no Map type."""
+    rawAttributes: [SmartAttributeEntry!]!
+}
+
+"""A map entry for a SMART attribute keyed by its numeric attribute id."""
+type SmartAttributeEntry {
+    id: Int!
+    attribute: SmartAttribute!
+}
+
+type SmartAttribute {
+    id: Int!
+    name: String!
+    raw: Long
+    normalized: Int
+    worst: Int
 }
 
 type HddSmartData implements SmartData {
@@ -228,6 +245,7 @@ type HddSmartData implements SmartData {
     temperatureCelsius: Int
     powerOnHours: Long
     powerCycleCount: Long
+    rawAttributes: [SmartAttributeEntry!]!
 
     reallocatedSectors: Long
     pendingSectors: Long
@@ -243,6 +261,7 @@ type SataSsdSmartData implements SmartData {
     temperatureCelsius: Int
     powerOnHours: Long
     powerCycleCount: Long
+    rawAttributes: [SmartAttributeEntry!]!
 
     percentageUsed: Int
     wearLevelingCount: Int
@@ -261,6 +280,7 @@ type NvmeSmartData implements SmartData {
     temperatureCelsius: Int
     powerOnHours: Long
     powerCycleCount: Long
+    rawAttributes: [SmartAttributeEntry!]!
 
     percentageUsed: Int
     dataUnitsRead: Long
