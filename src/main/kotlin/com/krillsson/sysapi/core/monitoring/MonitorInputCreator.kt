@@ -52,7 +52,9 @@ class MonitorInputCreator(
     private val diskTypes = listOf(
         Monitor.Type.DISK_READ_RATE,
         Monitor.Type.DISK_WRITE_RATE,
-        Monitor.Type.DISK_TEMPERATURE
+        Monitor.Type.DISK_TEMPERATURE,
+        Monitor.Type.DISK_SMART_HEALTH,
+
     )
     private val fileSystemTypes = listOf(
         Monitor.Type.FILE_SYSTEM_SPACE

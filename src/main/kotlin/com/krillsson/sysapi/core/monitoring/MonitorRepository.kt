@@ -29,15 +29,20 @@ class MonitorRepository(private val store: MonitorStore) {
         )
     }
 
-    private fun MonitorStore.StoredMonitor.Config.asConfig(type: Monitor.Type): MonitorConfig<MonitoredValue> {
+    private fun <E : Enum<E>> MonitorStore.StoredMonitor.Config.asConfig(type: Monitor.Type): MonitorConfig<MonitoredValue> {
         val convertedValue = when (type.valueType) {
             Monitor.ValueType.Conditional -> threshold.toConditionalValue()
             Monitor.ValueType.Fractional -> threshold.toFractionalValue()
             Monitor.ValueType.Numerical -> threshold.toNumericalValue()
-            else -> throw IllegalStateException("No equivalent to $this exists in ${Monitor.Type::class.simpleName}")
+            Monitor.ValueType.Enum -> threshold.toEnumValue(
+                requireNotNull(type.toEnumEntries<E>()) { "$type is not mappable to enum entries" }
+            )
         }
+
         return MonitorConfig(
-            monitoredItemId, convertedValue, inertia
+            monitoredItemId = monitoredItemId,
+            threshold = convertedValue,
+            inertia = inertia
         )
     }
 
