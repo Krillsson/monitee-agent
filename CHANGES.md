@@ -5,6 +5,12 @@
   - Historical data is available via the `upsMetricsHistoryBetweenTimestamps` query method
   - Two new monitor types added: "UPS Load" and "UPS Operational"
   - Requires upsc command to be available. The docker image comes with this command installed inside container.
+- Feature: More SMART data points
+  - Different data points depending on device type: Hdd, SataSsd or Nvme
+  - Basic evaluation of device health (see HealthAnalyzer.kt)
+  - New monitor type added: "Disk SMART health"
+  - Support passing additional flags to smartctl (see smart section in configuration.yml)
+  - Missing a crucial datapoint? Open an issue and I'll see what I can do
 - Fix: also delete associated monitors while deleting a webserver check
 - Fix: resolve start and end timestamps being swapped for past events
 - Fix: also delete associated monitors while deleting a webserver check
