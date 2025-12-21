@@ -59,7 +59,7 @@ class SmartCtl(
         @JsonProperty("nvme_smart_health_information_log")
         val nvmeSmartHealthInformationLog: NvmeSmartHealthLog?,
         @JsonProperty("power_cycle_count")
-        val powerCycleCount: Int?,
+        val powerCycleCount: Long?,
         @JsonProperty("power_on_time")
         val powerOnTime: PowerOnTime?,
         @JsonProperty("temperature")

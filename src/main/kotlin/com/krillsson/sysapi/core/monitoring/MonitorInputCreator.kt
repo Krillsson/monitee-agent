@@ -17,6 +17,7 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
+import com.krillsson.sysapi.core.monitoring.monitors.DiskSmartHealthMonitor
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
@@ -515,9 +516,9 @@ class MonitorInputCreator(
         id = it.name,
         name = it.name,
         description = it.serial,
-        maxValue = MonitoredValue.NumericalValue(120),
+        maxValue = HealthStatus.CRITICAL.toEnumValue(),
         currentValue = load.health?.status?.toEnumValue() ?: HealthStatus.HEALTHY.toEnumValue(),
-        type = Monitor.Type.DISK_TEMPERATURE
+        type = Monitor.Type.DISK_SMART_HEALTH
     )
 
     private fun createWebserverUpMonitorableItem(it: WebServerCheck) = MonitorableItem(

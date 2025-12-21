@@ -49,7 +49,7 @@ class SmartParser(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),
-            powerCycleCount = json.powerCycleCount?.toLong(),
+            powerCycleCount = json.powerCycleCount,
             rawAttributes = emptyMap(),
             percentageUsed = log?.percentage_used,
             dataUnitsRead = log?.data_units_read,
@@ -71,7 +71,7 @@ class SmartParser(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),
-            powerCycleCount = json.powerCycleCount?.toLong(),
+            powerCycleCount = json.powerCycleCount,
             rawAttributes = attrs,
 
             reallocatedSectors = attrs[5]?.raw,
@@ -96,7 +96,7 @@ class SmartParser(
             name = deviceName,
             temperatureCelsius = json.temperature.current,
             powerOnHours = json.powerOnTime?.hours?.toLong(),
-            powerCycleCount = json.powerCycleCount?.toLong(),
+            powerCycleCount = json.powerCycleCount,
             rawAttributes = attrs,
 
             percentageUsed = (
