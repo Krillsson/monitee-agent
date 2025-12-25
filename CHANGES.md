@@ -4,13 +4,18 @@
   - List devices using `upsDevices` query method
   - Historical data is available via the `upsMetricsHistoryBetweenTimestamps` query method
   - Two new monitor types added: "UPS Load" and "UPS Operational"
-  - Requires upsc command to be available. The docker image comes with this command installed inside container.
+  - Requires upsc to be available. The docker image comes with this command installed inside container.
+  - Needs opt-in from configuration.yml, see `ups` section.
 - Feature: More SMART data points
   - Different data points depending on device type: Hdd, SataSsd or Nvme
   - Basic evaluation of device health (see HealthAnalyzer.kt)
   - New monitor type added: "Disk SMART health"
   - Support passing additional flags to smartctl (see smart section in configuration.yml)
   - Missing a crucial datapoint? Open an issue and I'll see what I can do
+- Feature: Internet services availability
+  - List services and their ping at server startup with `system.connectivity.internetServicesAvailability`
+  - Then subscribe to internetServicesAvailability Subscription endpoint to get updates on their ping
+  - Needs opt-in from configuration.yml, see `internetServicesCheck` section.
 - Fix: also delete associated monitors while deleting a webserver check
 - Fix: resolve start and end timestamps being swapped for past events
 - Fix: also delete associated monitors while deleting a webserver check

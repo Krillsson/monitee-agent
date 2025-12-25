@@ -6,6 +6,7 @@ import com.google.common.cache.CacheBuilder
 import com.google.common.cache.CacheLoader
 import com.google.common.cache.LoadingCache
 import com.krillsson.sysapi.config.CacheConfiguration
+import com.krillsson.sysapi.core.connectivity.InternetServicesCheckService
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.core.domain.network.NetworkInterface
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
@@ -31,6 +32,12 @@ class CachingNetworkMetrics(
         Suppliers.synchronizedSupplier { networkMetrics.connectivity() },
         cacheConfiguration.duration, cacheConfiguration.unit
     )
+
+    private val internetServiceAvailabilitiesCache: Supplier<List<InternetServicesCheckService.InternetServiceAvailability>> =
+        Suppliers.memoizeWithExpiration(
+            Suppliers.synchronizedSupplier { networkMetrics.internetServiceAvailabilities() },
+            cacheConfiguration.duration, cacheConfiguration.unit
+        )
     private val networkInterfaceQueryCache: LoadingCache<String, Optional<NetworkInterface>> =
         CacheBuilder.newBuilder()
             .expireAfterWrite(cacheConfiguration.duration, cacheConfiguration.unit)
@@ -64,6 +71,14 @@ class CachingNetworkMetrics(
 
     override fun networkInterfaceLoads(): List<NetworkInterfaceLoad> {
         return networkInterfaceLoadsCache.get()
+    }
+
+    override fun internetServiceAvailabilities(): List<InternetServicesCheckService.InternetServiceAvailability> {
+        return internetServiceAvailabilitiesCache.get()
+    }
+
+    override fun internetServiceAvailabilitiesEvents(): Flux<List<InternetServicesCheckService.InternetServiceAvailability>> {
+        return networkMetrics.internetServiceAvailabilitiesEvents()
     }
 
     override fun networkInterfaceLoadEvents(): Flux<List<NetworkInterfaceLoad>> {

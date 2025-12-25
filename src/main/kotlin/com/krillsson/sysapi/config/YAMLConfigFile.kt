@@ -28,6 +28,7 @@ data class YAMLConfigFile(
     val linux: LinuxConfiguration = LinuxConfiguration(),
     val ups: UpsConfiguration = UpsConfiguration(),
     val connectivityCheck: ConnectivityCheckConfiguration,
+    val internetServicesCheck: InternetServicesCheckConfiguration = InternetServicesCheckConfiguration(),
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
     val docker: DockerConfiguration,
