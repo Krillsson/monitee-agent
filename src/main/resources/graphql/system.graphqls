@@ -16,6 +16,7 @@ extend type Subscription {
     fileSystemMetrics: [FileSystemMetrics!]!
     fileSystemMetricsById(id: String!): FileSystemMetrics
     diskMetricsById(id: String!): DiskMetrics
+    internetServiceAvailabilities: [InternetService!]!
     networkInterfaceMetrics: [NetworkInterfaceMetrics!]!
     networkInterfaceMetricsById(id: String!): NetworkInterfaceMetrics
 }
@@ -281,7 +282,6 @@ type NvmeSmartData implements SmartData {
     powerOnHours: Long
     powerCycleCount: Long
     rawAttributes: [SmartAttributeEntry!]!
-
     percentageUsed: Int
     dataUnitsRead: Long
     dataUnitsWritten: Long
@@ -303,6 +303,17 @@ type Connectivity {
     previousExternalIp: String
     localIp: String
     connected: Boolean!
+    internetServicesAvailability: [InternetService!]!
+}
+
+type InternetService {
+    id: String!
+    name: String!
+    address: String!
+    port: Int!
+    available: Boolean!
+    failureMessage: String
+    latencyMs: Long!
 }
 
 type NetworkInterface {

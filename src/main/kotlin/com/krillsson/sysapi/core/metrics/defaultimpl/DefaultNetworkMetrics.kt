@@ -21,6 +21,7 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
 import com.krillsson.sysapi.core.connectivity.ConnectivityCheckService
+import com.krillsson.sysapi.core.connectivity.InternetServicesCheckService
 import com.krillsson.sysapi.core.domain.network.*
 import com.krillsson.sysapi.core.metrics.NetworkMetrics
 import com.krillsson.sysapi.core.speed.SpeedMeasurementManager.CurrentSpeed
@@ -40,7 +41,8 @@ import java.util.concurrent.TimeUnit
 open class DefaultNetworkMetrics(
     private val hal: HardwareAbstractionLayer,
     private val speedMeasurementManager: NetworkUploadDownloadRateMeasurementManager,
-    private val connectivityCheckService: ConnectivityCheckService
+    private val connectivityCheckService: ConnectivityCheckService,
+    private val internetServicesCheckService: InternetServicesCheckService
 ) : NetworkMetrics {
 
     private val networkInterfaces: MutableList<NetworkIF> = hal.networkIFs
@@ -128,6 +130,14 @@ open class DefaultNetworkMetrics(
             }
             it.asNetworkInterfaceLoad(up, speedForInterfaceWithName(it.name))
         }.toList()
+    }
+
+    override fun internetServiceAvailabilities(): List<InternetServicesCheckService.InternetServiceAvailability> {
+        return internetServicesCheckService.internetServiceAvailabilities()
+    }
+
+    override fun internetServiceAvailabilitiesEvents(): Flux<List<InternetServicesCheckService.InternetServiceAvailability>> {
+        return internetServicesCheckService.internetServiceAvailabilitiesEvents()
     }
 
     override fun networkInterfaceLoadEvents(): Flux<List<NetworkInterfaceLoad>> {

@@ -66,6 +66,18 @@ docker:
 connectivityCheck:
   enabled: true
   address: https://ifconfig.me
+internetServicesCheck:
+  enabled: true
+  services:
+    - address: google.com
+      name: Google
+      port: 80
+    - address: one.one.one.one
+      name: Cloudflare
+      port: 80
+    - address: connectivity.office.com
+      name: Microsoft
+      port: 80
 updateCheck:
   enabled: true
   address: https://api.github.com

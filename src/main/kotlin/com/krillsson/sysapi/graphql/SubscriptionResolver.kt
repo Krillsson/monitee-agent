@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.BuildConfig
+import com.krillsson.sysapi.core.connectivity.InternetServicesCheckService
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
@@ -8,6 +9,7 @@ import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.graphql.domain.InternetService
 import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
 import com.krillsson.sysapi.serverid.ServerIdService
@@ -56,6 +58,35 @@ class SubscriptionResolver(
     @SubscriptionMapping
     fun networkInterfaceMetrics(): Flux<List<NetworkInterfaceLoad>> {
         return metrics.networkMetrics().networkInterfaceLoadEvents()
+    }
+
+    @SubscriptionMapping
+    fun internetServiceAvailabilities(): Flux<List<InternetService>> {
+        return metrics.networkMetrics().internetServiceAvailabilitiesEvents().map { list ->
+            list.map { item ->
+                when (item) {
+                    is InternetServicesCheckService.InternetServiceAvailability.Available -> InternetService(
+                        item.id,
+                        item.name,
+                        item.address,
+                        item.port,
+                        true,
+                        null,
+                        item.latencyMs
+                    )
+
+                    is InternetServicesCheckService.InternetServiceAvailability.Unavailable -> InternetService(
+                        item.id,
+                        item.name,
+                        item.address,
+                        item.port,
+                        false,
+                        item.message,
+                        -1
+                    )
+                }
+            }
+        }
     }
 
     @SubscriptionMapping

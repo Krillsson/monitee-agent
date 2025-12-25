@@ -8,6 +8,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Sinks
 import retrofit2.Response
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -18,8 +19,10 @@ import java.util.concurrent.TimeUnit
 class ConnectivityCheckService(
     private val externalIpAddressService: ExternalIpAddressService,
     private val repository: KeyValueRepository,
-    private val config: YAMLConfigFile
+    private val yamlConfigFile: YAMLConfigFile
 ) {
+
+    private val config = yamlConfigFile.connectivityCheck
 
     private val logger by logger()
 
@@ -27,10 +30,11 @@ class ConnectivityCheckService(
 
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES)
     fun run() {
-        if (config.connectivityCheck.enabled) {
+        if (config.enabled) {
             _connectivity = resolveConnectivity()
         }
     }
+
 
     private fun resolveConnectivity(): Connectivity {
         val response: Response<String> = try {
@@ -51,7 +55,11 @@ class ConnectivityCheckService(
                 connected = true
             )
         } else {
-            logger.debug("Connectivity check: DISCONNECTED - got ${response.code()}/${response.body().orEmpty()} from ${config.connectivityCheck.address}. stored ip: $storedExternalIp")
+            logger.debug(
+                "Connectivity check: DISCONNECTED - got ${response.code()}/${
+                    response.body().orEmpty()
+                } from ${yamlConfigFile.connectivityCheck.address}. stored ip: $storedExternalIp"
+            )
             Connectivity(
                 externalIp = null,
                 previousExternalIp = storedExternalIp,
