@@ -187,6 +187,7 @@ type ConditionalValue {
 }
 
 type EnumValue {
+    type: MonitorType!
     name: String!
     ordinal: Int!
 }

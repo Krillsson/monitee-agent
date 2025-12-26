@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql.domain
 
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
+import com.krillsson.sysapi.core.monitoring.asMonitorType
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.util.toOffsetDateTime
 import java.time.Instant
@@ -11,7 +12,12 @@ interface MonitoredValue
 data class NumericalValue(val number: Long) : com.krillsson.sysapi.graphql.domain.MonitoredValue
 data class FractionalValue(val fraction: Float) : com.krillsson.sysapi.graphql.domain.MonitoredValue
 data class ConditionalValue(val condition: Boolean) : com.krillsson.sysapi.graphql.domain.MonitoredValue
-data class EnumValue(val name: String, val ordinal: Int) : com.krillsson.sysapi.graphql.domain.MonitoredValue
+data class EnumValue(
+    val name: String,
+    val ordinal: Int,
+    val type: com.krillsson.sysapi.core.monitoring.Monitor.Type
+) : com.krillsson.sysapi.graphql.domain.MonitoredValue
+
 data class MonitorableEnum(
     val type: com.krillsson.sysapi.core.monitoring.Monitor.Type,
     val entries: List<EnumValue>
@@ -49,7 +55,7 @@ fun MonitoredValue.asMonitoredValue(): com.krillsson.sysapi.graphql.domain.Monit
         is MonitoredValue.ConditionalValue -> ConditionalValue(value)
         is MonitoredValue.FractionalValue -> FractionalValue(value)
         is MonitoredValue.NumericalValue -> NumericalValue(value)
-        is MonitoredValue.EnumValue<*> -> EnumValue(value.name, value.ordinal)
+        is MonitoredValue.EnumValue<*> -> EnumValue(value.name, value.ordinal, this.asMonitorType())
     }
 }
 

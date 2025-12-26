@@ -126,8 +126,9 @@ class QueryResolver(
                         type,
                         entries.map {
                             EnumValue(
-                                it.name,
-                                it.ordinal
+                                name = it.name,
+                                ordinal = it.ordinal,
+                                type = type
                             )
                         }
                     )

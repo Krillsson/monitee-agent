@@ -14,14 +14,21 @@ fun Double.toFractionalValue() = MonitoredValue.FractionalValue(this.toFloat())
 fun Double.toConditionalValue() = if (this == 1.0) true.toConditionalValue() else false.toConditionalValue()
 
 fun <E : Enum<E>> Double.toEnumFromDouble(entries: EnumEntries<E>): E = entries[this.roundToInt()]
-fun <E : Enum<E>> String.toEnumFromString(entries: EnumEntries<E>): E? =
-    entries.firstOrNull { it.name.equals(this, ignoreCase = true) }
-
 fun <E : Enum<E>> Double.toEnumValue(entries: EnumEntries<E>): MonitoredValue.EnumValue<E> =
     MonitoredValue.EnumValue(this.toEnumFromDouble(entries))
 
+fun <E : Enum<E>> String.toEnumFromString(entries: EnumEntries<E>): E? =
+    entries.firstOrNull { it.name.equals(this, ignoreCase = true) }
+
 fun <E : Enum<E>> String.toEnumValueFromString(entries: EnumEntries<E>): MonitoredValue.EnumValue<E>? =
     this.toEnumFromString(entries)?.let { MonitoredValue.EnumValue(it) }
+
+fun <E : Enum<E>> MonitoredValue.EnumValue<E>.asMonitorType(): Monitor.Type {
+    return when (value::class) {
+        HealthStatus::class -> Monitor.Type.DISK_SMART_HEALTH
+        else -> throw IllegalStateException("Unknown monitor enum type ${value::class}")
+    }
+}
 
 fun <E : Enum<E>> E.toEnumValue(): MonitoredValue.EnumValue<E> =
     MonitoredValue.EnumValue(this)
