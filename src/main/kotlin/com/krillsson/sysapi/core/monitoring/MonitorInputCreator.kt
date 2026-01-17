@@ -17,10 +17,10 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
-import com.krillsson.sysapi.core.monitoring.monitors.DiskSmartHealthMonitor
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.notifications.localization.ByteFormatter
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
@@ -35,6 +35,7 @@ class MonitorInputCreator(
     private val metrics: Metrics,
     private val containerService: ContainerService,
     private val webServerCheckService: WebServerCheckService,
+    private val byteFormatter: ByteFormatter,
     private val upsService: UpsService,
 ) {
 
@@ -55,7 +56,7 @@ class MonitorInputCreator(
         Monitor.Type.DISK_TEMPERATURE,
         Monitor.Type.DISK_SMART_HEALTH,
 
-    )
+        )
     private val fileSystemTypes = listOf(
         Monitor.Type.FILE_SYSTEM_SPACE
     )
@@ -251,10 +252,12 @@ class MonitorInputCreator(
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createMonitorIsOperatingNormallyItem(device)
                 }
+
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> {
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createUpsLoadPercentageMonitoredItem(device)
                 }
+
                 Monitor.Type.DISK_SMART_HEALTH -> {
                     val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
                     val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
@@ -462,7 +465,7 @@ class MonitorInputCreator(
                 }
             }
 
-            Monitor.Type.DISK_SMART_HEALTH ->  {
+            Monitor.Type.DISK_SMART_HEALTH -> {
                 val diskLoads = metrics.diskMetrics().diskLoads().associateBy { it.name }
                 metrics.diskMetrics().disks().mapNotNull {
                     diskLoads[it.name]?.let { load ->
@@ -474,6 +477,7 @@ class MonitorInputCreator(
             Monitor.Type.UPS_OPERATING_NORMALLY -> upsService.upsDevices().map {
                 createMonitorIsOperatingNormallyItem(it)
             }
+
             Monitor.Type.UPS_LOAD_PERCENTAGE -> upsService.upsDevices().map {
                 createUpsLoadPercentageMonitoredItem(it)
             }
@@ -505,7 +509,7 @@ class MonitorInputCreator(
     ) = MonitorableItem(
         id = it.name,
         name = it.name,
-        description = it.serial,
+        description = "${it.sizeBytes} ${it.model}",
         maxValue = MonitoredValue.NumericalValue(120),
         currentValue = load.temperature?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
         type = Monitor.Type.DISK_TEMPERATURE
@@ -517,7 +521,7 @@ class MonitorInputCreator(
     ) = MonitorableItem(
         id = it.name,
         name = it.name,
-        description = it.serial,
+        description = "${it.sizeBytes} ${it.model}",
         maxValue = HealthStatus.CRITICAL.toEnumValue(),
         currentValue = load.health?.status?.toEnumValue() ?: HealthStatus.HEALTHY.toEnumValue(),
         type = Monitor.Type.DISK_SMART_HEALTH
@@ -675,7 +679,7 @@ class MonitorInputCreator(
     ) = MonitorableItem(
         id = it.name,
         name = it.name,
-        description = it.serial,
+        description = "${it.sizeBytes} ${it.model}",
         maxValue = THEORETICAL_DRIVE_READ_SPEED_LIMIT_BYTES_PER_SECOND.toNumericalValue(),
         currentValue = load.speed.writeBytesPerSecond.toNumericalValue(),
         type = Monitor.Type.DISK_WRITE_RATE
@@ -687,7 +691,7 @@ class MonitorInputCreator(
     ) = MonitorableItem(
         id = it.name,
         name = it.name,
-        description = it.serial,
+        description = "${it.sizeBytes} ${it.model}",
         maxValue = THEORETICAL_DRIVE_READ_SPEED_LIMIT_BYTES_PER_SECOND.toNumericalValue(),
         currentValue = load.speed.readBytesPerSecond.toNumericalValue(),
         type = Monitor.Type.DISK_READ_RATE
