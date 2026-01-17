@@ -14,6 +14,7 @@ import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
+import com.krillsson.sysapi.ups.UpsService
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.SubscriptionMapping
 import org.springframework.stereotype.Controller
@@ -27,6 +28,7 @@ class SubscriptionResolver(
     val logFileService: LogFileService,
     val containerService: ContainerService,
     val serverIdService: ServerIdService,
+    val upsService: UpsService,
     val systemDaemonManager: SystemDaemonManager
 ) {
     @SubscriptionMapping
@@ -54,6 +56,9 @@ class SubscriptionResolver(
 
     @SubscriptionMapping
     fun diskMetricsById(@Argument id: String) = metrics.diskMetrics().diskLoadEventsByName(id)
+
+    @SubscriptionMapping
+    fun upsMetricsById(@Argument id: String) = upsService.upsDevicesMetricsById(id)
 
     @SubscriptionMapping
     fun networkInterfaceMetrics(): Flux<List<NetworkInterfaceLoad>> {

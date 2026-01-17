@@ -2,6 +2,7 @@
 
 - Feature: Integration with NUT (Network UPS Tools)
   - List devices using `upsDevices` query method
+  - Watch UPS device metrics with upsMetricsById subscription
   - Historical data is available via the `upsMetricsHistoryBetweenTimestamps` query method
   - Two new monitor types added: "UPS Load" and "UPS Operational"
   - Requires upsc to be available. The docker image comes with this command installed inside container.

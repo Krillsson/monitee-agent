@@ -4,6 +4,10 @@ extend type Query {
 
 union UpsInfo = UpsInfoAvailable | UpsInfoUnavailable
 
+extend type Subscription {
+    upsMetricsById(id: String!): UpsDeviceMetrics
+}
+
 type UpsInfoAvailable {
     upsDevices: [UpsDevice!]!
     upsDeviceById(id: String!): UpsDevice

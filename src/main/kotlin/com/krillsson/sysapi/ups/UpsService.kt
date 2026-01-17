@@ -3,7 +3,11 @@ package com.krillsson.sysapi.ups
 import com.krillsson.sysapi.bash.Upsc
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Sinks
+import java.util.concurrent.TimeUnit
 
 @Service
 class UpsService(
@@ -18,6 +22,10 @@ class UpsService(
         object Disabled : Status()
         data class Unavailable(val error: RuntimeException) : Status()
     }
+
+    private val upsDeviceMetricsSink = Sinks.many()
+        .replay()
+        .latest<List<UpsDevice.Metrics>>()
 
     val logger by logger()
 
@@ -35,6 +43,27 @@ class UpsService(
         return upsDevices().find { it.name == name }
     }
 
+    fun upsDevicesMetrics(): Flux<List<UpsDevice.Metrics>> {
+        return upsDeviceMetricsSink.asFlux()
+    }
+
+    fun upsDevicesMetricsById(id: String): Flux<UpsDevice.Metrics> {
+        return upsDevicesMetrics()
+            .mapNotNull { list: List<UpsDevice.Metrics> ->
+                list.firstOrNull { n -> n.id.equals(id, ignoreCase = true) }
+            }
+    }
+
+    @Scheduled(fixedRate = 20, timeUnit = TimeUnit.SECONDS)
+    fun runMeasurement() {
+        if (config.enabled && upsDeviceMetricsSink.currentSubscriberCount() > 0) {
+            upsDeviceMetricsSink.tryEmitNext(
+                upsDevices().map {
+                    it.metrics
+                }
+            )
+        }
+    }
 
     fun upsDevices(): List<UpsDevice> {
         return when (status()) {
@@ -42,7 +71,7 @@ class UpsService(
                 val deviceList = upsc.upsDevices(config.host, config.port)
                 deviceList.devices.map {
                     val output = upsc.queryUpsDevice(it.name, config.host, config.port)
-                    with(output){
+                    with(output) {
                         UpsDevice(
                             name = it.name,
                             id = it.name,
