@@ -486,7 +486,7 @@ class MonitorInputCreator(
 
     private fun createMonitorIsOperatingNormallyItem(device: UpsDevice): MonitorableItem = MonitorableItem(
         id = device.id,
-        name = device.name,
+        name = "${device.manufacturer} ${device.model}",
         description = "${device.name} is operating normally",
         maxValue = true.toConditionalValue(),
         currentValue = device.metrics.isOperatingNormally()
@@ -496,8 +496,8 @@ class MonitorInputCreator(
 
     private fun createUpsLoadPercentageMonitoredItem(device: UpsDevice): MonitorableItem = MonitorableItem(
         id = device.id,
-        name = device.name,
-        description = "${device.name} is operating normally",
+        name = "${device.manufacturer} ${device.model}",
+        description = null,
         maxValue = MonitoredValue.NumericalValue(100),
         currentValue = device.metrics.loadPercent?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
         type = Monitor.Type.UPS_LOAD_PERCENTAGE
