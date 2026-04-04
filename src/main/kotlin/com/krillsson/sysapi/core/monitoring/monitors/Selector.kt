@@ -2,8 +2,8 @@ package com.krillsson.sysapi.core.monitoring.monitors
 
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 
 // To prevent repeating the logic for selecting a monitored value from a SystemLoad as it can cause bugs
@@ -15,5 +15,5 @@ typealias ContainerConditionalValueSelector = (List<Container>, List<ContainerMe
 typealias ContainerNumericalValueSelector = (List<Container>, List<ContainerMetrics>, String?) -> MonitoredValue.NumericalValue?
 typealias ContainerFractionalValueSelector = (List<Container>, List<ContainerMetrics>, String?) -> MonitoredValue.FractionalValue?
 
-typealias MaxValueNumericalSelector = (SystemInfo, String?) -> MonitoredValue.NumericalValue?
-typealias MaxValueFractionalSelector = (SystemInfo, String?) -> MonitoredValue.FractionalValue?
+typealias MaxValueNumericalSelector = (MonitorMaxValueInput, String?) -> MonitoredValue.NumericalValue?
+typealias MaxValueFractionalSelector = (MonitorMaxValueInput, String?) -> MonitoredValue.FractionalValue?

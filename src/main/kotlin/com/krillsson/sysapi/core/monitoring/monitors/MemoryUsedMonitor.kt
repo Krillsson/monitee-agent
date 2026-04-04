@@ -4,7 +4,7 @@ import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -20,8 +20,8 @@ class MemoryUsedMonitor(override val id: UUID, override val config: MonitorConfi
         fun value(memoryLoad: MemoryLoad) =
             memoryLoad.usedBytes.toNumericalValue()
 
-        val maxValueSelector: MaxValueNumericalSelector = { info, _ ->
-            info.memory.totalBytes.toNumericalValue()
+        val maxValueSelector: MaxValueNumericalSelector = { input, _ ->
+            input.memory.totalBytes.toNumericalValue()
         }
     }
 
@@ -30,8 +30,8 @@ class MemoryUsedMonitor(override val id: UUID, override val config: MonitorConfi
     override fun selectValue(event: MonitorInput): MonitoredValue.NumericalValue? =
         selector(event.load, null)
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.NumericalValue? {
-        return maxValueSelector(info, null)
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
+        return maxValueSelector(input, null)
     }
 
     override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {

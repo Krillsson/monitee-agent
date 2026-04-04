@@ -3,7 +3,6 @@ package com.krillsson.sysapi.core.monitoring
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.metrics.Metrics
-import com.krillsson.sysapi.core.monitoring.MonitorFactory.createMonitor
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.notifications.NotificationManager
@@ -25,7 +24,8 @@ class MonitorManager(
     private val monitoredItemMissingChecker: MonitoredItemMissingChecker,
     private val clock: Clock,
     private val monitorInputCreator: MonitorInputCreator,
-    private val notificationManager: NotificationManager
+    private val notificationManager: NotificationManager,
+    private val monitorFactory: MonitorFactory
 ) {
 
     val logger by logger()
@@ -112,7 +112,7 @@ class MonitorManager(
     fun add(inertia: Duration, type: Monitor.Type, threshold: MonitoredValue, itemId: String?): UUID {
         logger.info("Adding monitoring for {}{} with grace period of {}", type.name, itemId.orEmpty(), inertia)
         val config = MonitorConfig(itemId, threshold, inertia)
-        val monitor = createMonitor(type, UUID.randomUUID(), config)
+        val monitor = monitorFactory.createMonitor(type, UUID.randomUUID(), config)
         return if (validate(monitor)) {
             register(monitor)
             persist()
@@ -131,7 +131,7 @@ class MonitorManager(
             threshold ?: oldMonitor.config.threshold,
             inertia ?: oldMonitor.config.inertia
         )
-        val updatedMonitor = createMonitor(oldMonitor.type, oldMonitor.id, updatedConfig)
+        val updatedMonitor = monitorFactory.createMonitor(oldMonitor.type, oldMonitor.id, updatedConfig)
         return if (validate(updatedMonitor)) {
             register(updatedMonitor)
             persist()

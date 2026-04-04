@@ -3,7 +3,7 @@ package com.krillsson.sysapi.core.monitoring.monitors
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toFractionalValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -16,8 +16,8 @@ class ProcessCpuMonitor(override val id: UUID, override val config: MonitorConfi
             val pid = monitoredItemID?.toInt()
             load.processes.firstOrNull { it.processID == pid }?.cpuPercent?.toFractionalValue()
         }
-        val maxValueSelector: MaxValueFractionalSelector = { info, _ ->
-            MonitoredValue.FractionalValue(info.cpuInfo.centralProcessor.logicalProcessorCount.toFloat() * 100f)
+        val maxValueSelector: MaxValueFractionalSelector = { input, _ ->
+            MonitoredValue.FractionalValue(input.cpuInfo.centralProcessor.logicalProcessorCount.toFloat() * 100f)
         }
     }
 
@@ -26,8 +26,8 @@ class ProcessCpuMonitor(override val id: UUID, override val config: MonitorConfi
     override fun selectValue(event: MonitorInput): MonitoredValue.FractionalValue? =
         selector(event.load, config.monitoredItemId)
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.FractionalValue? {
-        return maxValueSelector(info, null)
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.FractionalValue? {
+        return maxValueSelector(input, null)
     }
 
     override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {

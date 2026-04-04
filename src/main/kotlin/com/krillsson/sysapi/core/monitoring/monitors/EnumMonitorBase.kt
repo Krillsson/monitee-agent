@@ -2,7 +2,7 @@ package com.krillsson.sysapi.core.monitoring.monitors
 
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import java.util.*
 import kotlin.enums.EnumEntries
@@ -17,7 +17,7 @@ abstract class EnumMonitorBase<E: Enum<E>>(
     // We can't assume that the Enum is ordered by its significance
     open fun orderOfEntry(entry: E) = entries.indexOf(entry)
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.EnumValue<E>? {
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.EnumValue<E>? {
         return entries
             .map { orderOfEntry(it) to it }
             .maxBy { (order, _) -> order }

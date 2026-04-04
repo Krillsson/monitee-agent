@@ -59,6 +59,7 @@ class GenericEventFormatter {
             Monitor.Type.PROCESS_CPU_LOAD -> "Process — CPU usage"
             Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS — Operating normally"
             Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS — Load percent"
+            Monitor.Type.UPS_LOAD_WATT -> "UPS — Power usage (W)"
         }
     }
 }

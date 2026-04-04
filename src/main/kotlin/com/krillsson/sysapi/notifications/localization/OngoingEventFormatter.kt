@@ -44,6 +44,7 @@ class OngoingEventFormatter(
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load too high on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"
                 Monitor.Type.DISK_SMART_HEALTH -> "Disk unhealthy on $serverName"
+                Monitor.Type.UPS_LOAD_WATT -> "Power usage too high on $serverName"
             }
         }
 
@@ -100,6 +101,7 @@ class OngoingEventFormatter(
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"
+                Monitor.Type.UPS_LOAD_WATT -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"
             }
         }
 
@@ -161,6 +163,8 @@ class OngoingEventFormatter(
             Monitor.Type.DISK_SMART_HEALTH -> {
                 (this as MonitoredValue.EnumValue<HealthStatus>).value.name.lowercase()
             }
+
+            Monitor.Type.UPS_LOAD_WATT -> "${(this as MonitoredValue.NumericalValue).value}W"
         }
     }
 

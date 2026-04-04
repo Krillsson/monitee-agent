@@ -1,6 +1,5 @@
 package com.krillsson.sysapi.core.monitoring
 
-import com.krillsson.sysapi.core.domain.system.SystemInfo
 import java.util.*
 
 abstract class Monitor<out T : MonitoredValue> {
@@ -34,7 +33,8 @@ abstract class Monitor<out T : MonitoredValue> {
         EXTERNAL_IP_CHANGED(ValueType.Conditional),
         DISK_SMART_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),
-        UPS_LOAD_PERCENTAGE(ValueType.Numerical)
+        UPS_LOAD_PERCENTAGE(ValueType.Numerical),
+        UPS_LOAD_WATT(ValueType.Numerical)
     }
 
     enum class ValueType {
@@ -45,6 +45,6 @@ abstract class Monitor<out T : MonitoredValue> {
     }
 
     abstract fun selectValue(event: MonitorInput): T?
-    abstract fun maxValue(info: SystemInfo): T?
+    abstract fun maxValue(input: MonitorMaxValueInput): T?
     abstract fun isPastThreshold(value: @UnsafeVariance T): Boolean
 }

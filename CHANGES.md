@@ -4,7 +4,7 @@
   - List devices using `upsDevices` query method
   - Watch UPS device metrics with upsMetricsById subscription
   - Historical data is available via the `upsMetricsHistoryBetweenTimestamps` query method
-  - Two new monitor types added: "UPS Load" and "UPS Operational"
+  - Three new monitor types added: "UPS Load Percentage", "UPS Load Watts" and "UPS Operational"
   - Requires upsc to be available. The docker image comes with this command installed inside container.
   - Needs opt-in from configuration.yml, see `ups` section.
 - Feature: More SMART data points

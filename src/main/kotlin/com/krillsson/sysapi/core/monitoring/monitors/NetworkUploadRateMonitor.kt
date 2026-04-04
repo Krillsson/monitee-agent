@@ -4,7 +4,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -25,8 +25,8 @@ class NetworkUploadRateMonitor(
                 n.name.equals(monitoredItemId, ignoreCase = true) || n.mac.equals(monitoredItemId, ignoreCase = true)
             }?.speed?.sendBytesPerSecond?.toNumericalValue()
 
-        val maxValueSelector: MaxValueNumericalSelector = { info, monitoredItemId ->
-            val nic = info.networkInterfaces.firstOrNull { n ->
+        val maxValueSelector: MaxValueNumericalSelector = { input, monitoredItemId ->
+            val nic = input.networkInterfaces.firstOrNull { n ->
                 n.name.equals(
                     monitoredItemId,
                     ignoreCase = true
@@ -42,9 +42,10 @@ class NetworkUploadRateMonitor(
         return selector(event.load, config.monitoredItemId)
     }
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.NumericalValue? {
-        return maxValueSelector(info, config.monitoredItemId)
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
+        return maxValueSelector(input, config.monitoredItemId)
     }
+
 
     override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
         return value > config.threshold

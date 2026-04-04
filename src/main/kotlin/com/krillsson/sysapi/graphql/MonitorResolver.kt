@@ -34,7 +34,8 @@ class MonitorResolver(
     val monitorManager: MonitorManager,
     val upsMetricsHistoryRepository: UpsMetricsHistoryRepository,
     val webServerCheckService: WebServerCheckService,
-    val metrics: Metrics
+    val metrics: Metrics,
+    val monitorInputCreator: com.krillsson.sysapi.core.monitoring.MonitorInputCreator
 ) {
 
     @SchemaMapping
@@ -218,7 +219,7 @@ class MonitorResolver(
 
     @SchemaMapping
     fun maxValue(monitor: Monitor): MonitoredValue? {
-        return monitorManager.getById(monitor.id)?.maxValue(metrics.systemInfo())
+        return monitorManager.getById(monitor.id)?.maxValue(monitorInputCreator.createMaxValueInput())
             ?.asMonitoredValue()
     }
 

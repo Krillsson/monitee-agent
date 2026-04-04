@@ -3,10 +3,10 @@ package com.krillsson.sysapi.core.monitoring
 import org.springframework.stereotype.Component
 
 @Component
-class MonitorRepository(private val store: MonitorStore) {
+class MonitorRepository(private val store: MonitorStore, private val monitorFactory: MonitorFactory) {
 
     fun read(): List<Monitor<MonitoredValue>> {
-        return store.read()?.map { MonitorFactory.createMonitor(it.type, it.id, it.config.asConfig(it.type)) }.orEmpty()
+        return store.read()?.map { monitorFactory.createMonitor(it.type, it.id, it.config.asConfig(it.type)) }.orEmpty()
     }
 
     fun write(content: List<Monitor<MonitoredValue>>) {

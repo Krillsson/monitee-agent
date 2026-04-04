@@ -4,7 +4,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toConditionalValue
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -31,7 +31,7 @@ class NetworkUpMonitor(
         return selector(event.load, config.monitoredItemId)
     }
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.ConditionalValue? = MonitoredValue.ConditionalValue(true)
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.ConditionalValue? = MonitoredValue.ConditionalValue(true)
 
     override fun isPastThreshold(value: MonitoredValue.ConditionalValue): Boolean {
         return !value.value

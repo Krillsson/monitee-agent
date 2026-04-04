@@ -2,9 +2,11 @@ package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.smart.HealthStatus
+import org.springframework.stereotype.Component
 import java.util.*
 
-object MonitorFactory {
+@Component
+class MonitorFactory {
     @Suppress("UNCHECKED_CAST")
     fun createMonitor(type: Monitor.Type, id: UUID, config: MonitorConfig<MonitoredValue>): Monitor<MonitoredValue> {
         return when (type) {
@@ -107,7 +109,13 @@ object MonitorFactory {
                 id,
                 config as MonitorConfig<MonitoredValue.ConditionalValue>
             )
+
             Monitor.Type.UPS_LOAD_PERCENTAGE -> UpsLoadPercentageMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
+            Monitor.Type.UPS_LOAD_WATT -> UpsLoadWattMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>
             )

@@ -60,6 +60,7 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.WEBSERVER_UP,
         Monitor.Type.EXTERNAL_IP_CHANGED,
         Monitor.Type.UPS_OPERATING_NORMALLY,
+        Monitor.Type.UPS_LOAD_WATT,
         Monitor.Type.UPS_LOAD_PERCENTAGE -> null
     }
 

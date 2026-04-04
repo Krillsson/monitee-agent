@@ -83,6 +83,16 @@ class MonitorInputCreator(
         filter { types.contains(it.type) }
             .mapNotNull { it.config.monitoredItemId }
 
+    fun createMaxValueInput(): MonitorMaxValueInput {
+        return MonitorMaxValueInput(
+            cpuInfo = metrics.cpuMetrics().cpuInfo(),
+            memory = metrics.memoryMetrics().memoryInfo(),
+            fileSystems = metrics.fileSystemMetrics().fileSystems(),
+            networkInterfaces = metrics.networkMetrics().networkInterfaces(),
+            upsDevices = upsService.upsDevices(),
+        )
+    }
+
     fun createInput(
         activeTypes: List<Monitor<*>>,
     ): MonitorInput {
@@ -262,6 +272,11 @@ class MonitorInputCreator(
                     val diskLoad = metrics.diskMetrics().diskLoads().first { it.name == monitor.config.monitoredItemId }
                     val disk = metrics.diskMetrics().disks().first { it.name == monitor.config.monitoredItemId }
                     createDiskSmartHealthMonitorableItem(disk, diskLoad)
+                }
+
+                Monitor.Type.UPS_LOAD_WATT -> {
+                    val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
+                    createUpsLoadWattMonitoredItem(device)
                 }
             }
         }
@@ -481,6 +496,10 @@ class MonitorInputCreator(
             Monitor.Type.UPS_LOAD_PERCENTAGE -> upsService.upsDevices().map {
                 createUpsLoadPercentageMonitoredItem(it)
             }
+
+            Monitor.Type.UPS_LOAD_WATT -> upsService.upsDevices().map {
+                createUpsLoadWattMonitoredItem(it)
+            }
         }
     }
 
@@ -501,6 +520,15 @@ class MonitorInputCreator(
         maxValue = MonitoredValue.NumericalValue(100),
         currentValue = device.metrics.loadPercent?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
         type = Monitor.Type.UPS_LOAD_PERCENTAGE
+    )
+
+    private fun createUpsLoadWattMonitoredItem(device: UpsDevice): MonitorableItem = MonitorableItem(
+        id = device.id,
+        name = "${device.manufacturer} ${device.model}",
+        description = null,
+        maxValue = device.realPowerNominalWatts?.toLong()?.toNumericalValue() ?: MonitoredValue.NumericalValue(0),
+        currentValue = device.metrics.realPowerLoadWatts?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
+        type = Monitor.Type.UPS_LOAD_WATT
     )
 
     private fun createDiskTemperatureMonitorableItem(

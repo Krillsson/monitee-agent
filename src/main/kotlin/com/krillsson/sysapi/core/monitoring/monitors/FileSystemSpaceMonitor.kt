@@ -5,7 +5,7 @@ import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -25,8 +25,8 @@ class FileSystemSpaceMonitor(override val id: UUID, override val config: Monitor
                 i.id.equals(monitoredItemId, ignoreCase = true)
             }?.usableSpaceBytes?.toNumericalValue()
 
-        val maxValueSelector: MaxValueNumericalSelector = { info, id ->
-            info.fileSystems.firstOrNull { i: FileSystem ->
+        val maxValueSelector: MaxValueNumericalSelector = { input, id ->
+            input.fileSystems.firstOrNull { i: FileSystem ->
                 i.id.equals(id, ignoreCase = true)
             }?.totalSpaceBytes?.toNumericalValue()
         }
@@ -35,8 +35,8 @@ class FileSystemSpaceMonitor(override val id: UUID, override val config: Monitor
     override fun selectValue(event: MonitorInput): MonitoredValue.NumericalValue? =
         selector(event.load, config.monitoredItemId)
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.NumericalValue? {
-        return maxValueSelector(info, config.monitoredItemId)
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
+        return maxValueSelector(input, config.monitoredItemId)
     }
 
     override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {

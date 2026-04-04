@@ -4,7 +4,7 @@ import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toConditionalValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -33,7 +33,7 @@ class ContainerRunningMonitor(
         return selector(event.containers, event.containerStats, config.monitoredItemId)
     }
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.ConditionalValue? {
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.ConditionalValue? {
         return MonitoredValue.ConditionalValue(true)
     }
 

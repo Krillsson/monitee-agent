@@ -3,7 +3,7 @@ package com.krillsson.sysapi.core.monitoring.monitors
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
-import com.krillsson.sysapi.core.domain.system.SystemInfo
+import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
 import java.util.*
@@ -20,7 +20,7 @@ class UpsLoadPercentageMonitor(
         return ups?.loadPercent?.toNumericalValue()
     }
 
-    override fun maxValue(info: SystemInfo): MonitoredValue.NumericalValue? {
+    override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
         return MonitoredValue.NumericalValue(100)
     }
 
