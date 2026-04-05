@@ -99,8 +99,10 @@ class MonitorManager(
     }
 
     fun getMonitorableItemsForMonitors(ids: List<UUID>): List<Pair<UUID, MonitorableItem>> {
-        return getAllById(ids).map { monitor ->
-            monitor.id to monitorInputCreator.getMonitorableItemForMonitor(monitor)
+        return getAllById(ids).mapNotNull { monitor ->
+            monitorInputCreator.getMonitorableItemForMonitor(monitor)?.let {
+                monitor.id to it
+            }
         }
     }
 
@@ -110,7 +112,7 @@ class MonitorManager(
     }
 
     fun add(inertia: Duration, type: Monitor.Type, threshold: MonitoredValue, itemId: String?): UUID {
-        logger.info("Adding monitoring for {}{} with grace period of {}", type.name, itemId.orEmpty(), inertia)
+        logger.info("Adding monitoring for {} {} with grace period of {}", type.name, itemId.orEmpty(), inertia)
         val config = MonitorConfig(itemId, threshold, inertia)
         val monitor = monitorFactory.createMonitor(type, UUID.randomUUID(), config)
         return if (validate(monitor)) {

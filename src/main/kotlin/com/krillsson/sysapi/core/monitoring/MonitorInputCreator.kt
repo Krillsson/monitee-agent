@@ -140,7 +140,7 @@ class MonitorInputCreator(
         )
     }
 
-    fun getMonitorableItemForMonitor(monitor: Monitor<MonitoredValue>): MonitorableItem {
+    fun getMonitorableItemForMonitor(monitor: Monitor<MonitoredValue>): MonitorableItem? {
         val (duration, item) = measureTimeMillis {
             when (monitor.type) {
                 Monitor.Type.FILE_SYSTEM_SPACE -> {
@@ -219,28 +219,24 @@ class MonitorInputCreator(
                 }
 
                 Monitor.Type.PROCESS_MEMORY_SPACE -> {
-                    val process = requireNotNull(
-                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
-                            .getOrNull()
-                    )
-                    val memorySize = metrics.memoryMetrics().memoryInfo().totalBytes
-                    createProcessMemorySpaceMonitorableItem(process, memorySize)
+                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                        .getOrNull()?.let {
+                            val memorySize = metrics.memoryMetrics().memoryInfo().totalBytes
+                            createProcessMemorySpaceMonitorableItem(it, memorySize)
+
+                        }
                 }
 
                 Monitor.Type.PROCESS_CPU_LOAD -> {
-                    val process = requireNotNull(
-                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
-                            .getOrNull()
-                    )
-                    createProcessCpuLoadMonitorableItem(process)
+                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                        .getOrNull()?.let { createProcessCpuLoadMonitorableItem(it) }
                 }
 
                 Monitor.Type.PROCESS_EXISTS -> {
-                    val process = requireNotNull(
-                        metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
-                            .getOrNull()
-                    )
-                    createProcessExistsMonitorableItem(process)
+                    metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
+                        .getOrNull()?.let {
+                            createProcessExistsMonitorableItem(it)
+                        }
                 }
 
                 Monitor.Type.WEBSERVER_UP -> {

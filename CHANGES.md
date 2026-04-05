@@ -19,7 +19,8 @@
   - Needs opt-in from configuration.yml, see `internetServicesCheck` section.
 - Fix: also delete associated monitors while deleting a webserver check
 - Fix: resolve start and end timestamps being swapped for past events
-- Fix: also delete associated monitors while deleting a webserver check
+- Fix/Breaking: PID monitors no longer cause monitors API to fail with an error. 
+  - `Monitor.monitoredItem` and `Monitor.currentValue` are now nullable 
 
 ### 0.39.1
 
