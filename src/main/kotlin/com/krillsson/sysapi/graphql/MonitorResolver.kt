@@ -203,10 +203,10 @@ class MonitorResolver(
     }
 
     @BatchMapping(field = "monitoredItem", typeName = "Monitor")
-    fun monitoredItem(monitors: Collection<Monitor>): Map<Monitor, MonitorableItem> {
+    fun monitoredItem(monitors: Collection<Monitor>): Map<Monitor, MonitorableItem?> {
         val itemIds = monitors.map { it.id }
         val items = monitorManager.getMonitorableItemsForMonitors(itemIds).associateBy { it.first }
-        return monitors.associateWith { requireNotNull(items[it.id]?.second) }
+        return monitors.associateWith { items[it.id]?.second }
     }
 
     @SchemaMapping
@@ -227,7 +227,7 @@ class MonitorResolver(
     fun currentValue(monitors: Collection<Monitor>): Map<Monitor, MonitoredValue?> {
         val itemIds = monitors.map { it.id }
         val items = monitorManager.getMonitorableItemsForMonitors(itemIds).associateBy { it.first }
-        return monitors.associateWith { requireNotNull(items[it.id]?.second?.currentValue?.asMonitoredValue()) }
+        return monitors.associateWith { items[it.id]?.second?.currentValue?.asMonitoredValue() }
     }
 
     private fun BasicHistorySystemLoadEntity.asMonitoredValueHistoryEntry(monitor: Monitor): MonitoredValueHistoryEntry? {
