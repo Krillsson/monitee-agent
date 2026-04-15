@@ -1,5 +1,7 @@
 ### Unreleased
 
+### 0.40.0
+
 - Feature: Integration with NUT (Network UPS Tools)
   - List devices using `upsDevices` query method
   - Watch UPS device metrics with upsMetricsById subscription
