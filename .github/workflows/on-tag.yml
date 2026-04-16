@@ -107,3 +107,50 @@ jobs:
         with:
           name: sys-api-native-image
           path: build/native/nativeCompile/sysapi
+  create-release:
+    name: Create GitHub Draft Release
+    needs: [build-deb, build-cmd, build-win]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract changelog for version
+        run: |
+          TAG="${{ github.ref_name }}"
+          ESCAPED_TAG=$(echo "$TAG" | sed 's/\./\\./g')
+          awk "/^### ${ESCAPED_TAG}\$/{found=1; next} found && /^### /{exit} found{print}" CHANGES.md > release-notes.md
+      - name: Download shadow-dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: shadow-dist
+          path: staging/shadow/
+      - name: Download debian package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sys-api-debian-package
+          path: staging/deb/
+      - name: Download windows setup artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-setup
+          path: staging/win/
+      - name: Collect and rename artifacts
+        run: |
+          TAG="${{ github.ref_name }}"
+          mkdir -p release-artifacts
+          mv staging/shadow/*.zip "release-artifacts/sysapi-shadow-${TAG}.zip"
+          unzip -j staging/deb/*.zip -d release-artifacts/
+          unzip -j staging/win/*.zip -d release-artifacts/
+      - name: Create draft release
+        run: |
+          TAG="${{ github.ref_name }}"
+          gh release create "$TAG" \
+            --draft \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            "release-artifacts/sysapi-shadow-${TAG}.zip" \
+            release-artifacts/*.deb \
+            release-artifacts/*.exe
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
