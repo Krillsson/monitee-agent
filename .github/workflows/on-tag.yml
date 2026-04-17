@@ -2,9 +2,18 @@ name: Build Docker images
 run-name: Build and push native and jvm images to Docker Hub
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. 1.2.3)'
+        required: true
+        type: string
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
 jobs:
   build-docker:
     name: Build sys-API docker image
@@ -16,6 +25,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
@@ -24,12 +35,14 @@ jobs:
           set-java-home: 'true'
           native-image-job-reports: 'true'
       - name: Upload JVM build to Docker Hub
-        run: ./gradlew jibJvm -PbuildType="release" -PsemVerTag="${{  github.ref_name }}"
+        run: ./gradlew jibJvm -PbuildType="release" -PsemVerTag="${{ env.RELEASE_TAG }}"
   build-deb:
     name: Build sys-API debian package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
@@ -49,6 +62,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
@@ -68,8 +83,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - name: inno-setup-download
-        uses: pwall2222/inno-setup-download@v0.0.8
+        uses: ./.github/actions/inno-setup-download
       - name: Set Up JDK
         uses: actions/setup-java@v3
         with:
@@ -93,6 +110,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
@@ -101,7 +120,7 @@ jobs:
           set-java-home: 'true'
           native-image-job-reports: 'true'
       - name: Upload Graal native build to Docker Hub
-        run: ./gradlew jibNativeImage -PbuildType="release" -PsemVerTag="${{  github.ref_name }}"
+        run: ./gradlew jibNativeImage -PbuildType="release" -PsemVerTag="${{ env.RELEASE_TAG }}"
       - name: Store native image artifact
         uses: actions/upload-artifact@v4
         with:
@@ -115,9 +134,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
       - name: Extract changelog for version
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ env.RELEASE_TAG }}"
           ESCAPED_TAG=$(echo "$TAG" | sed 's/\./\\./g')
           awk "/^### ${ESCAPED_TAG}\$/{found=1; next} found && /^### /{exit} found{print}" CHANGES.md > release-notes.md
       - name: Download shadow-dist artifact
@@ -137,14 +158,14 @@ jobs:
           path: staging/win/
       - name: Collect and rename artifacts
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ env.RELEASE_TAG }}"
           mkdir -p release-artifacts
           mv staging/shadow/*.zip "release-artifacts/sysapi-shadow-${TAG}.zip"
           unzip -j staging/deb/*.zip -d release-artifacts/
           unzip -j staging/win/*.zip -d release-artifacts/
       - name: Create draft release
         run: |
-          TAG="${{ github.ref_name }}"
+          TAG="${{ env.RELEASE_TAG }}"
           gh release create "$TAG" \
             --draft \
             --title "$TAG" \

@@ -1,0 +1,18 @@
+name: inno-setup-download
+description: Sets up latest version of InnoSetup and adds it to path
+inputs:
+  version:
+    description: 'InnoSetup Version'
+    required: false
+    default: '6.7.1'
+branding:
+  color: yellow
+  icon: arrow-down-circle
+runs:
+  using: composite
+  steps:
+    - name: Download InnoSetup
+      shell: pwsh
+      run: "${{ github.action_path }}/entrypoint.ps1"
+      env:
+        IS_VERSION: ${{ inputs.version }}
