@@ -1,5 +1,9 @@
 ### Unreleased
 
+### 0.40.1
+ 
+ - Fix: `packetsReceived` and `packetsSent` can become too large to not fit inside an Integer. These are now Long instead.
+
 ### 0.40.0
 
 - Feature: Integration with NUT (Network UPS Tools)

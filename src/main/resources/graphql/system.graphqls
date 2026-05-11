@@ -336,10 +336,10 @@ type NetworkInterfaceMetrics {
     name: String!
     bytesReceived: Long!
     bytesSent: Long!
-    packetsReceived: Int!
-    packetsSent: Int!
-    inErrors: Int!
-    outErrors: Int!
+    packetsReceived: Long!
+    packetsSent: Long!
+    inErrors: Long!
+    outErrors: Long!
     up: Boolean!
     readWriteRate: NetworkInterfaceReadWriteRate!
 }
@@ -365,7 +365,7 @@ type Process {
     parentProcessID: Int!
     threadCount: Int!
     priority: Int!
-    virtualSize: Int!
+    virtualSize: Long!
     residentSetSize: Long!
     memoryPercent: Float!
     kernelTime: Long!
