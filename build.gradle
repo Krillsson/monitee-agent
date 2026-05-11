@@ -29,7 +29,7 @@ plugins {
 apply plugin: 'io.github.fvarrui.javapackager.plugin'
 
 group = 'com.krillsson'
-version = '0.40.0'
+version = '0.40.1'
 
 buildConfig {
     buildConfigField("String", "APP_VERSION", provider { "\"${project.version}\"" })
