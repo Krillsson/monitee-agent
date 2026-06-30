@@ -45,6 +45,7 @@ import oshi.SystemInfo
 import oshi.hardware.HardwareAbstractionLayer
 import oshi.software.os.OperatingSystem
 import oshi.util.GlobalConfig
+import oshi.util.PlatformEnum
 import retrofit2.Retrofit
 import retrofit2.converter.jackson.JacksonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
@@ -187,7 +188,7 @@ class SysApiConfiguration : AsyncConfigurer {
     fun operatingSystem(systemInfo: SystemInfo) = systemInfo.operatingSystem.asOperatingSystem()
 
     @Bean
-    fun platform() = SystemInfo.getCurrentPlatform().asPlatform()
+    fun platform() = PlatformEnum.getCurrentPlatform().asPlatform()
 
     @Bean
     fun githubApi(yamlConfigFile: YAMLConfigFile, mapper: ObjectMapper): GithubApiService {

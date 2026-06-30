@@ -7,7 +7,7 @@ object OSProcessComparators {
         .comparingDouble { process: OSProcess -> process.processCpuLoadCumulative }.reversed()
 
     val MEMORY_COMPARATOR =
-        Comparator.comparingLong { process: OSProcess -> process.residentSetSize }
+        Comparator.comparingLong { process: OSProcess -> process.privateResidentMemory }
             .reversed()
 
     val NEWEST_COMPARATOR =

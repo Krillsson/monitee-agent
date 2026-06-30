@@ -8,8 +8,8 @@ import com.krillsson.sysapi.core.domain.system.OperatingSystem
 import com.krillsson.sysapi.core.domain.system.Platform
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import oshi.PlatformEnum
 import oshi.software.os.OSProcess
+import oshi.util.PlatformEnum
 import java.io.File
 import java.io.FileInputStream
 import java.time.Instant

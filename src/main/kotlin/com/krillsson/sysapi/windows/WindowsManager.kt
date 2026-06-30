@@ -14,13 +14,13 @@ import com.krillsson.sysapi.windows.services.WindowsServiceCommand
 import com.krillsson.sysapi.windows.services.WindowsServiceCommandResult
 import com.krillsson.sysapi.windows.services.WindowsServiceManager
 import org.springframework.stereotype.Service
-import oshi.PlatformEnum
 import oshi.SystemInfo
+import oshi.util.PlatformEnum
 
 @Service
 class WindowsManager(config: YAMLConfigFile) : WindowsManagementAccessAvailable {
     fun supportedBySystem(): Boolean {
-        return SystemInfo.getCurrentPlatform() == PlatformEnum.WINDOWS || SystemInfo.getCurrentPlatform() == PlatformEnum.WINDOWSCE
+        return PlatformEnum.getCurrentPlatform() == PlatformEnum.WINDOWS || PlatformEnum.getCurrentPlatform() == PlatformEnum.WINDOWSCE
     }
 
     private val reader = WindowsEventLogReader(config.windows.eventLog)

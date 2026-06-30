@@ -10,6 +10,7 @@ import oshi.hardware.HardwareAbstractionLayer
 @Component
 open class DefaultGpuMetrics(private val hal: HardwareAbstractionLayer) : GpuMetrics {
     override fun gpuLoads(): List<GpuLoad> {
+        hal.graphicsCards.first()
         return emptyList()
     }
 

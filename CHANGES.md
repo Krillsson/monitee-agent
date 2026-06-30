@@ -1,5 +1,7 @@
 ### Unreleased
 
+ - Update OSHI to v7.3.2
+
 ### 0.40.1
  
  - Fix: `packetsReceived` and `packetsSent` can become too large to not fit inside an Integer. These are now Long instead.
