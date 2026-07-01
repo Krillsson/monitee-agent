@@ -20,4 +20,10 @@
  */
 package com.krillsson.sysapi.core.domain.gpu
 
-class GpuHealth(val fanRpm: Double, val fanPercent: Double, val temperature: Double) 
+class GpuHealth(
+    val temperature: Double,
+    val fanPercent: Double,
+    val powerDraw: Double,
+    val coreClockMhz: Long,
+    val memoryClockMhz: Long
+)
