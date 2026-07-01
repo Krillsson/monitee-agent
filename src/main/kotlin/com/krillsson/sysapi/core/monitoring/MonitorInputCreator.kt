@@ -9,6 +9,8 @@ import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
+import com.krillsson.sysapi.core.domain.gpu.Gpu
+import com.krillsson.sysapi.core.domain.gpu.GpuLoad
 import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.core.domain.network.NetworkInterface
@@ -61,6 +63,12 @@ class MonitorInputCreator(
         Monitor.Type.FILE_SYSTEM_SPACE
     )
 
+    private val gpuTypes = listOf(
+        Monitor.Type.GPU_VRAM_USAGE,
+        Monitor.Type.GPU_TEMPERATURE,
+        Monitor.Type.GPU_UTILIZATION
+    )
+
     private val processesTypes = listOf(
         Monitor.Type.PROCESS_MEMORY_SPACE,
         Monitor.Type.PROCESS_CPU_LOAD,
@@ -104,6 +112,8 @@ class MonitorInputCreator(
             if (activeTypes.any { diskTypes.contains(it.type) }) metrics.diskMetrics().diskLoads() else emptyList()
         val fileSystemLoads = if (activeTypes.any { fileSystemTypes.contains(it.type) }) metrics.fileSystemMetrics()
             .fileSystemLoads() else emptyList()
+        val gpuLoads =
+            if (activeTypes.any { gpuTypes.contains(it.type) }) metrics.gpuMetrics().gpuLoads() else emptyList()
         val processes = activeTypes.filter { processesTypes.contains(it.type) }.mapNotNull {
             it.config.monitoredItemId?.toInt()?.let { pid ->
                 metrics.processesMetrics().getProcessByPid(pid).orElse(null)
@@ -123,7 +133,7 @@ class MonitorInputCreator(
             fileSystemLoads = fileSystemLoads,
             memory = metrics.memoryMetrics().memoryLoad(),
             processes = processes,
-            gpuLoads = emptyList(),
+            gpuLoads = gpuLoads,
             motherboardHealth = metrics.motherboardMetrics().motherboardHealth()
         )
         val containers =
@@ -273,6 +283,24 @@ class MonitorInputCreator(
                 Monitor.Type.UPS_LOAD_WATT -> {
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createUpsLoadWattMonitoredItem(device)
+                }
+
+                Monitor.Type.GPU_VRAM_USAGE -> {
+                    val gpuLoad = metrics.gpuMetrics().gpuLoads().first { it.id == monitor.config.monitoredItemId }
+                    val gpu = metrics.gpuMetrics().gpus().first { it.id == monitor.config.monitoredItemId }
+                    createGpuVramUsageMonitorableItem(gpu, gpuLoad)
+                }
+
+                Monitor.Type.GPU_TEMPERATURE -> {
+                    val gpuLoad = metrics.gpuMetrics().gpuLoads().first { it.id == monitor.config.monitoredItemId }
+                    val gpu = metrics.gpuMetrics().gpus().first { it.id == monitor.config.monitoredItemId }
+                    createGpuTemperatureMonitorableItem(gpu, gpuLoad)
+                }
+
+                Monitor.Type.GPU_UTILIZATION -> {
+                    val gpuLoad = metrics.gpuMetrics().gpuLoads().first { it.id == monitor.config.monitoredItemId }
+                    val gpu = metrics.gpuMetrics().gpus().first { it.id == monitor.config.monitoredItemId }
+                    createGpuUtilizationMonitorableItem(gpu, gpuLoad)
                 }
             }
         }
@@ -496,6 +524,33 @@ class MonitorInputCreator(
             Monitor.Type.UPS_LOAD_WATT -> upsService.upsDevices().map {
                 createUpsLoadWattMonitoredItem(it)
             }
+
+            Monitor.Type.GPU_VRAM_USAGE -> {
+                val gpuLoads = metrics.gpuMetrics().gpuLoads().associateBy { it.id }
+                metrics.gpuMetrics().gpus().mapNotNull {
+                    gpuLoads[it.id]?.let { load ->
+                        createGpuVramUsageMonitorableItem(it, load)
+                    }
+                }
+            }
+
+            Monitor.Type.GPU_TEMPERATURE -> {
+                val gpuLoads = metrics.gpuMetrics().gpuLoads().associateBy { it.id }
+                metrics.gpuMetrics().gpus().mapNotNull {
+                    gpuLoads[it.id]?.let { load ->
+                        createGpuTemperatureMonitorableItem(it, load)
+                    }
+                }
+            }
+
+            Monitor.Type.GPU_UTILIZATION -> {
+                val gpuLoads = metrics.gpuMetrics().gpuLoads().associateBy { it.id }
+                metrics.gpuMetrics().gpus().mapNotNull {
+                    gpuLoads[it.id]?.let { load ->
+                        createGpuUtilizationMonitorableItem(it, load)
+                    }
+                }
+            }
         }
     }
 
@@ -537,6 +592,42 @@ class MonitorInputCreator(
         maxValue = MonitoredValue.NumericalValue(120),
         currentValue = load.temperature?.toNumericalValue() ?: MonitoredValue.NumericalValue(-1),
         type = Monitor.Type.DISK_TEMPERATURE
+    )
+
+    private fun createGpuVramUsageMonitorableItem(
+        gpu: Gpu,
+        load: GpuLoad
+    ) = MonitorableItem(
+        id = gpu.id,
+        name = gpu.name,
+        description = gpu.vendor,
+        maxValue = load.vramTotalBytes.toNumericalValue(),
+        currentValue = load.vramUsedBytes.toNumericalValue(),
+        type = Monitor.Type.GPU_VRAM_USAGE
+    )
+
+    private fun createGpuTemperatureMonitorableItem(
+        gpu: Gpu,
+        load: GpuLoad
+    ) = MonitorableItem(
+        id = gpu.id,
+        name = gpu.name,
+        description = gpu.vendor,
+        maxValue = MonitoredValue.NumericalValue(120),
+        currentValue = load.health.temperature.toNumericalValue(),
+        type = Monitor.Type.GPU_TEMPERATURE
+    )
+
+    private fun createGpuUtilizationMonitorableItem(
+        gpu: Gpu,
+        load: GpuLoad
+    ) = MonitorableItem(
+        id = gpu.id,
+        name = gpu.name,
+        description = gpu.vendor,
+        maxValue = (100f).toFractionalValue(),
+        currentValue = load.coreLoad.toFractionalValue(),
+        type = Monitor.Type.GPU_UTILIZATION
     )
 
     private fun createDiskSmartHealthMonitorableItem(

@@ -61,7 +61,10 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.EXTERNAL_IP_CHANGED,
         Monitor.Type.UPS_OPERATING_NORMALLY,
         Monitor.Type.UPS_LOAD_WATT,
-        Monitor.Type.UPS_LOAD_PERCENTAGE -> null
+        Monitor.Type.UPS_LOAD_PERCENTAGE,
+        Monitor.Type.GPU_VRAM_USAGE,
+        Monitor.Type.GPU_TEMPERATURE,
+        Monitor.Type.GPU_UTILIZATION -> null
     }
 
 
