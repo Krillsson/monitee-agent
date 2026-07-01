@@ -100,6 +100,8 @@ object Selectors {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_UPLOAD_RATE -> NetworkUploadRateMonitor.selector
             com.krillsson.sysapi.core.monitoring.Monitor.Type.NETWORK_DOWNLOAD_RATE -> NetworkDownloadRateMonitor.selector
             com.krillsson.sysapi.core.monitoring.Monitor.Type.PROCESS_MEMORY_SPACE -> ProcessMemoryMonitor.selector
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_VRAM_USAGE -> GpuVramUsageMonitor.selector
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_TEMPERATURE -> GpuTemperatureMonitor.selector
             else -> throw IllegalArgumentException("$type is a ${type.valueType} type")
         }
 
@@ -110,6 +112,7 @@ object Selectors {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> LoadAverageMonitorOneMinute.selector
             com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> LoadAverageMonitorFiveMinutes.selector
             com.krillsson.sysapi.core.monitoring.Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> LoadAverageMonitorFifteenMinutes.selector
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_UTILIZATION -> GpuUtilizationMonitor.selector
             else -> throw IllegalArgumentException("$type is a ${type.valueType} type")
         }
 

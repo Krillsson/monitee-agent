@@ -60,6 +60,9 @@ class GenericEventFormatter {
             Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS — Operating normally"
             Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS — Load percent"
             Monitor.Type.UPS_LOAD_WATT -> "UPS — Power usage (W)"
+            Monitor.Type.GPU_VRAM_USAGE -> "GPU — VRAM usage"
+            Monitor.Type.GPU_TEMPERATURE -> "GPU — Temperature"
+            Monitor.Type.GPU_UTILIZATION -> "GPU — Load percent"
         }
     }
 }

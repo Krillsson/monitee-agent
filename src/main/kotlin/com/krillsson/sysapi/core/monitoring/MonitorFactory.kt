@@ -124,6 +124,21 @@ class MonitorFactory {
                 id,
                 config as MonitorConfig<MonitoredValue.EnumValue<HealthStatus>>
             )
+
+            Monitor.Type.GPU_VRAM_USAGE -> GpuVramUsageMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
+            Monitor.Type.GPU_TEMPERATURE -> GpuTemperatureMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
+            Monitor.Type.GPU_UTILIZATION -> GpuUtilizationMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.FractionalValue>
+            )
         }
     }
 }

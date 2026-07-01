@@ -45,6 +45,9 @@ class OngoingEventFormatter(
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"
                 Monitor.Type.DISK_SMART_HEALTH -> "Disk unhealthy on $serverName"
                 Monitor.Type.UPS_LOAD_WATT -> "Power usage too high on $serverName"
+                Monitor.Type.GPU_VRAM_USAGE -> "GPU VRAM usage too high on $serverName"
+                Monitor.Type.GPU_TEMPERATURE -> "GPU temp. too high on $serverName"
+                Monitor.Type.GPU_UTILIZATION -> "GPU load too high on $serverName"
             }
         }
 
@@ -102,6 +105,9 @@ class OngoingEventFormatter(
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"
                 Monitor.Type.UPS_LOAD_WATT -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"
+                Monitor.Type.GPU_VRAM_USAGE -> "VRAM usage on $monitoredItemId went above $formattedThreshold to $formattedValue"
+                Monitor.Type.GPU_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
+                Monitor.Type.GPU_UTILIZATION -> "Load on $monitoredItemId went above $formattedThreshold to $formattedValue"
             }
         }
 
@@ -165,6 +171,9 @@ class OngoingEventFormatter(
             }
 
             Monitor.Type.UPS_LOAD_WATT -> "${(this as MonitoredValue.NumericalValue).value}W"
+            Monitor.Type.GPU_VRAM_USAGE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
+            Monitor.Type.GPU_TEMPERATURE -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
+            Monitor.Type.GPU_UTILIZATION -> formatPercent((this as MonitoredValue.FractionalValue).value)
         }
     }
 

@@ -34,7 +34,10 @@ abstract class Monitor<out T : MonitoredValue> {
         DISK_SMART_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),
         UPS_LOAD_PERCENTAGE(ValueType.Numerical),
-        UPS_LOAD_WATT(ValueType.Numerical)
+        UPS_LOAD_WATT(ValueType.Numerical),
+        GPU_VRAM_USAGE(ValueType.Numerical),
+        GPU_TEMPERATURE(ValueType.Numerical),
+        GPU_UTILIZATION(ValueType.Fractional)
     }
 
     enum class ValueType {
