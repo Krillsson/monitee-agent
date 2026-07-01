@@ -20,6 +20,10 @@ class GpuVramUsageMonitor(override val id: UUID, override val config: MonitorCon
         fun value(gpuLoads: List<GpuLoad>, monitoredItemId: String?): MonitoredValue.NumericalValue? {
             return gpuLoads.firstOrNull { it.id == monitoredItemId }?.vramUsedBytes?.toNumericalValue()
         }
+
+        val maxValueSelector: MaxValueNumericalSelector = { input, id ->
+            input.gpus.firstOrNull { it.id == id }?.vRamBytes?.toNumericalValue()
+        }
     }
 
     override val type: Type = Type.GPU_VRAM_USAGE
@@ -28,7 +32,7 @@ class GpuVramUsageMonitor(override val id: UUID, override val config: MonitorCon
         selector(event.load, config.monitoredItemId)
 
     override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
-        return null
+        return maxValueSelector(input, config.monitoredItemId)
     }
 
     override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
