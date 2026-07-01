@@ -20,4 +20,10 @@
  */
 package com.krillsson.sysapi.core.domain.gpu
 
-class Gpu(val vendor: String, val model: String, val coreMhz: Double, val memoryMhz: Double) 
+class Gpu(
+    val id: String,
+    val name: String,
+    val vendor: String,
+    val versionInfo: String,
+    val vRamBytes: Long
+)
