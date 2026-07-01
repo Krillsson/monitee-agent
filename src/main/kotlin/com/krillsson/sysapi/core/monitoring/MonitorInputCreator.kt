@@ -98,6 +98,7 @@ class MonitorInputCreator(
             fileSystems = metrics.fileSystemMetrics().fileSystems(),
             networkInterfaces = metrics.networkMetrics().networkInterfaces(),
             upsDevices = upsService.upsDevices(),
+            gpus = metrics.gpuMetrics().gpus(),
         )
     }
 

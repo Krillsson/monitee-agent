@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.core.domain.cpu.CpuInfo
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
+import com.krillsson.sysapi.core.domain.gpu.Gpu
 import com.krillsson.sysapi.core.domain.memory.MemoryInfo
 import com.krillsson.sysapi.core.domain.network.NetworkInterface
 import com.krillsson.sysapi.ups.UpsDevice
@@ -12,5 +13,6 @@ data class MonitorMaxValueInput(
     val fileSystems: List<FileSystem>,
     val networkInterfaces: List<NetworkInterface>,
     val upsDevices: List<UpsDevice>,
+    val gpus: List<Gpu>,
 )
 
