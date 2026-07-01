@@ -67,13 +67,13 @@ fun com.krillsson.sysapi.core.history.db.HealthData.asHealthData(): HealthData {
 
 fun GpuLoad.asGpuLoad(): com.krillsson.sysapi.core.domain.gpu.GpuLoad {
     return com.krillsson.sysapi.core.domain.gpu.GpuLoad(
-            name, coreLoad, memoryLoad, health.asHealth()
+            deviceId, name, coreLoad, vramUsedBytes, vramTotalBytes, health.asHealth()
     )
 }
 
 fun GpuHealth.asHealth(): com.krillsson.sysapi.core.domain.gpu.GpuHealth {
     return com.krillsson.sysapi.core.domain.gpu.GpuHealth(
-            fanRpm, fanPercent, temperature
+            temperature, fanPercent, powerDraw, coreClockMhz, memoryClockMhz
     )
 }
 

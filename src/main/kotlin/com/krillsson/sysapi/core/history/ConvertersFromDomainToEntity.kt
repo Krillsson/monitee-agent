@@ -88,16 +88,18 @@ private fun com.krillsson.sysapi.core.domain.gpu.GpuLoad.asGpuLoad(id: UUID): Gp
         UUID.randomUUID(),
         null,
         id,
+        this.id,
         name,
         coreLoad,
-        memoryLoad,
+        vramUsedBytes,
+        vramTotalBytes,
         health.asGpuHealth()
     )
 }
 
 private fun com.krillsson.sysapi.core.domain.gpu.GpuHealth.asGpuHealth(): GpuHealth {
     return GpuHealth(
-        fanRpm, fanPercent, temperature
+        temperature, fanPercent, powerDraw, coreClockMhz, memoryClockMhz
     )
 }
 
