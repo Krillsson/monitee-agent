@@ -1,0 +1,39 @@
+# Example: query GPUs and their live metrics
+#
+# OSHI reports -1 for any metric that isn't available on the current platform/driver.
+
+query GpuMetricsQuery {
+  system {
+    gpus {
+      id
+      name
+      vendor
+      versionInfo
+      vRamBytes
+      metrics {
+        id
+        name
+        coreLoad
+        vramUsedBytes
+        vramTotalBytes
+        temperature
+        fanPercent
+        powerDraw
+        coreClockMhz
+        memoryClockMhz
+      }
+    }
+  }
+}
+
+# Live updates for all GPUs:
+#
+# subscription GpuMetrics {
+#   gpuMetrics {
+#     id
+#     coreLoad
+#     vramUsedBytes
+#     vramTotalBytes
+#     temperature
+#   }
+# }

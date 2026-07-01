@@ -19,6 +19,8 @@ extend type Subscription {
     internetServiceAvailabilities: [InternetService!]!
     networkInterfaceMetrics: [NetworkInterfaceMetrics!]!
     networkInterfaceMetricsById(id: String!): NetworkInterfaceMetrics
+    gpuMetrics: [GpuMetrics!]!
+    gpuMetricsById(id: String!): GpuMetrics
 }
 
 type System {
@@ -36,6 +38,8 @@ type System {
     connectivity: Connectivity!
     networkInterfaces: [NetworkInterface!]!
     networkInterfaceById(id: String!): NetworkInterface
+    gpus: [Gpu!]!
+    gpuById(id: String!): Gpu
     # 0 means no limitation
     processes(limit: Int = 0, sortBy: ProcessSortMethod = MEMORY): [Process!]!
     processByPid(pid: Int!): Process
@@ -66,6 +70,7 @@ type SystemMetricsHistoryEntry {
     diskMetrics: [DiskMetrics!]!
     fileSystemMetrics: [FileSystemMetrics!]!
     networkInterfaceMetrics: [NetworkInterfaceMetrics!]!
+    gpuMetrics: [GpuMetrics!]!
     connectivity: Connectivity!
     memoryMetrics: MemoryMetrics!
 }
@@ -294,6 +299,34 @@ type NvmeSmartData implements SmartData {
 type DiskReadWriteRate {
     readBytesPerSecond: Long!
     writeBytesPerSecond: Long!
+}
+
+## GPU
+
+type Gpu {
+    id: String!
+    name: String!
+    vendor: String!
+    versionInfo: String!
+    vRamBytes: Long!
+    metrics: GpuMetrics
+}
+
+"""
+The "Load" view of a GPU. Named *Metrics to match the Disk/Network convention.
+OSHI reports -1 for metrics that aren't available on the current platform/driver.
+"""
+type GpuMetrics {
+    id: String!
+    name: String!
+    coreLoad: Float!
+    vramUsedBytes: Long!
+    vramTotalBytes: Long!
+    temperature: Float!
+    fanPercent: Float!
+    powerDraw: Float!
+    coreClockMhz: Long!
+    memoryClockMhz: Long!
 }
 
 ## Network interface

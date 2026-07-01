@@ -5,6 +5,7 @@ import com.krillsson.sysapi.core.connectivity.InternetServicesCheckService
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
+import com.krillsson.sysapi.core.domain.gpu.GpuLoad
 import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.metrics.Metrics
@@ -96,6 +97,14 @@ class SubscriptionResolver(
 
     @SubscriptionMapping
     fun networkInterfaceMetricsById(@Argument id: String) = metrics.networkMetrics().networkInterfaceLoadEventsById(id)
+
+    @SubscriptionMapping
+    fun gpuMetrics(): Flux<List<GpuLoad>> {
+        return metrics.gpuMetrics().gpuLoadEvents()
+    }
+
+    @SubscriptionMapping
+    fun gpuMetricsById(@Argument id: String) = metrics.gpuMetrics().gpuLoadEventsById(id)
 
     @SubscriptionMapping
     fun meta(): Flux<Meta> = Flux.just(
