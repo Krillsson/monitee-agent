@@ -78,5 +78,9 @@ class SystemResolver(val metrics: Metrics) {
     @SchemaMapping
     fun networkInterfaceById(system: System, @Argument id: String) = metrics.networkMetrics().networkInterfaceById(id)
     @SchemaMapping
+    fun gpus(system: System) = metrics.gpuMetrics().gpus()
+    @SchemaMapping
+    fun gpuById(system: System, @Argument id: String) = metrics.gpuMetrics().gpus().firstOrNull { it.id == id }
+    @SchemaMapping
     fun memory(system: System) = metrics.memoryMetrics().memoryInfo()
 }
