@@ -27,6 +27,7 @@ open class HistoryRepository constructor(
     private val memoryLoadDAO: MemoryLoadDAO,
     private val networkLoadDAO: NetworkLoadDAO,
     private val diskLoadDAO: DiskLoadDAO,
+    private val gpuLoadDAO: GpuLoadDAO,
     private val fileSystemLoadDAO: FileSystemLoadDAO,
     private val connectivityDAO: ConnectivityDAO
 ) {
@@ -114,6 +115,10 @@ open class HistoryRepository constructor(
 
     open fun getDiskLoadsById(id: UUID): List<DiskLoad> {
         return diskLoadDAO.findAllByHistoryId(id).map { it.asDiskLoad() }
+    }
+
+    open fun getGpuLoadsById(id: UUID): List<com.krillsson.sysapi.core.domain.gpu.GpuLoad> {
+        return gpuLoadDAO.findAllByHistoryId(id).map { it.asGpuLoad() }
     }
 
     open fun getFileSystemLoadsById(id: UUID): List<FileSystemLoad> {
