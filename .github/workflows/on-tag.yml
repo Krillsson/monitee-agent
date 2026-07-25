@@ -161,8 +161,8 @@ jobs:
           TAG="${{ env.RELEASE_TAG }}"
           mkdir -p release-artifacts
           mv staging/shadow/*.zip "release-artifacts/sysapi-shadow-${TAG}.zip"
-          unzip -j staging/deb/*.zip -d release-artifacts/
-          unzip -j staging/win/*.zip -d release-artifacts/
+          mv staging/deb/*.deb release-artifacts/
+          mv staging/win/*.exe release-artifacts/
       - name: Create draft release
         run: |
           TAG="${{ env.RELEASE_TAG }}"
