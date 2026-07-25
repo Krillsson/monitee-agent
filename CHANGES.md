@@ -1,5 +1,6 @@
 ### Unreleased
 
+ - Initial support for GPU monitoring. See `gpus`, `gpuById` queries and `gpuMetrics`, `gpuMetricsById` subscriptions in the GraphQL API
  - Update OSHI to v7.3.2
 
 ### 0.40.1
