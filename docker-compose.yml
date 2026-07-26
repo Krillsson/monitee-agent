@@ -37,4 +37,19 @@ services:
     # temperature monitoring of disks
     #devices:
     #  - "/dev/sda:/dev/sda"
+    # NVIDIA GPU monitoring. Requires the NVIDIA Container Toolkit on the host.
+    # AMD and Intel GPUs are read from /sys and need no extra configuration.
+    #environment:
+    #  - NVIDIA_VISIBLE_DEVICES=all
+    #  # "utility" is what makes the NVML library available to sys-API
+    #  - NVIDIA_DRIVER_CAPABILITIES=utility
+    #deploy:
+    #  resources:
+    #    reservations:
+    #      devices:
+    #        - driver: nvidia
+    #          count: all
+    #          capabilities: [gpu, utility]
+    # On older Compose, replace the deploy block above with:
+    #runtime: nvidia
     restart: unless-stopped

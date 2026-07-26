@@ -8,4 +8,5 @@ RUN apt-get update && apt-get -qq -y install systemd -y --no-install-recommends 
     systemd \
     curl \
     nut \
-    smartmontools
+    smartmontools \
+    pciutils
