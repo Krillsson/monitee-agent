@@ -1,5 +1,10 @@
 ### Unreleased
 
+### 0.41.1
+
+ - Fix: GPU monitoring inside the docker image. The image now ships `pciutils`, which is needed to enumerate graphics cards
+ - NVIDIA GPUs additionally require the container to run under the NVIDIA container runtime with `NVIDIA_VISIBLE_DEVICES` and `NVIDIA_DRIVER_CAPABILITIES` (must include `utility`) set. See `docker-compose.yml`
+
 ### 0.41.0
 
  - Initial support for GPU monitoring. See `gpus`, `gpuById` queries and `gpuMetrics`, `gpuMetricsById` subscriptions in the GraphQL API
