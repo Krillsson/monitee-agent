@@ -31,6 +31,9 @@ apply plugin: 'io.github.fvarrui.javapackager.plugin'
 group = 'com.krillsson'
 version = '0.41.1'
 
+def imageArch = findProperty("imageArch")?.toString()?.trim()
+def largestSupportedPageSize = 65536
+
 buildConfig {
     buildConfigField("String", "APP_VERSION", provider { "\"${project.version}\"" })
     buildConfigField("java.util.Date", "BUILD_TIME", "java.util.Date(" + System.currentTimeMillis() + "L)")
@@ -81,6 +84,9 @@ graalvmNative {
             buildArgs.add('-H:+ReportExceptionStackTraces')
             buildArgs.add('--initialize-at-build-time=org.slf4j,ch.qos.logback')
             buildArgs.add('--initialize-at-run-time=io.netty,sun.reflect.misc.Trampoline')
+            if (imageArch == 'arm64') {
+                buildArgs.add("-H:PageSize=$largestSupportedPageSize")
+            }
         }
     }
 }
@@ -138,14 +144,23 @@ task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
             }
             jib.from {
                 image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+                if (imageArch) {
+                    platforms {
+                        platform {
+                            architecture = imageArch
+                            os = 'linux'
+                        }
+                    }
+                }
             }
             to {
                 def tag = findProperty("buildType") == "release" ? "native" : "native-nightly"
-                image = "krillsson/sys-api:$tag"
+                def suffix = imageArch ? "-$imageArch" : ""
+                image = "krillsson/sys-api:$tag$suffix"
                 def semVerRegex = /^\d+\.\d+\.\d+$/
                 def semVerTag = findProperty("semVerTag")?.toString()?.trim()
                 if (semVerTag && semVerTag.matches(semVerRegex) && tag == "native") {
-                    tags = [semVerTag + "-native"]
+                    tags = [semVerTag + "-native" + suffix]
                 } else {
                     tags = []  // Explicitly set an empty list if no valid SemVer tag
                 }
