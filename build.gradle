@@ -50,6 +50,7 @@ def jvmArgs = [
         "-XX:+AlwaysPreTouch",
         "-Xmx512m",
         "-Xms128m",
+        "--enable-native-access=ALL-UNNAMED",
 ]
 
 allOpen {
@@ -63,6 +64,10 @@ repositories {
     flatDir {
         dirs 'lib'
     }
+}
+
+configurations.nativeImageClasspath {
+    exclude group: 'com.github.oshi', module: 'oshi-core-ffm'
 }
 
 /**
@@ -102,7 +107,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 jvmFlags = jvmArgs
             }
             from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+                image = 'krillsson/openjdk25-ubuntu-systemd:latest'
                 platforms {
                     platform {
                         architecture = 'amd64'
@@ -141,7 +146,7 @@ task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 volumes = ["/config", "/data", "/var/run/docker.sock"]
             }
             jib.from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+                image = 'krillsson/openjdk25-ubuntu-systemd:latest'
             }
             to {
                 def tag = findProperty("buildType") == "release" ? "native" : "native-nightly"
@@ -239,7 +244,10 @@ dependencies {
     implementation 'org.apache.commons:commons-exec:1.3'
     implementation 'commons-io:commons-io:2.18.0'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
-    implementation('com.github.oshi:oshi-core:7.3.2') {
+    implementation('com.github.oshi:oshi-core:7.4.2') {
+        exclude group: "org.slf4j"
+    }
+    runtimeOnly('com.github.oshi:oshi-core-ffm:7.4.2') {
         exclude group: "org.slf4j"
     }
     implementation name: 'jni4net.j-0.8.9.0', group: "net.sf.jni4net", version: "1"
@@ -263,7 +271,7 @@ ospackage {
     user 'root'
     permissionGroup 'root'
 
-    requires('openjdk-21-jre-headless').or('java-sdk-headless', "21", Flags.GREATER | Flags.EQUAL)
+    requires('openjdk-25-jre-headless').or('java-sdk-headless', "25", Flags.GREATER | Flags.EQUAL)
 
     requires('daemon')
 }
@@ -310,8 +318,12 @@ task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.Package
     displayName = "sys-API"
     organizationName = "Krillsson"
     mainClass = 'com.krillsson.sysapi.SysAPIApplicationKt'
+    vmArgs = ["--enable-native-access=ALL-UNNAMED"]
     bundleJre = true
     customizedJre = false
+    if (findProperty("bundledJrePath")) {
+        jrePath = file(findProperty("bundledJrePath"))
+    }
     runnableJar = shadowJar.outputs.files.first()
     copyDependencies = false
     generateInstaller = true

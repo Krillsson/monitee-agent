@@ -1,5 +1,9 @@
 ### Unreleased
 
+ - Update OSHI to v7.4.2 and switch to its FFM backend, which replaces JNA with the Foreign Function & Memory API
+ - **Java 25 is now required.** The docker image, the .deb package and the Windows installer all bring their own Java 25. Only the command line .zip relies on the Java installation already on the machine — on anything older it logs a warning and keeps using the old JNA backend
+ - The GraalVM native image continues to use the JNA backend
+
 ### 0.41.1
 
  - Fix: GPU monitoring inside the docker image. The image now ships `pciutils`, which is needed to enumerate graphics cards
