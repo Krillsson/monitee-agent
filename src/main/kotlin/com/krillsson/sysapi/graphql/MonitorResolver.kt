@@ -103,6 +103,21 @@ class MonitorResolver(
                 }
             }
 
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.UPS_LOAD_WATT -> {
+                upsMetricsHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now()
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.realPowerLoadWatts?.toNumericalValue()?.asMonitoredValue()
+                            ?: com.krillsson.sysapi.core.monitoring.MonitoredValue.NumericalValue(-1)
+                                .asMonitoredValue()
+                    )
+                }
+            }
+
             com.krillsson.sysapi.core.monitoring.Monitor.Type.UPS_OPERATING_NORMALLY -> {
                 upsMetricsHistoryRepository.getHistoryLimitedToDates(
                     requireNotNull(monitor.monitoredItemId),
@@ -173,6 +188,21 @@ class MonitorResolver(
                     MonitoredValueHistoryEntry(
                         it.timestamp,
                         it.metrics.loadPercent?.toNumericalValue()?.asMonitoredValue()
+                            ?: com.krillsson.sysapi.core.monitoring.MonitoredValue.NumericalValue(-1)
+                                .asMonitoredValue()
+                    )
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.UPS_LOAD_WATT -> {
+                upsMetricsHistoryRepository.getHistoryLimitedToDates(
+                    requireNotNull(monitor.monitoredItemId),
+                    from,
+                    to
+                ).map {
+                    MonitoredValueHistoryEntry(
+                        it.timestamp,
+                        it.metrics.realPowerLoadWatts?.toNumericalValue()?.asMonitoredValue()
                             ?: com.krillsson.sysapi.core.monitoring.MonitoredValue.NumericalValue(-1)
                                 .asMonitoredValue()
                     )
