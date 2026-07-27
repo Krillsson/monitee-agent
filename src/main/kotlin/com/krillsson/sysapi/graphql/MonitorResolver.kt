@@ -320,6 +320,21 @@ class MonitorResolver(
                 historyRepository.getConnectivityById(id)
             )?.asMonitoredValue()
 
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_VRAM_USAGE -> GpuVramUsageMonitor.value(
+                historyRepository.getGpuLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_TEMPERATURE -> GpuTemperatureMonitor.value(
+                historyRepository.getGpuLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.GPU_UTILIZATION -> GpuUtilizationMonitor.value(
+                historyRepository.getGpuLoadsById(id),
+                monitor.monitoredItemId
+            )?.asMonitoredValue()
+
             else -> throw IllegalStateException("Illegal type ${monitor.type.name}")
         }
 
