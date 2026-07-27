@@ -94,13 +94,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: actions/checkout@v4
+      # Gradle 8.8 cannot compile a Groovy build script on JDK 25, so the daemon
+      # stays on 21 and only native-image runs on GraalVM 25 via GRAALVM_HOME.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
       - uses: graalvm/setup-graalvm@v1
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'graalvm-community'
-          cache: 'gradle'
-          set-java-home: 'true'
+          set-java-home: 'false'
           native-image-job-reports: 'true'
+      - name: Install zlib headers for native-image linking
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
       - name: Upload Graal native build to Docker Hub
         run: ./gradlew jibNativeImage
       - name: Store native image artifact
