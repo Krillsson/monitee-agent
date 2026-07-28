@@ -1,0 +1,15 @@
+#
+# Custom base image for jib for the native build. Same tooling as the JVM base
+# image, without the JRE that a native binary does not need.
+#
+# Built per architecture by the native CI job and consumed by jib via docker://
+#
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get -qq -y install -y --no-install-recommends \
+    systemd \
+    curl \
+    nut \
+    smartmontools \
+    pciutils \
+ && rm -rf /var/lib/apt/lists/*

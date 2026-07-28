@@ -135,8 +135,12 @@ jobs:
           native-image-job-reports: 'true'
       - name: Install zlib headers for native-image linking
         run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+      - name: Build the native base image
+        run: docker build -f Dockerfile.native -t sysapi-native-base:local .
       - name: Upload Graal native build to Docker Hub
-        run: ./gradlew jibNativeImage -PbuildType="release" -PsemVerTag="${{ env.RELEASE_TAG }}" -PimageArch=${{ matrix.arch }}
+        run: ./gradlew jibNativeImage -PbuildType="release" -PsemVerTag="${{ env.RELEASE_TAG }}" -PimageArch=${{ matrix.arch }} -PnativeBaseImage=docker://sysapi-native-base:local
+      - name: Smoke test the native binary
+        run: ./.github/smoke-test-native.sh build/native/nativeCompile/sysapi
       - name: Store native image artifact
         uses: actions/upload-artifact@v4
         with:

@@ -33,6 +33,7 @@ version = '0.41.1'
 
 def imageArch = findProperty("imageArch")?.toString()?.trim()
 def largestSupportedPageSize = 65536
+def nativeBaseImage = findProperty("nativeBaseImage")?.toString()?.trim() ?: 'krillsson/openjdk21-ubuntu-systemd:latest'
 
 buildConfig {
     buildConfigField("String", "APP_VERSION", provider { "\"${project.version}\"" })
@@ -143,8 +144,8 @@ task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 volumes = ["/config", "/data", "/var/run/docker.sock"]
             }
             jib.from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
-                if (imageArch) {
+                image = nativeBaseImage
+                if (imageArch && !nativeBaseImage.startsWith('docker://')) {
                     platforms {
                         platform {
                             architecture = imageArch
