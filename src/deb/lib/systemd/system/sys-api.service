@@ -4,6 +4,8 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
+Environment=MALLOC_ARENA_MAX=2
+Environment=MALLOC_TRIM_THRESHOLD_=131072
 ExecStart=/usr/bin/sys-api-server --spring.config.location=file:/etc/application.properties
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
