@@ -1,5 +1,3 @@
-# TrueNAS Scale
-
 ## Find the community app
 
 Search for monitee in community applications. It can also be found under the Monitoring category.
@@ -77,4 +75,4 @@ We can verify that the server is working by looking at the logs in the TrueNAS U
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

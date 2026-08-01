@@ -1,5 +1,3 @@
-# Windows setup.exe
-
 ## 1. Installation
 
 Download the latest setup.exe from [https://github.com/Krillsson/sys-API/releases/latest](https://github.com/Krillsson/sys-API/releases/latest) and run it
@@ -54,4 +52,4 @@ If everything worked there will be a few log files in the installation directory
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

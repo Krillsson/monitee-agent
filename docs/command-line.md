@@ -1,5 +1,3 @@
-# Command line
-
 ## Linux
 
 Log onto your server
@@ -91,4 +89,4 @@ Again, press **CTRL+C** to get back to the terminal
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

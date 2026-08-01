@@ -1,5 +1,3 @@
-# SSL troubleshooting
-
 ![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.12.01.png)
 
 This guide is intended for when you get SSL unverified peer error during setup and are using the self-signed certificate solution in sys-API (the default).

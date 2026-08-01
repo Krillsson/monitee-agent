@@ -1,5 +1,3 @@
-# Unraid
-
 The docker template for monitee-agent is pretty standard, so if you are familiar with unraid it will be a easy task.
 
 The template is using host-mode networking. **This means the app will fail to start if 8080 and 8443 is not available**. To fix it, read the “**Prepare configuration**” section.
@@ -104,4 +102,4 @@ We can verify that the server is working by looking at the logs in the unraid UI
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

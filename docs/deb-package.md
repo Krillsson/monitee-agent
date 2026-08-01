@@ -1,5 +1,3 @@
-# Deb package
-
 ## For Debian based Linux distros (e.g Ubuntu / Raspbian)
 
 Log onto your server
@@ -99,4 +97,4 @@ When you see the following, we know that the server is up and running:
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

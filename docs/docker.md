@@ -1,5 +1,3 @@
-# Docker
-
 Let’s create a installation directory in our servers home folder
 
 ```bash
@@ -74,4 +72,4 @@ When you see the following, we know that the server is up and running:
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

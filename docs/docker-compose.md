@@ -1,5 +1,3 @@
-# Docker Compose
-
 Let’s create a installation directory in our servers home folder
 
 ```bash
@@ -69,4 +67,4 @@ If you see this message without any error after it. That means the server is up 
 
 Now you are ready to proceed to next step
 
-[Connect App to Server](connect-app-to-server.md)
+**Connect App to Server**

@@ -1,5 +1,3 @@
-# Connect the app to your server
-
 Got the Monitee agent running on your server? Let’s connect it to Monitee. The process is different depending on if the server is on your local network / WIFI or on the internet.
 
 Please note, you connect the app directly to the server. There is no central server for service discovery or tunneling traffic. This is so that **you remain in control**.
@@ -40,7 +38,7 @@ Look for the IP of the eth0 or wlan0 interface.
 
 If you choose to connect over HTTPS and have not done anything to configure SSL for the service, it will use a self-signed certificate per default. A popup will appear for you to review the contents and trust the certificate.
 
-[Can’t get SSL to work?](ssl-troubleshooting.md)
+Can’t get SSL to work? See **SSL troubleshooting**.
 
 ![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.49.25.png)
 
