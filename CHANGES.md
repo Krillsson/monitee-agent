@@ -1,5 +1,7 @@
 ### Unreleased
 
+ - Reduced memory footprint: the JVM now uses SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
+
 ### 0.41.1
 
  - Fix: GPU monitoring inside the docker image. The image now ships `pciutils`, which is needed to enumerate graphics cards
@@ -9,7 +11,6 @@
 
  - Initial support for GPU monitoring. See `gpus`, `gpuById` queries and `gpuMetrics`, `gpuMetricsById` subscriptions in the GraphQL API
  - Update OSHI to v7.3.2
- - JVM tweaks to reduce memory footprint
 
 ### 0.40.1
  
