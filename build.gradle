@@ -251,7 +251,7 @@ dependencies {
     implementation 'org.apache.commons:commons-exec:1.3'
     implementation 'commons-io:commons-io:2.18.0'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
-    implementation('com.github.oshi:oshi-core:7.3.2') {
+    implementation('com.github.oshi:oshi-core:7.4.3') {
         exclude group: "org.slf4j"
     }
     implementation name: 'jni4net.j-0.8.9.0', group: "net.sf.jni4net", version: "1"

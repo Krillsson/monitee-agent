@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
+
 ### 0.41.1
 
  - Fix: GPU monitoring inside the docker image. The image now ships `pciutils`, which is needed to enumerate graphics cards
