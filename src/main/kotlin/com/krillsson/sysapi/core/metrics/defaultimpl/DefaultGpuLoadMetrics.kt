@@ -28,6 +28,7 @@ class DefaultGpuLoadMetrics(private val hal: HardwareAbstractionLayer) {
     private val previousSampledAt = mutableMapOf<String, Long>()
     private val names = mutableMapOf<String, String>()
     private val vramTotals = mutableMapOf<String, Long>()
+    private val unreadableDevices = mutableSetOf<String>()
 
     @Volatile
     var gpuLoads: List<GpuLoad> = emptyList()
@@ -59,23 +60,42 @@ class DefaultGpuLoadMetrics(private val hal: HardwareAbstractionLayer) {
         return gpuLoads.firstOrNull { it.id == id }
     }
 
+    /**
+     * Never throws: a GPU we cannot read is reported as missing rather than being allowed to take
+     * down the metric that samples it — or, because the first sample happens in the constructor,
+     * the whole application context.
+     */
     private fun sample(): List<GpuLoad> {
-        refreshSessions()
-        return sessions.map { (deviceId, stats) ->
-            GpuLoad(
-                id = deviceId,
-                name = names[deviceId].orEmpty(),
-                coreLoad = utilization(deviceId, stats, System.nanoTime()),
-                vramUsedBytes = stats.vramUsed,
-                vramTotalBytes = vramTotals[deviceId] ?: -1L,
-                health = GpuHealth(
-                    temperature = stats.temperature,
-                    fanPercent = stats.fanSpeedPercent,
-                    powerDraw = stats.powerDraw,
-                    coreClockMhz = stats.coreClockMhz,
-                    memoryClockMhz = stats.memoryClockMhz
-                )
+        runCatching { refreshSessions() }
+            .onFailure { logger.warn("Unable to enumerate graphics cards", it) }
+        return sessions.mapNotNull { (deviceId, stats) ->
+            runCatching { read(deviceId, stats) }
+                .onSuccess { unreadableDevices.remove(deviceId) }
+                .onFailure { reportUnreadable(deviceId, it) }
+                .getOrNull()
+        }
+    }
+
+    private fun read(deviceId: String, stats: GpuStats): GpuLoad {
+        return GpuLoad(
+            id = deviceId,
+            name = names[deviceId].orEmpty(),
+            coreLoad = utilization(deviceId, stats, System.nanoTime()),
+            vramUsedBytes = stats.vramUsed,
+            vramTotalBytes = vramTotals[deviceId] ?: -1L,
+            health = GpuHealth(
+                temperature = stats.temperature,
+                fanPercent = stats.fanSpeedPercent,
+                powerDraw = stats.powerDraw,
+                coreClockMhz = stats.coreClockMhz,
+                memoryClockMhz = stats.memoryClockMhz
             )
+        )
+    }
+
+    private fun reportUnreadable(deviceId: String, throwable: Throwable) {
+        if (unreadableDevices.add(deviceId)) {
+            logger.warn("Unable to read load for GPU {}, skipping it until it recovers", deviceId, throwable)
         }
     }
 
@@ -117,6 +137,8 @@ class DefaultGpuLoadMetrics(private val hal: HardwareAbstractionLayer) {
             runCatching { sessions[deviceId]?.close() }
             sessions.remove(deviceId)
             previousTicks.remove(deviceId)
+            previousSampledAt.remove(deviceId)
+            unreadableDevices.remove(deviceId)
         }
     }
 
