@@ -24,6 +24,9 @@ DAEMON_OPTS="--spring.config.location=file:$CONFILE"
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
+export MALLOC_ARENA_MAX="${MALLOC_ARENA_MAX:-2}"
+export MALLOC_TRIM_THRESHOLD_="${MALLOC_TRIM_THRESHOLD_:-131072}"
+
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
 
