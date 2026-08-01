@@ -12,6 +12,27 @@ It publishes and monitors values from [OSHI](https://github.com/oshi/oshi) with 
 
 # [monitee.app/get-started](https://monitee.app/get-started/)
 
+## Get started
+
+Monitee is two pieces: the app on your phone, and an agent you run on the server you want to watch. The agent does the work — install it first, then point the app at it.
+
+### 1. Install the agent on your server
+
+- [Docker Compose](docs/docker-compose.md)
+- [Docker](docs/docker.md)
+- [Unraid](docs/unraid.md)
+- [TrueNAS Scale](docs/truenas.md)
+- [Deb package](docs/deb-package.md)
+- [Command line](docs/command-line.md)
+- [Windows setup.exe](docs/windows-setup-exe.md)
+
+### 2. Add the server in the app
+
+Install Monitee from Google Play and tap **+**. On your own network it usually finds the server by itself — the agent announces itself over DNS-SD, so there is often nothing to type at all.
+
+- [Connection guide](docs/connect-app-to-server.md)
+- [SSL troubleshooting](docs/ssl-troubleshooting.md)
+
 ## What can it do?
 
 Query for:
@@ -55,7 +76,7 @@ graphQLPlayGround:
 
 ## Running
 
-Referr to [monitee.app/get-started](https://monitee.app/get-started/) for how to run it on your system.
+Referr to the [setup guides](#1-install-the-agent-on-your-server) for how to run it on your system.
 
 ## Configuration
 The application expects a user config file (_configuration.yml_) and a spring configuration file (_application.properties_) in the _/config_ directory.
