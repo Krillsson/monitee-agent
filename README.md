@@ -1,6 +1,8 @@
 ![header](header.png)
 [![Docker hub](https://badgen.net/badge/icon/docker?icon=docker&label)](https://hub.docker.com/r/krillsson/sys-api)
 
+# [monitee.app](https://monitee.app/)
+
 Monitee agent (formerly sys-API) provide a [GraphQL API](https://graphql.org/) to your computers hardware.
 
 It publishes and monitors values from [OSHI](https://github.com/oshi/oshi) with the help of [Spring](https://spring.io/). On Windows the information is supplemented with
@@ -9,8 +11,6 @@ It publishes and monitors values from [OSHI](https://github.com/oshi/oshi) with 
 >This is the server backend for the Android app Monitee.
 >
 ><a href="https://play.google.com/store/apps/details?id=com.krillsson.monitee"><img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" alt="Get it on Play Store" height="80"></a>
-
-# [monitee.app/get-started](https://monitee.app/get-started/)
 
 ## Get started
 
