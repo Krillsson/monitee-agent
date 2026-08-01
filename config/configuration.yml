@@ -14,7 +14,7 @@ metricsConfig:
       purgeEvery: 1
       purgeEveryUnit: DAYS
   cache:
-    enabled: false
+    enabled: true
     duration: 5
     unit: SECONDS
 user:
