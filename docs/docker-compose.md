@@ -29,7 +29,7 @@ Use your favorite text editor to edit the user & password of the config
 nano configuration.yml
 ```
 
-![](images/Screenshot-2023-09-01-at-09.25.00.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2023-09-01-at-09.25.00.png)
 
 Then press **CTRL+X** to exit nano (and press **Y** to save)
 

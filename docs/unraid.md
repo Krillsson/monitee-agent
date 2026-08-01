@@ -70,15 +70,15 @@ Again, press **CTRL+X** to exit nano (and press **Y** to save)
 
 Search for monitee-agent in the Community Applications store.
 
-![](images/Screenshot-2025-02-19-at-06.56.12.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-19-at-06.56.12.png)
 
 Now that everything is prepared we can just choose the directories we created during the preparation and the rest will just work.
 
-![](images/Screenshot-2025-02-19-at-17.55.45.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-19-at-17.55.45.png)
 
 And then lets add the disks we want to monitor as devices inside the “Extra parameters” along with the capability RAWIO.
 
-![](images/Screenshot-2025-03-08-at-20.44.27.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-03-08-at-20.44.27.png)
 
 Example:
 

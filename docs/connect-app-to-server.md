@@ -22,7 +22,7 @@ If it shows up, just select it and press **Next**
 
 However, if the server does not show up. Press the **Add address manually button**
 
-![](images/photo_2023-09-03-14.28.59.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-03-14.28.59.jpeg)
 
 In the dialog that appears, fill in the servers local IP.
 
@@ -34,7 +34,7 @@ ifconfig
 
 Look for the IP of the eth0 or wlan0 interface.
 
-![](images/photo_2023-09-03-14.35.21.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-03-14.35.21.jpeg)
 
 ## Self-signed certificate popup
 
@@ -42,7 +42,7 @@ If you choose to connect over HTTPS and have not done anything to configure SSL 
 
 [Can’t get SSL to work?](ssl-troubleshooting.md)
 
-![](images/Screenshot-2025-02-16-at-12.49.25.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.49.25.png)
 
 ## Internet only
 
@@ -58,7 +58,7 @@ There’s a few prerequisites to get this working
 
 Server discovery does not work over the internet. Press the **Add address manually button** in the Primary step
 
-![](images/photo_2023-09-03-14.28.59.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-03-14.28.59.jpeg)
 
 In the dialog that appears, fill in the servers public IP or domain.
 
@@ -68,7 +68,7 @@ To find the public IP of the server use this command.
 curl ifconfig.me
 ```
 
-![](images/photo_2023-09-03-14.35.21.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-03-14.35.21.jpeg)
 
 ## Both Local and Internet
 
@@ -84,13 +84,13 @@ In the Secondary step. Fill in the servers public IP.
 
 However, if you are not on the same WIFI. Press the **Add address manually button**
 
-![](images/photo_2023-09-04-15.12.15.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-04-15.12.15.jpeg)
 
 ## Login step
 
 Fill in the username and password you entered in the [configuration.yml](https://github.com/Krillsson/monitee-agent/blob/master/config/configuration.yml) when setting up Monitee agent.
 
-![](images/photo_2023-09-04-15.21.33.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-04-15.21.33.jpeg)
 
 ## Info step
 
@@ -100,7 +100,7 @@ Select what drive and network adapter you want to appear on the server detail da
 
 Choose ***“Notify when unreachable”*** if you’d like Monitee to send you a notification when it can’t reach the server. Note that this doesn’t make sense if you use the Local server only option, since you will receive notifications when you are not on the same WIFI as the server.
 
-![](images/photo_2023-09-04-15.23.51.jpeg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/photo_2023-09-04-15.23.51.jpeg)
 
 ## Final words…
 
@@ -108,4 +108,4 @@ That’s it! You should be setup by now. Should you run into any issue. Don’t 
 
 Reach it from the Settings > About screen.
 
-![](images/2023-09-04-15.28.58.jpg)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/2023-09-04-15.28.58.jpg)

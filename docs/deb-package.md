@@ -42,7 +42,7 @@ To allow monitee agent monitor temperature of disks, we need smartmontools
 sudo apt-get install smartmontools
 ```
 
-Then go to [GitHub](https://github.com/Krillsson/sys-api/releases/latest) ![](images/GitHub-Mark-Light-120px-plus.png) in a browser to find latest release download
+Then go to [GitHub](https://github.com/Krillsson/sys-api/releases/latest) ![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/GitHub-Mark-Light-120px-plus.png) in a browser to find latest release download
 
 Copy the URL of the file *sysapi_x.x.x_all.deb*
 
@@ -66,7 +66,7 @@ Use your favorite text editor to edit the user & password of the config
 nano /opt/sys-api/config/configuration.yml
 ```
 
-![](images/Screenshot-2023-09-01-at-09.25.00.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2023-09-01-at-09.25.00.png)
 
 Then press **CTRL+X** to exit nano (and press **Y** to save)
 

@@ -22,7 +22,7 @@ If you need to change the default application ports *8080* and *8443*, you can d
 
 Now we can start sys-api using the exe file sysapi.exe. A console window will pop-up and eventually it will settle.
 
-![](images/Screenshot-2024-09-29-090902.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2024-09-29-090902.png)
 
 It will pause for a long time at:  
 **“Initializing OpenHardwareMonitor.”**
@@ -44,13 +44,13 @@ After we’ve made sure that it works we can install sys-api as a service. This 
 
 Double-click *install-service.bat* and wait until it finishes.
 
-![](images/Screenshot-2024-09-29-092046.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2024-09-29-092046.png)
 
 The bat files are just calling the *sys-API-servicew.exe* with different arguments. You can take a look at [winsw documentation](https://github.com/winsw/winsw) if you want to learn more.
 
 If everything worked there will be a few log files in the installation directory. You can also operate the service using the Services program in Windows.
 
-![](images/Screenshot-2024-09-29-092341.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2024-09-29-092341.png)
 
 Now you are ready to proceed to next step
 

@@ -30,7 +30,7 @@ Let’s create a installation directory in our servers home folder
 mkdir ~/sys-api && cd ~/sys-api
 ```
 
-Then go to [GitHub](https://github.com/Krillsson/sys-api/releases/latest) ![](images/GitHub-Mark-Light-120px-plus.png) in a browser to find latest release download
+Then go to [GitHub](https://github.com/Krillsson/sys-api/releases/latest) ![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/GitHub-Mark-Light-120px-plus.png) in a browser to find latest release download
 
 Copy the URL of the file *sysapi-shadow-x.x.x.zip*
 
@@ -60,7 +60,7 @@ Use your favorite text editor to edit the user & password of the config
 nano config/configuration.yml
 ```
 
-![](images/Screenshot-2023-09-01-at-09.25.00.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2023-09-01-at-09.25.00.png)
 
 Then press **CTRL+X** to exit nano (and press **Y** to save)
 

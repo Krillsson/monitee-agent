@@ -1,6 +1,6 @@
 # SSL troubleshooting
 
-![](images/Screenshot-2025-02-16-at-12.12.01.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.12.01.png)
 
 This guide is intended for when you get SSL unverified peer error during setup and are using the self-signed certificate solution in sys-API (the default).
 
@@ -24,9 +24,9 @@ openssl x509 -in self_signed_server.crt -text -noout
 
 You can use an [online tool](https://www.sslshopper.com/certificate-decoder.html) if you are not comfortable with the terminal.
 
-![](images/Screenshot-2025-02-16-at-12.16.46.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.16.46.png)
 
-![](images/Screenshot-2025-02-16-at-12.23.32.png)
+![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2025-02-16-at-12.23.32.png)
 
 ## 2. Regenerate the certs manually
 
