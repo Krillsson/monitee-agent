@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Reduced memory footprint: the JVM now runs SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
 - Fix: the docker image no longer declares a volume for `/var/run/docker.sock`
 - The agent no longer starts Spring auto-configuration it does not use, loading around 800 fewer classes
 
@@ -49,7 +50,6 @@
 
  - Initial support for GPU monitoring. See `gpus`, `gpuById` queries and `gpuMetrics`, `gpuMetricsById` subscriptions in the GraphQL API
  - Update OSHI to v7.3.2
- - JVM tweaks to reduce memory footprint
 
 ### 0.40.1
  
