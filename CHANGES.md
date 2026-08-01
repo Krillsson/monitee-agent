@@ -1,6 +1,7 @@
 ### Unreleased
 
- - Reduced memory footprint: the JVM now uses SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
+- Reduced memory footprint: the JVM now uses SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
+- Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 
 ### 0.41.1
 
