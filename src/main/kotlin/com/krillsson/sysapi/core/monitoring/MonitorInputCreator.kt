@@ -6,6 +6,7 @@ import com.krillsson.sysapi.core.domain.disk.Disk
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
+import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
@@ -22,6 +23,7 @@ import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.notifications.localization.ByteFormatter
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
@@ -39,6 +41,7 @@ class MonitorInputCreator(
     private val webServerCheckService: WebServerCheckService,
     private val byteFormatter: ByteFormatter,
     private val upsService: UpsService,
+    private val containerUpdateChecker: ContainerUpdateChecker,
 ) {
 
     companion object {
@@ -85,6 +88,10 @@ class MonitorInputCreator(
 
     private val containerStatisticsTypes = listOf<Monitor.Type>(
         Monitor.Type.CONTAINER_MEMORY_SPACE, Monitor.Type.CONTAINER_CPU_LOAD
+    )
+
+    private val containerUpdateTypes = listOf<Monitor.Type>(
+        Monitor.Type.CONTAINER_UPDATE_AVAILABLE
     )
 
     private fun List<Monitor<*>>.idsSubset(types: List<Monitor.Type>) =
@@ -141,11 +148,16 @@ class MonitorInputCreator(
             if (containerIds.isNotEmpty()) containerService.containersWithIds(containerIds) else emptyList()
         val containersStats = containerStatisticsIds.mapNotNull { id -> containerService.statsForContainer(id) }
 
+        val containerImageUpdates = containerUpdateChecker.updatesForContainers(
+            activeTypes.idsSubset(containerUpdateTypes)
+        ).values.toList()
+
         val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
         return MonitorInput(
             load,
             containers,
             containersStats,
+            containerImageUpdates,
             webserverChecks,
             upsDeviceMetrics
         )
@@ -227,6 +239,12 @@ class MonitorInputCreator(
                     val containerStats =
                         requireNotNull(containerService.statsForContainer(requireNotNull(monitor.config.monitoredItemId)))
                     createContainerCpuLoadMonitorableItem(containerStats, container)
+                }
+
+                Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> {
+                    val container =
+                        requireNotNull(containerService.container(requireNotNull(monitor.config.monitoredItemId)))
+                    createContainerUpdateAvailableMonitorableItem(container)
                 }
 
                 Monitor.Type.PROCESS_MEMORY_SPACE -> {
@@ -444,6 +462,16 @@ class MonitorInputCreator(
                     stats[container.id]?.let { statistics ->
                         createContainerCpuLoadMonitorableItem(statistics, container)
                     }
+                }
+            }
+
+            Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> {
+                if (containerUpdateChecker.enabled) {
+                    containerService.containers().map {
+                        createContainerUpdateAvailableMonitorableItem(it)
+                    }
+                } else {
+                    emptyList()
                 }
             }
 
@@ -722,6 +750,16 @@ class MonitorInputCreator(
         maxValue = statistics.memoryUsage.limitBytes.toNumericalValue(),
         currentValue = statistics.memoryUsage.usageBytes.toNumericalValue(),
         type = Monitor.Type.CONTAINER_MEMORY_SPACE
+    )
+
+    private fun createContainerUpdateAvailableMonitorableItem(container: Container) = MonitorableItem(
+        id = container.id,
+        name = container.names.joinToString(),
+        description = container.image,
+        maxValue = true.toConditionalValue(),
+        currentValue = (containerUpdateChecker.updateForContainer(container.id)?.status != ImageUpdateStatus.OUTDATED)
+            .toConditionalValue(),
+        type = Monitor.Type.CONTAINER_UPDATE_AVAILABLE
     )
 
     private fun createContainerRunningMonitorableItem(it: Container) = MonitorableItem(

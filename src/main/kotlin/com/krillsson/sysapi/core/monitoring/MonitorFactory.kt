@@ -95,6 +95,11 @@ class MonitorFactory {
                 config as MonitorConfig<MonitoredValue.FractionalValue>
             )
 
+            Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> ContainerUpdateAvailableMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.ConditionalValue>
+            )
+
             Monitor.Type.WEBSERVER_UP -> WebServerUpMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.ConditionalValue>

@@ -25,6 +25,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CONTAINER_RUNNING(ValueType.Conditional),
         CONTAINER_MEMORY_SPACE(ValueType.Numerical),
         CONTAINER_CPU_LOAD(ValueType.Fractional),
+        CONTAINER_UPDATE_AVAILABLE(ValueType.Conditional),
         PROCESS_MEMORY_SPACE(ValueType.Numerical),
         PROCESS_CPU_LOAD(ValueType.Fractional),
         PROCESS_EXISTS(ValueType.Conditional),

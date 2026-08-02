@@ -48,6 +48,7 @@ class OngoingEventFormatter(
                 Monitor.Type.GPU_VRAM_USAGE -> "GPU VRAM usage too high on $serverName"
                 Monitor.Type.GPU_TEMPERATURE -> "GPU temp. too high on $serverName"
                 Monitor.Type.GPU_UTILIZATION -> "GPU load too high on $serverName"
+                Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "New container image available on $serverName"
             }
         }
 
@@ -108,6 +109,12 @@ class OngoingEventFormatter(
                 Monitor.Type.GPU_VRAM_USAGE -> "VRAM usage on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.GPU_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.GPU_UTILIZATION -> "Load on $monitoredItemId went above $formattedThreshold to $formattedValue"
+                Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "Container ${
+                    monitoredItemId?.replace(
+                        "/",
+                        ""
+                    )
+                } is running an $formattedValue image"
             }
         }
 
@@ -174,6 +181,7 @@ class OngoingEventFormatter(
             Monitor.Type.GPU_VRAM_USAGE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
             Monitor.Type.GPU_TEMPERATURE -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
             Monitor.Type.GPU_UTILIZATION -> formatPercent((this as MonitoredValue.FractionalValue).value)
+            Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> if ((this as MonitoredValue.ConditionalValue).value) "up to date" else "outdated"
         }
     }
 

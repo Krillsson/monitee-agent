@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.core.monitoring.monitors
 
 import com.krillsson.sysapi.core.domain.docker.Container
+import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
@@ -14,6 +15,7 @@ typealias EnumValueSelector<E> = (SystemLoad, String?) -> MonitoredValue.EnumVal
 typealias ContainerConditionalValueSelector = (List<Container>, List<ContainerMetrics>, String?) -> MonitoredValue.ConditionalValue?
 typealias ContainerNumericalValueSelector = (List<Container>, List<ContainerMetrics>, String?) -> MonitoredValue.NumericalValue?
 typealias ContainerFractionalValueSelector = (List<Container>, List<ContainerMetrics>, String?) -> MonitoredValue.FractionalValue?
+typealias ContainerUpdateConditionalValueSelector = (List<ContainerImageUpdate>, String?) -> MonitoredValue.ConditionalValue?
 
 typealias MaxValueNumericalSelector = (MonitorMaxValueInput, String?) -> MonitoredValue.NumericalValue?
 typealias MaxValueFractionalSelector = (MonitorMaxValueInput, String?) -> MonitoredValue.FractionalValue?
