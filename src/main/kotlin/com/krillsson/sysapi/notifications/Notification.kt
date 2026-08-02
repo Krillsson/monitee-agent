@@ -35,6 +35,14 @@ sealed interface Notification {
             val monitorId: UUID,
             val monitoredItemId: String?
         ) : GenericEvent
+
+        class ContainerImageUpdateAvailable(
+            val id: UUID,
+            val timestamp: Instant,
+            val containerId: String,
+            val containerName: String,
+            val imageRef: String,
+        ) : GenericEvent
     }
 }
 

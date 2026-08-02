@@ -310,6 +310,18 @@ type UpdateAvailable implements GenericEvent {
     publishDate: String!
 }
 
+type ContainerImageUpdateAvailable implements GenericEvent {
+    id: UUID!
+    dateTime: OffsetDateTime! @deprecated(reason: "Replaced by timestamp")
+    timestamp: Instant!
+    title: String!
+    description: String!
+    containerId: String!
+    containerName: String!
+    imageRef: String!
+    remoteDigest: String!
+}
+
 type MonitoredItemMissing implements GenericEvent {
     id: UUID!
     dateTime: OffsetDateTime! @deprecated(reason: "Replaced by timestamp")

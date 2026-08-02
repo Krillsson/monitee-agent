@@ -117,6 +117,24 @@ class DockerClient(
         return timedResult.second
     }
 
+    data class ImageInspection(
+        val repoDigests: List<String>,
+        val repoTags: List<String>
+    )
+
+    fun inspectImage(imageId: String): ImageInspection? {
+        return try {
+            val response = client.inspectImageCmd(imageId).exec()
+            ImageInspection(
+                response.repoDigests.orEmpty(),
+                response.repoTags.orEmpty()
+            )
+        } catch (e: RuntimeException) {
+            LOGGER.debug("Unable to inspect image {}: {}", imageId, e.message)
+            null
+        }
+    }
+
     fun containerStatistics(containerId: String): ContainerMetrics? {
         val timedResult = measureTimeMillis {
             var statistics: Statistics?

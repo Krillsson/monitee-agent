@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEvent
 import com.krillsson.sysapi.core.genericevents.MonitoredItemMissing
 import com.krillsson.sysapi.util.toOffsetDateTime
@@ -28,6 +29,23 @@ import org.springframework.stereotype.Controller
 //    @SchemaMapping
 //    fun dateTime(event: GenericEvent) = event.timestamp.toOffsetDateTime()
 //}
+
+@Controller
+@SchemaMapping(typeName = "ContainerImageUpdateAvailable")
+class ContainerImageUpdateAvailableGenericEventResolver {
+    @SchemaMapping(typeName = "ContainerImageUpdateAvailable", field = "title")
+    fun title(event: ContainerImageUpdateAvailable): String {
+        return "New container image available"
+    }
+
+    @SchemaMapping(typeName = "ContainerImageUpdateAvailable", field = "description")
+    fun description(event: ContainerImageUpdateAvailable): String {
+        return "${event.containerName} is running an outdated ${event.imageRef}"
+    }
+
+    @SchemaMapping(typeName = "ContainerImageUpdateAvailable", field = "dateTime")
+    fun dateTime(event: ContainerImageUpdateAvailable) = event.timestamp.toOffsetDateTime()
+}
 
 @Controller
 @SchemaMapping(typeName = "MonitoredItemMissing")

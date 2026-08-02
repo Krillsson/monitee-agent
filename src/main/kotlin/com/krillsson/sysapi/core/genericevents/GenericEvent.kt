@@ -27,3 +27,12 @@ abstract class GenericEvent(
         val monitorId: UUID,
         val monitoredItemId: String?
     ) : GenericEvent(id, timestamp)
+
+    class ContainerImageUpdateAvailable(
+        id: UUID,
+        timestamp: Instant,
+        val containerId: String,
+        val containerName: String,
+        val imageRef: String,
+        val remoteDigest: String
+    ) : GenericEvent(id, timestamp)
