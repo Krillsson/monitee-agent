@@ -1,10 +1,12 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ReadLogsCommandResult
+import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.graphql.domain.*
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -14,7 +16,10 @@ import java.time.OffsetDateTime
 
 @Controller
 @SchemaMapping(typeName = "DockerAvailable")
-class DockerResolver(val containerService: ContainerService) {
+class DockerResolver(
+    val containerService: ContainerService,
+    val containerUpdateChecker: ContainerUpdateChecker
+) {
 
     @SchemaMapping
     fun containers() = containerService.containers()
@@ -24,6 +29,12 @@ class DockerResolver(val containerService: ContainerService) {
     @SchemaMapping
     fun runningContainers() =
         containerService.containers().filter { it.state == State.RUNNING }
+
+    @SchemaMapping
+    fun containersWithImageUpdates(): List<Container> {
+        val outdated = containerUpdateChecker.outdatedContainerIds()
+        return containerService.containers().filter { outdated.contains(it.id) }
+    }
 
     @SchemaMapping
     fun readLogsForContainer(

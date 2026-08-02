@@ -46,6 +46,7 @@ type DockerAvailable {
     container(id: String!): DockerContainer
     containers: [DockerContainer!]!
     runningContainers: [DockerContainer!]!
+    containersWithImageUpdates: [DockerContainer!]!
     readLogsForContainer(containerId: String!, from: OffsetDateTime, to: OffsetDateTime): ReadLogsForContainerOutput @deprecated(reason: "Replaced by readLogsForContainerBetweenTimestamps")
     readLogsForContainerBetweenTimestamps(containerId: String!, from: Instant, to: Instant): ReadLogsForContainerOutput
     metricsForContainer(containerId: String!): DockerContainerMetrics
@@ -98,6 +99,24 @@ type DockerContainer {
     state: DockerContainerState!
     health: DockerContainerHealth
     status: String!
+    imageUpdate: DockerContainerImageUpdate!
+}
+
+enum DockerImageUpdateStatus {
+    UP_TO_DATE,
+    OUTDATED,
+    SKIPPED,
+    ERROR,
+    UNKNOWN
+}
+
+type DockerContainerImageUpdate {
+    status: DockerImageUpdateStatus!
+    imageRef: String!
+    remoteDigest: String
+    # why the image was skipped or why the check failed
+    reason: String
+    checkedAt: Instant
 }
 
 type DockerContainerMetrics{

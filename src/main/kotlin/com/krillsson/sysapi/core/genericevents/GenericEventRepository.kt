@@ -67,6 +67,16 @@ class GenericEventRepository(private val store: GenericEventStore) {
                 downloadUrl = downloadUrl,
                 publishDate = publishDate
             )
+
+            is ContainerImageUpdateAvailable -> GenericEventStore.StoredGenericEvent.ContainerImageUpdateAvailable(
+                id = id,
+                dateTime = timestamp.toOffsetDateTime(),
+                containerId = containerId,
+                containerName = containerName,
+                imageRef = imageRef,
+                remoteDigest = remoteDigest
+            )
+
             else -> null
         }
     }
@@ -89,6 +99,15 @@ class GenericEventRepository(private val store: GenericEventStore) {
                 changeLogMarkdown = changeLogMarkdown,
                 downloadUrl = downloadUrl,
                 publishDate = publishDate
+            )
+
+            is GenericEventStore.StoredGenericEvent.ContainerImageUpdateAvailable -> ContainerImageUpdateAvailable(
+                id = id,
+                timestamp = dateTime.toInstant(),
+                containerId = containerId,
+                containerName = containerName,
+                imageRef = imageRef,
+                remoteDigest = remoteDigest
             )
         }
     }

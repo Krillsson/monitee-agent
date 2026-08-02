@@ -62,6 +62,19 @@ docker:
   #    unit: SECONDS
   # uncomment if you'd like to manually specify docker host
   # host: unix:///var/run/docker.sock or unix:///run/podman/podman.sock
+  # compares the digest of every container's image with the one its registry serves
+  updateCheck:
+    enabled: true
+    # set to false to keep detecting updates without sending push notifications
+    notify: true
+    intervalMinutes: 60
+    # container names to leave out, * matches any part of a name
+    excludeContainers: [ ]
+    # credentials for private registries, public images need none
+    #    registries:
+    #      - host: ghcr.io
+    #        username: user
+    #        password: token
 # resolve external IP and monitor internet connectivity
 connectivityCheck:
   enabled: true

@@ -19,6 +19,10 @@ class GenericEventStore(objectMapper: ObjectMapper) :
     @JsonSubTypes(
         JsonSubTypes.Type(value = StoredGenericEvent.UpdateAvailable::class, name = "UpdateAvailable"),
         JsonSubTypes.Type(value = StoredGenericEvent.MonitoredItemMissing::class, name = "MonitoredItemMissing"),
+        JsonSubTypes.Type(
+            value = StoredGenericEvent.ContainerImageUpdateAvailable::class,
+            name = "ContainerImageUpdateAvailable"
+        ),
     )
     sealed interface StoredGenericEvent {
         val type: String
@@ -45,6 +49,17 @@ class GenericEventStore(objectMapper: ObjectMapper) :
             val monitoredItemId: String?
         ) : StoredGenericEvent {
             override val type: String = "MonitoredItemMissing"
+        }
+
+        data class ContainerImageUpdateAvailable(
+            val id: UUID,
+            val dateTime: OffsetDateTime,
+            val containerId: String,
+            val containerName: String,
+            val imageRef: String,
+            val remoteDigest: String
+        ) : StoredGenericEvent {
+            override val type: String = "ContainerImageUpdateAvailable"
         }
     }
 

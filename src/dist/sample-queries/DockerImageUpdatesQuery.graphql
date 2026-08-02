@@ -1,0 +1,26 @@
+query dockerImageUpdates {
+    docker {
+        ... on DockerUnavailable {
+            reason
+            isDisabled
+        }
+        ... on DockerAvailable {
+            containersWithImageUpdates {
+                names
+                id
+            }
+            containers {
+                names
+                id
+                image
+                imageUpdate {
+                    status
+                    imageRef
+                    remoteDigest
+                    reason
+                    checkedAt
+                }
+            }
+        }
+    }
+}

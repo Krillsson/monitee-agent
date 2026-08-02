@@ -1,6 +1,7 @@
 package com.krillsson.sysapi
 
 import SlowResolverWarningInstrumentation
+import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.core.DockerConfigFile
 import com.krillsson.sysapi.config.*
@@ -22,6 +23,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
 @RegisterReflectionForBinding(
     CacheConfiguration::class,
     ConnectivityCheckConfiguration::class,
+    ContainerUpdateCheckConfiguration::class,
+    RegistryConfiguration::class,
     DockerConfiguration::class,
     HistoryConfiguration::class,
     HistoryPurgingConfiguration::class,
@@ -41,6 +44,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerConfigFile::class,
     GenericEventStore.StoredGenericEvent.UpdateAvailable::class,
     GenericEventStore.StoredGenericEvent.MonitoredItemMissing::class,
+    GenericEventStore.StoredGenericEvent.ContainerImageUpdateAvailable::class,
+    InspectImageResponse::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,

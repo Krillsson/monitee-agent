@@ -18,7 +18,15 @@ class DeeplinkCreator(
         return when (notification) {
             is Notification.GenericEvent.MonitoredItemMissing -> monitoredItemMissing()
             is Notification.GenericEvent.UpdateAvailable -> githubRelease()
+            is Notification.GenericEvent.ContainerImageUpdateAvailable -> container(notification.containerId)
             is Notification.OngoingEvent -> ongoingEvent(notification.monitorId)
+        }
+    }
+
+    fun container(containerId: String): String {
+        return createMoniteeDeeplink {
+            addPathSegment("container")
+            addPathSegment(containerId)
         }
     }
 

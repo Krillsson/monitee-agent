@@ -23,6 +23,16 @@ class GenericEventFormatter {
 
     }
 
+    fun formatContainerImageUpdateTitle(serverName: String): String {
+        return "New container image available on $serverName"
+    }
+
+    fun formatContainerImageUpdateDescription(notification: Notification.GenericEvent.ContainerImageUpdateAvailable): String {
+        return with(notification) {
+            "${containerName.removePrefix("/")} is running an outdated $imageRef"
+        }
+    }
+
     fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing, serverName: String): String {
         return "Monitored item missing from ${EnvironmentUtils.hostName}"
     }
