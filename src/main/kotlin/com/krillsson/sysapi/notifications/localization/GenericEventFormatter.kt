@@ -73,6 +73,7 @@ class GenericEventFormatter {
             Monitor.Type.GPU_VRAM_USAGE -> "GPU — VRAM usage"
             Monitor.Type.GPU_TEMPERATURE -> "GPU — Temperature"
             Monitor.Type.GPU_UTILIZATION -> "GPU — Load percent"
+            Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "Docker — Container image up to date"
         }
     }
 }

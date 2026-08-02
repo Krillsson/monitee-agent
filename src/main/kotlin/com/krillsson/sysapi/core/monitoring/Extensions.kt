@@ -53,6 +53,7 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.CONTAINER_RUNNING,
         Monitor.Type.CONTAINER_MEMORY_SPACE,
         Monitor.Type.CONTAINER_CPU_LOAD,
+        Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
         Monitor.Type.PROCESS_MEMORY_SPACE,
         Monitor.Type.PROCESS_CPU_LOAD,
         Monitor.Type.PROCESS_EXISTS,
