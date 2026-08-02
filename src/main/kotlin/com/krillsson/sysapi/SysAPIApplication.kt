@@ -5,7 +5,11 @@ import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.core.DockerConfigFile
 import com.krillsson.sysapi.config.*
+import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
+import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
+import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.core.monitoring.MonitorStore
 import com.krillsson.sysapi.core.monitoring.event.EventStore
 import com.krillsson.sysapi.tls.CertificateNamesCreator
@@ -45,6 +49,10 @@ import org.springframework.context.annotation.ImportRuntimeHints
     GenericEventStore.StoredGenericEvent.UpdateAvailable::class,
     GenericEventStore.StoredGenericEvent.MonitoredItemMissing::class,
     GenericEventStore.StoredGenericEvent.ContainerImageUpdateAvailable::class,
+    ContainerImageUpdateAvailable::class,
+    Notification.GenericEvent.ContainerImageUpdateAvailable::class,
+    ContainerImageUpdate::class,
+    ImageUpdateStatus::class,
     InspectImageResponse::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
