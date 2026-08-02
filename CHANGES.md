@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Reduced memory footprint: the JVM now uses SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: the native image failed to start on any Linux host with a graphics card, because the NVIDIA NVML binding was missing its native-image proxy registration. GPU sampling can also no longer prevent the agent from starting
 

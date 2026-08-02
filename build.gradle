@@ -48,10 +48,11 @@ java {
 def jvmArgs = [
         "-server",
         "-Djava.awt.headless=true",
-        "-XX:+UseG1GC",
+        "-XX:+UseSerialGC",
         "-XX:MinHeapFreeRatio=2",
         "-XX:MaxHeapFreeRatio=10",
-        "-XX:+AlwaysPreTouch",
+        "-XX:MaxMetaspaceSize=192m",
+        "-XX:ReservedCodeCacheSize=96m",
         "-Xmx512m",
         "-Xms128m",
 ]
@@ -103,6 +104,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 ports = ["8080", "8443", "2375"]
                 volumes = ["/config", "/data", "/var/run/docker.sock"]
                 jvmFlags = jvmArgs
+                environment = ["LD_PRELOAD": "libjemalloc.so.2"]
             }
             from {
                 image = 'krillsson/openjdk21-ubuntu-systemd:latest'
@@ -322,6 +324,7 @@ task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.Package
     displayName = "sys-API"
     organizationName = "Krillsson"
     mainClass = 'com.krillsson.sysapi.SysAPIApplicationKt'
+    vmArgs = jvmArgs
     bundleJre = true
     customizedJre = false
     runnableJar = shadowJar.outputs.files.first()
