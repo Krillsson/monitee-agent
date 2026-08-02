@@ -1,12 +1,27 @@
 package com.krillsson.sysapi
 
+import com.github.dockerjava.api.command.InspectContainerResponse
+import com.github.dockerjava.api.model.Container
+import com.github.dockerjava.api.model.Statistics
 import com.krillsson.sysapi.config.MdnsConfiguration
+import org.springframework.aot.hint.BindingReflectionHintsRegistrar
 import org.springframework.aot.hint.MemberCategory
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.core.type.classreading.CachingMetadataReaderFactory
+import org.springframework.util.ClassUtils
 import oshi.jna.common.Nvml
+import java.lang.reflect.Type
 
 class RuntimeHint : RuntimeHintsRegistrar {
+
+    companion object {
+        private const val DOCKER_MODEL_PACKAGE = "com.github.dockerjava.api.model"
+    }
+
+    private val bindingRegistrar = BindingReflectionHintsRegistrar()
+
     override fun registerHints(hints: RuntimeHints, classLoader: ClassLoader?) {
         hints.reflection()
             .registerType(
@@ -16,6 +31,40 @@ class RuntimeHint : RuntimeHintsRegistrar {
                 MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS
             )
         registerNvmlHints(hints)
+        registerDockerResponseHints(hints, classLoader)
+    }
+
+    /**
+     * docker-java maps every API response onto plain beans that Jackson fills through their
+     * no-arg constructor and private `@JsonProperty` fields. Without reflection metadata the
+     * native image exposes neither, so `listContainersCmd` fails with
+     * `InvalidDefinitionException: cannot deserialize from Object value (no delegate- or
+     * property-based Creator)` and Docker support is dead in the native image.
+     *
+     * The entry points are the three responses the agent reads — `listContainersCmd`,
+     * `inspectContainerCmd` and `statsCmd`. Walking their properties is not enough on its own:
+     * the registrar stops at array types, and docker-java holds a lot of the response in arrays
+     * (`Container.ports`, `HostConfig.binds`, …), so the whole model package goes in as well.
+     * That also keeps the metadata correct across docker-java upgrades. `logContainerCmd` needs
+     * nothing: frames arrive over a raw stream that never reaches Jackson.
+     */
+    private fun registerDockerResponseHints(hints: RuntimeHints, classLoader: ClassLoader?) {
+        val types: List<Type> = listOf(
+            Container::class.java,
+            InspectContainerResponse::class.java,
+            Statistics::class.java
+        ) + dockerModelTypes(classLoader)
+        bindingRegistrar.registerReflectionHints(hints.reflection(), *types.toTypedArray())
+    }
+
+    private fun dockerModelTypes(classLoader: ClassLoader?): List<Class<*>> {
+        val resolver = PathMatchingResourcePatternResolver(classLoader)
+        val metadataReaderFactory = CachingMetadataReaderFactory(resolver)
+        val pattern = "classpath*:${ClassUtils.convertClassNameToResourcePath(DOCKER_MODEL_PACKAGE)}/**/*.class"
+        return resolver.getResources(pattern).mapNotNull { resource ->
+            val className = metadataReaderFactory.getMetadataReader(resource).classMetadata.className
+            runCatching { ClassUtils.forName(className, classLoader) }.getOrNull()
+        }
     }
 
     /**
