@@ -23,10 +23,11 @@ import java.util.concurrent.TimeUnit
 /**
  * Compares the digest of every container's image with the one its registry currently serves.
  *
- * A container is only up for a new check once its interval has passed, so the sweep runs
- * often enough to pick up containers that were just created while the registry itself is
- * queried at the configured pace. Images that cannot be compared — local builds, images
- * pinned to a digest — are reported as skipped instead of silently counting as up to date.
+ * A container is only up for a new check once its interval has passed, so the sweep picks
+ * up containers that were just created while the registry itself is queried at the
+ * configured pace. Intervals shorter than the sweep are rounded up to it. Images that
+ * cannot be compared — local builds, images pinned to a digest — are reported as skipped
+ * instead of silently counting as up to date.
  */
 @Service
 class ContainerUpdateChecker(
@@ -62,7 +63,7 @@ class ContainerUpdateChecker(
         .map { it.containerId }
         .toSet()
 
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES)
     fun run() {
         if (!config.enabled || containerService.status != Status.Available) {
             return
