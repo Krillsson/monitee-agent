@@ -1,7 +1,6 @@
 package com.krillsson.sysapi
 
 import SlowResolverWarningInstrumentation
-import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.core.DockerConfigFile
 import com.krillsson.sysapi.config.*
@@ -53,7 +52,6 @@ import org.springframework.context.annotation.ImportRuntimeHints
     Notification.GenericEvent.ContainerImageUpdateAvailable::class,
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
-    InspectImageResponse::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,

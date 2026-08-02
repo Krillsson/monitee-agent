@@ -1,6 +1,7 @@
 package com.krillsson.sysapi
 
 import com.github.dockerjava.api.command.InspectContainerResponse
+import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.model.Container
 import com.github.dockerjava.api.model.Statistics
 import com.krillsson.sysapi.config.MdnsConfiguration
@@ -41,8 +42,9 @@ class RuntimeHint : RuntimeHintsRegistrar {
      * `InvalidDefinitionException: cannot deserialize from Object value (no delegate- or
      * property-based Creator)` and Docker support is dead in the native image.
      *
-     * The entry points are the three responses the agent reads — `listContainersCmd`,
-     * `inspectContainerCmd` and `statsCmd`. Walking their properties is not enough on its own:
+     * The entry points are the four responses the agent reads — `listContainersCmd`,
+     * `inspectContainerCmd`, `inspectImageCmd` and `statsCmd`. Walking their properties is not
+     * enough on its own:
      * the registrar stops at array types, and docker-java holds a lot of the response in arrays
      * (`Container.ports`, `HostConfig.binds`, …), so the whole model package goes in as well.
      * That also keeps the metadata correct across docker-java upgrades. `logContainerCmd` needs
@@ -52,6 +54,7 @@ class RuntimeHint : RuntimeHintsRegistrar {
         val types: List<Type> = listOf(
             Container::class.java,
             InspectContainerResponse::class.java,
+            InspectImageResponse::class.java,
             Statistics::class.java
         ) + dockerModelTypes(classLoader)
         bindingRegistrar.registerReflectionHints(hints.reflection(), *types.toTypedArray())
