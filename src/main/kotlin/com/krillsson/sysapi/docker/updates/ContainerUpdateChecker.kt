@@ -78,7 +78,7 @@ class ContainerUpdateChecker(
             return
         }
 
-        logger.debug("Checking {} of {} containers for image updates", due.size, containers.size)
+        logger.debug("Checking {} of {} containers for image update", due.size, containers.size)
         val digests = mutableMapOf<ImageReference, RegistryClient.DigestResult>()
         due.forEach { container ->
             val update = check(container, digests)
