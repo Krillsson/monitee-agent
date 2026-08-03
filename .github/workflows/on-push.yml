@@ -71,6 +71,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: inno-setup-download
         uses: ./.github/actions/inno-setup-download
+      - name: Set Up JRE to bundle
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '25'
       - name: Set Up JDK
         uses: actions/setup-java@v3
         with:
@@ -78,7 +83,7 @@ jobs:
           java-version: '21'
           cache: 'gradle'
       - name: Build Windows installer
-        run: ./gradlew packageWindowsInstaller
+        run: ./gradlew packageWindowsInstaller "-PbundledJrePath=$env:JAVA_HOME_25_X64"
       - name: Store setup.exe artifact
         uses: actions/upload-artifact@v4
         with:

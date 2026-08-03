@@ -14,7 +14,6 @@ import com.krillsson.sysapi.windows.services.WindowsServiceCommand
 import com.krillsson.sysapi.windows.services.WindowsServiceCommandResult
 import com.krillsson.sysapi.windows.services.WindowsServiceManager
 import org.springframework.stereotype.Service
-import oshi.SystemInfo
 import oshi.util.PlatformEnum
 
 @Service

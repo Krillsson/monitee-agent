@@ -54,6 +54,7 @@ def jvmArgs = [
         "-XX:+AlwaysPreTouch",
         "-Xmx512m",
         "-Xms128m",
+        "--enable-native-access=ALL-UNNAMED",
 ]
 
 allOpen {
@@ -67,6 +68,10 @@ repositories {
     flatDir {
         dirs 'lib'
     }
+}
+
+configurations.nativeImageClasspath {
+    exclude group: 'com.github.oshi', module: 'oshi-core-ffm'
 }
 
 /**
@@ -105,7 +110,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 jvmFlags = jvmArgs
             }
             from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+                image = 'krillsson/openjdk25-ubuntu-systemd:ffm-probe'
                 platforms {
                     platform {
                         architecture = 'amd64'
@@ -251,12 +256,15 @@ dependencies {
     implementation 'org.apache.commons:commons-exec:1.3'
     implementation 'commons-io:commons-io:2.18.0'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
-    // TEMPORARY (#295): oshi-core and oshi-common are replaced by locally built jars carrying the fix from
+    // THROWAWAY PROBE BRANCH — do not merge, do not reuse these jars.
+    // oshi-common/-core/-core-ffm are locally built from
     // https://github.com/Krillsson/oshi/tree/fix/more-correct-vramtotal
-    // The two are built as a matched pair, so both are vendored. Because file dependencies resolve nothing
-    // transitively, oshi-core's JNA dependencies are declared here; slf4j-api comes from Spring Boot.
-    // Revert to the plain oshi-core dependency once the fix is released upstream.
+    // The -ffm jar additionally carries an UNCOMMITTED marker that adds 512 MiB to any VRAM total NVML
+    // reports, so a P400 reading 2.5 GB proves the FFM code path ran. That marker exists only in this jar.
+    // Because file dependencies resolve nothing transitively, the JNA artifacts are declared here;
+    // slf4j-api comes from Spring Boot.
     implementation files('lib/oshi-common-7.4.4-vramfix.jar', 'lib/oshi-core-7.4.4-vramfix.jar')
+    runtimeOnly files('lib/oshi-core-ffm-7.4.4-PROBE512.jar')
     implementation 'net.java.dev.jna:jna-jpms:5.19.1'
     implementation 'net.java.dev.jna:jna-platform-jpms:5.19.1'
     implementation name: 'jni4net.j-0.8.9.0', group: "net.sf.jni4net", version: "1"
@@ -280,7 +288,7 @@ ospackage {
     user 'root'
     permissionGroup 'root'
 
-    requires('openjdk-21-jre-headless').or('java-sdk-headless', "21", Flags.GREATER | Flags.EQUAL)
+    requires('openjdk-25-jre-headless').or('java-sdk-headless', "25", Flags.GREATER | Flags.EQUAL)
 
     requires('daemon')
 }
@@ -327,8 +335,12 @@ task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.Package
     displayName = "sys-API"
     organizationName = "Krillsson"
     mainClass = 'com.krillsson.sysapi.SysAPIApplicationKt'
+    vmArgs = ["--enable-native-access=ALL-UNNAMED"]
     bundleJre = true
     customizedJre = false
+    if (findProperty("bundledJrePath")) {
+        jrePath = file(findProperty("bundledJrePath"))
+    }
     runnableJar = shadowJar.outputs.files.first()
     copyDependencies = false
     generateInstaller = true
