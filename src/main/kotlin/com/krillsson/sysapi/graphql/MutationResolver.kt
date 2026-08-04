@@ -12,9 +12,8 @@ import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.pkill.ProcessKillerService
 import com.krillsson.sysapi.core.webservicecheck.AddWebServerResult
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
-import com.krillsson.sysapi.docker.ContainerRecreateService
 import com.krillsson.sysapi.docker.ContainerService
-import com.krillsson.sysapi.docker.RecreateContainerResult
+import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.graphql.mutations.*
 import com.krillsson.sysapi.systemd.CommandResult
 import com.krillsson.sysapi.systemd.SystemDaemonManager
@@ -31,7 +30,7 @@ class MutationResolver(
     private val eventManager: EventManager,
     private val genericEventRepository: GenericEventRepository,
     private val containerService: ContainerService,
-    private val containerRecreateService: ContainerRecreateService,
+    private val containerUpdateJobs: ContainerUpdateJobs,
     private val systemDaemonManager: SystemDaemonManager,
     private val windowsManager: WindowsManager,
     private val processKiller: ProcessKillerService,
@@ -56,16 +55,13 @@ class MutationResolver(
 
     @MutationMapping
     fun updateDockerContainer(@Argument input: UpdateDockerContainerInput): UpdateDockerContainerOutput {
-        val result = containerRecreateService.recreateContainer(input.containerId, input.pullImage)
-
-        return when (result) {
-            is RecreateContainerResult.Success -> UpdateDockerContainerOutputSucceeded(
-                result.containerId,
-                result.composeProject
+        return when (val result = containerUpdateJobs.start(input.containerId, input.pullImage)) {
+            is ContainerUpdateJobs.StartResult.Started -> UpdateDockerContainerOutputStarted(
+                result.jobId,
+                result.containerId
             )
 
-            is RecreateContainerResult.Failed -> UpdateDockerContainerOutputFailed(result.reason)
-            RecreateContainerResult.Unavailable -> UpdateDockerContainerOutputFailed("Docker client is unavailable")
+            is ContainerUpdateJobs.StartResult.Rejected -> UpdateDockerContainerOutputFailed(result.reason)
         }
     }
 
