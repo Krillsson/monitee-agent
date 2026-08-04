@@ -17,4 +17,20 @@ data class PerformDockerContainerCommandInput(
         val command: CommandType
 )
 
+interface UpdateDockerContainerOutput
+
+data class UpdateDockerContainerOutputSucceeded(
+        val containerId: String,
+        val composeProject: String?
+) : UpdateDockerContainerOutput
+
+data class UpdateDockerContainerOutputFailed(
+        val reason: String
+) : UpdateDockerContainerOutput
+
+data class UpdateDockerContainerInput(
+        val containerId: String,
+        val pullImage: Boolean
+)
+
 
