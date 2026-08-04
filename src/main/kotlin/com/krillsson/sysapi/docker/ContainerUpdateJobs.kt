@@ -20,16 +20,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Runs container updates in the background and publishes what they are doing.
- *
- * Updates run one at a time on a single thread: a pull can hold the daemon busy for minutes and
- * two containers being replaced at once is not worth the trouble. A queued update reports nothing
- * until it starts.
- *
- * A finished job is kept around for a while so a subscriber that arrives late still sees how it
- * ended, then forgotten along with everything it emitted.
- */
 @Service
 class ContainerUpdateJobs(
     private val containerRecreateService: ContainerRecreateService
@@ -76,11 +66,6 @@ class ContainerUpdateJobs(
         }
     }
 
-    /**
-     * Everything the job has emitted so far followed by the rest of it, completing once it is done.
-     * An unknown job — never started, or finished long enough ago to be forgotten — is an empty
-     * stream rather than an error, since the update itself is unaffected either way.
-     */
     fun events(jobId: UUID): Flux<DockerContainerUpdateEvent> {
         return jobs[jobId]?.events?.asFlux() ?: Flux.empty()
     }
@@ -137,7 +122,7 @@ class ContainerUpdateJobs(
         private val jobId: UUID,
         private val job: Job,
         private val imageRef: String
-    ) : DockerClient.RecreateListener {
+    ) : ContainerRecreator.Listener {
 
         @Volatile
         var step: ContainerUpdateStep = ContainerUpdateStep.INSPECTING_CONTAINER
@@ -155,13 +140,17 @@ class ContainerUpdateJobs(
                     containerId = job.containerId,
                     timestamp = Instant.now(),
                     imageRef = imageRef,
-                    downloadedBytes = layers.mapNotNull { it.currentBytes }.sumOrNull(),
-                    totalBytes = layers.mapNotNull { it.totalBytes }.sumOrNull(),
+                    downloadedBytes = layers.sumOrNull { it.downloadedBytes },
+                    downloadTotalBytes = layers.sumOrNull { it.downloadTotalBytes },
+                    layersTotal = layers.size,
+                    layersDownloaded = layers.count { it.phase.isDownloaded },
+                    layersExtracted = layers.count { it.phase.isExtracted },
                     layers = layers
                 )
             )
         }
 
-        private fun List<Long>.sumOrNull(): Long? = if (isEmpty()) null else sum()
+        private fun List<ImagePullLayer>.sumOrNull(selector: (ImagePullLayer) -> Long?): Long? =
+            mapNotNull(selector).takeIf { it.isNotEmpty() }?.sum()
     }
 }
