@@ -56,6 +56,17 @@ class ContainerStatisticsDAO {
     }
 
     @Transactional
+    fun moveToContainerId(fromContainerId: String, toContainerId: String): Int {
+        val builder = em.criteriaBuilder
+        val update = builder.createCriteriaUpdate(ContainerStatisticsEntity::class.java)
+        val table = update.from(ContainerStatisticsEntity::class.java)
+        update.set(table.get("containerId"), toContainerId)
+        return em
+                .createQuery(update.where(builder.equal(table.get<String>("containerId"), fromContainerId)))
+                .executeUpdate()
+    }
+
+    @Transactional
     fun purge(maxAge: Instant): Int {
         val builder = em.criteriaBuilder
         val delete = builder.createCriteriaDelete(ContainerStatisticsEntity::class.java)

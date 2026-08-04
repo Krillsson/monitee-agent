@@ -54,6 +54,15 @@ class ContainersHistoryRepository(
         containerStatisticsDAO.insertAll(entries)
     }
 
+    /**
+     * History is keyed by container id, which changes when a container is recreated. Moving the
+     * rows over keeps the graphs continuous across an image update.
+     */
+    fun moveHistoryToContainerId(fromContainerId: String, toContainerId: String) {
+        val movedCount = containerStatisticsDAO.moveToContainerId(fromContainerId, toContainerId)
+        logger.info("Moved {} history entries from {} to {}", movedCount, fromContainerId, toContainerId)
+    }
+
     fun purgeContainerStatistics(olderThan: Long, unit: ChronoUnit) {
         val maxAge = clock.instant().minus(olderThan, unit)
         val deletedCount = containerStatisticsDAO.purge(maxAge)

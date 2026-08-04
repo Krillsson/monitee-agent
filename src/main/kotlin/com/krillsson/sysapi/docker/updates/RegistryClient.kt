@@ -55,6 +55,8 @@ class RegistryClient(
         data class Failed(val reason: String) : DigestResult
     }
 
+    data class RegistryCredentials(val username: String, val password: String)
+
     private data class CachedAuthorization(val header: String, val expiresAt: Instant)
 
     private val logger by logger()
@@ -186,14 +188,14 @@ class RegistryClient(
     }
 
     private fun basicAuthorization(reference: ImageReference): String? {
-        return credentialsFor(reference)?.let { (username, password) -> Credentials.basic(username, password) }
+        return credentialsFor(reference)?.let { Credentials.basic(it.username, it.password) }
     }
 
-    private fun credentialsFor(reference: ImageReference): Pair<String, String>? {
+    fun credentialsFor(reference: ImageReference): RegistryCredentials? {
         return registries.firstOrNull {
             it.host.equals(reference.registry, ignoreCase = true) ||
                     it.host.equals(reference.apiHost, ignoreCase = true)
-        }?.let { it.username to it.password }
+        }?.let { RegistryCredentials(it.username, it.password) }
     }
 
     private fun cacheKey(reference: ImageReference) = "${reference.apiHost}/${reference.repository}"

@@ -163,6 +163,30 @@ class MonitorManager(
         return removed != null
     }
 
+    /**
+     * Points every monitor of a monitored item at another one. Recreating a Docker container gives
+     * it a new id, and monitors that keep the old one are dropped the moment their item is gone.
+     */
+    fun replaceMonitoredItemId(oldItemId: String, newItemId: String) {
+        val affected = activeMonitors.values
+            .map { it.second }
+            .filter { it.config.monitoredItemId == oldItemId }
+        if (affected.isEmpty()) {
+            return
+        }
+        logger.info("Moving {} monitors from {} to {}", affected.size, oldItemId, newItemId)
+        affected.forEach { monitor ->
+            val config = MonitorConfig<MonitoredValue>(
+                monitoredItemId = newItemId,
+                threshold = monitor.config.threshold,
+                inertia = monitor.config.inertia
+            )
+            val mechanism = activeMonitors.getValue(monitor.id).first
+            activeMonitors[monitor.id] = mechanism to monitorFactory.createMonitor(monitor.type, monitor.id, config)
+        }
+        persist()
+    }
+
     fun removeMonitorOfTypeByMonitoredItemId(type: Monitor.Type, id: String) {
         logger.info("Removing all {} monitors associated with {}", type.name, id)
         monitorOfTypeByMonitoredItemId(type, id).forEach { monitor ->
