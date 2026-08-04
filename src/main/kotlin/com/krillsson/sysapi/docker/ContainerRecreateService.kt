@@ -10,13 +10,6 @@ import com.krillsson.sysapi.docker.updates.RegistryClient
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 
-/**
- * Replaces a container with one running the current image behind its reference, and moves
- * everything that is keyed on the container id over to the replacement.
- *
- * Split in two so the caller can answer a request before the work starts: [prepare] does
- * everything that can fail immediately, [recreate] does the part worth watching.
- */
 @Service
 class ContainerRecreateService(
     private val containerService: ContainerService,
@@ -40,7 +33,7 @@ class ContainerRecreateService(
             val name: String,
             val imageRef: String,
             val composeProject: String?,
-            val pull: DockerClient.ImagePull?
+            val pull: ContainerRecreator.ImagePull?
         ) : Preparation
 
         data class Rejected(val reason: String) : Preparation
@@ -77,30 +70,26 @@ class ContainerRecreateService(
         )
     }
 
-    fun recreate(prepared: Preparation.Ready, listener: DockerClient.RecreateListener): RecreateContainerResult {
+    fun recreate(prepared: Preparation.Ready, listener: ContainerRecreator.Listener): RecreateContainerResult {
         logger.info("Recreating container {} ({})", prepared.name, prepared.containerId)
         return when (val result = dockerClient.recreateContainer(prepared.containerId, prepared.pull, listener)) {
-            is DockerClient.RecreateResult.Failed -> RecreateContainerResult.Failed(
+            is ContainerRecreator.Result.Failed -> RecreateContainerResult.Failed(
                 result.step,
                 result.reason,
                 result.rolledBack
             )
 
-            is DockerClient.RecreateResult.Success -> {
+            is ContainerRecreator.Result.Success -> {
                 followContainer(prepared.containerId, result.containerId, listener)
                 RecreateContainerResult.Success(result.containerId, prepared.composeProject)
             }
         }
     }
 
-    /**
-     * Both containers exist while this runs, so nothing that is keyed on a container id ever points
-     * at one that is gone: the replacement takes over first and only then is the original removed.
-     */
     private fun followContainer(
         oldContainerId: String,
         newContainerId: String,
-        listener: DockerClient.RecreateListener
+        listener: ContainerRecreator.Listener
     ) {
         listener.onStep(ContainerUpdateStep.MOVING_MONITORS_AND_HISTORY)
         containerService.invalidateContainersCache()
@@ -116,9 +105,9 @@ class ContainerRecreateService(
         containerService.invalidateContainersCache()
     }
 
-    private fun ImageReference.asImagePull(): DockerClient.ImagePull {
+    private fun ImageReference.asImagePull(): ContainerRecreator.ImagePull {
         val repository = if (registry == ImageReference.DOCKER_HUB_REGISTRY) repository else "$registry/$repository"
-        return DockerClient.ImagePull(
+        return ContainerRecreator.ImagePull(
             repository = repository,
             tag = digest ?: tag,
             authConfig = registryClient.credentialsFor(this)?.let { credentials ->
