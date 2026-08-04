@@ -10,6 +10,7 @@
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
   - See `sample-queries/ContainerUpdates.graphql`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
+- Fix: a monitor going back inside its threshold sent a push worded as if a new event had started. Resolved events now get their own notification saying things are back to normal
 - Fix: the native image failed to start on any Linux host with a graphics card, because the NVIDIA NVML binding was missing its native-image proxy registration. GPU sampling can also no longer prevent the agent from starting
 
 ### 0.41.1

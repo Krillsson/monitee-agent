@@ -6,13 +6,20 @@ import org.springframework.stereotype.Component
 @Component
 class NotificationFormatter(
     private val genericEventFormatter: GenericEventFormatter,
-    private val ongoingEventFormatter: OngoingEventFormatter
+    private val ongoingEventFormatter: OngoingEventFormatter,
+    private val resolvedEventFormatter: ResolvedEventFormatter
 ) {
     fun formatNotification(notification: Notification, serverName: String): Pair<String, String> {
         return when (notification) {
             is Notification.OngoingEvent -> ongoingEventFormatter.formatOngoingEventTitle(
                 notification, serverName
             ) to ongoingEventFormatter.formatOngoingEventDescription(
+                notification
+            )
+
+            is Notification.ResolvedEvent -> resolvedEventFormatter.formatResolvedEventTitle(
+                notification, serverName
+            ) to resolvedEventFormatter.formatResolvedEventDescription(
                 notification
             )
 
