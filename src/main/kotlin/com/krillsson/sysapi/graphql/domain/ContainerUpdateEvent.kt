@@ -25,6 +25,8 @@ data class DockerContainerUpdateImagePullProgress(
     val imageRef: String,
     val downloadedBytes: Long?,
     val downloadTotalBytes: Long?,
+    val extractedBytes: Long?,
+    val extractTotalBytes: Long?,
     val layersTotal: Int,
     val layersDownloaded: Int,
     val layersExtracted: Int,

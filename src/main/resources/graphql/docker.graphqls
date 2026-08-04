@@ -111,26 +111,32 @@ type DockerContainerUpdateStepChanged implements DockerContainerUpdateEvent {
     step: DockerContainerUpdateStep!
 }
 
-# How far the image pull has got, sent about once a second while the step is PULLING_IMAGE
+# How far the image pull has got, sent whenever a layer changes phase and about once a second
+# in between while the step is PULLING_IMAGE
 #
-# A layer is downloaded and then extracted, and only the download is measured in bytes. Docker
-# reports extraction progress as seconds elapsed rather than as bytes, so extraction is followed
-# by counting layers instead: layersExtracted against layersTotal, and the phase of each layer
+# A layer is downloaded and then extracted. The download is always measured in bytes; whether
+# the extraction is depends on the image store the daemon uses. The classic overlay2 store
+# reports it in bytes, the containerd store reports it as seconds elapsed instead, and the byte
+# fields are null there. Counting layers works on both: layersExtracted against layersTotal,
+# and the phase of each layer
 #
 # Best effort throughout. Layers are announced as the registry reaches them, so every total grows
 # during the pull and is only the whole image once the last layer has been seen — a percentage
 # from any of them climbs and then drops as more layers appear. Layers already present locally
 # report no size, so a mostly cached pull completes having counted almost no bytes, and an image
-# that is entirely cached reports null for both byte fields while the layer counts still add up
+# that is entirely cached reports null for every byte field while the layer counts still add up
 type DockerContainerUpdateImagePullProgress implements DockerContainerUpdateEvent {
     jobId: UUID!
     containerId: String!
     timestamp: Instant!
     imageRef: String!
-    # Summed over the layers that report a size, null while none of them do. Neither goes
-    # backwards: a layer keeps its size once known and counts as whole once it stops downloading
+    # Summed over the layers that report a size, null while none of them do. None of them go
+    # backwards: a layer keeps its size once known and counts as whole once it leaves the phase
     downloadedBytes: Long
     downloadTotalBytes: Long
+    # Null on a daemon whose image store does not measure extraction in bytes
+    extractedBytes: Long
+    extractTotalBytes: Long
     # Layers seen so far, which is the whole image only once the last one has been announced
     layersTotal: Int!
     layersDownloaded: Int!
@@ -156,6 +162,13 @@ type DockerImagePullLayer {
     status: String!
     downloadedBytes: Long
     downloadTotalBytes: Long
+    # Null on a daemon whose image store does not measure extraction in bytes
+    extractedBytes: Long
+    extractTotalBytes: Long
+    # What that kind of daemon reports instead: how long this layer has been extracting, and how
+    # long it took once the layer is COMPLETE. There is no total to go with it, so it is something
+    # to show ticking rather than to fill a bar with, and it is null on a daemon reporting bytes
+    extractElapsedSeconds: Long
 }
 
 # The container was replaced. Last event of the job

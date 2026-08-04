@@ -34,5 +34,8 @@ data class ImagePullLayer(
     val status: String,
     val phase: ImagePullLayerPhase,
     val downloadedBytes: Long?,
-    val downloadTotalBytes: Long?
+    val downloadTotalBytes: Long?,
+    val extractedBytes: Long?,
+    val extractTotalBytes: Long?,
+    val extractElapsedSeconds: Long?
 )

@@ -142,6 +142,8 @@ class ContainerUpdateJobs(
                     imageRef = imageRef,
                     downloadedBytes = layers.sumOrNull { it.downloadedBytes },
                     downloadTotalBytes = layers.sumOrNull { it.downloadTotalBytes },
+                    extractedBytes = layers.sumOrNull { it.extractedBytes },
+                    extractTotalBytes = layers.sumOrNull { it.extractTotalBytes },
                     layersTotal = layers.size,
                     layersDownloaded = layers.count { it.phase.isDownloaded },
                     layersExtracted = layers.count { it.phase.isExtracted },

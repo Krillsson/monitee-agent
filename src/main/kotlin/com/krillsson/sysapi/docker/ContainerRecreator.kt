@@ -343,6 +343,9 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         private class Layer(var status: String, var phase: ImagePullLayerPhase) {
             var downloadedBytes: Long? = null
             var downloadTotalBytes: Long? = null
+            var extractedBytes: Long? = null
+            var extractTotalBytes: Long? = null
+            var extractElapsedSeconds: Long? = null
         }
 
         private val layers = LinkedHashMap<String, Layer>()
@@ -356,12 +359,12 @@ class ContainerRecreator(private val client: DockerJavaClient) {
                 return
             }
 
-            synchronized(layers) {
+            val phaseChanged = synchronized(layers) {
                 layers.getOrPut(id) { Layer(status, ImagePullLayerPhase.WAITING) }.record(status, item)
             }
 
             val now = System.currentTimeMillis()
-            if (now - reportedAt >= PULL_PROGRESS_INTERVAL_MS) {
+            if (phaseChanged || now - reportedAt >= PULL_PROGRESS_INTERVAL_MS) {
                 reportedAt = now
                 reportProgress()
             }
@@ -378,6 +381,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
                     if (!layer.phase.isExtracted) {
                         layer.phase = ImagePullLayerPhase.COMPLETE
                         layer.downloadTotalBytes?.let { layer.downloadedBytes = it }
+                        layer.extractTotalBytes?.let { layer.extractedBytes = it }
                     }
                 }
             }
@@ -392,7 +396,10 @@ class ContainerRecreator(private val client: DockerJavaClient) {
                         status = layer.status,
                         phase = layer.phase,
                         downloadedBytes = layer.downloadedBytes,
-                        downloadTotalBytes = layer.downloadTotalBytes
+                        downloadTotalBytes = layer.downloadTotalBytes,
+                        extractedBytes = layer.extractedBytes,
+                        extractTotalBytes = layer.extractTotalBytes,
+                        extractElapsedSeconds = layer.extractElapsedSeconds
                     )
                 }
             }
@@ -402,19 +409,44 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         }
 
         /**
-         * Docker stops reporting a layer's size once it is downloaded, so the size is kept and the
-         * layer counted as whole as soon as it moves on. Extraction is only reported as a phase:
-         * from Docker 29 its progress is measured in seconds elapsed rather than in bytes.
+         * Docker stops reporting a layer's size once it is past a phase, so sizes are kept and
+         * filled in as the layer moves on. A daemon using the containerd image store reports the
+         * progress of an extraction as seconds elapsed instead of bytes, which is why extraction
+         * bytes are only taken from a layer that has reported a size to measure them against.
          */
-        private fun Layer.record(status: String, item: PullResponseItem) {
+        private fun Layer.record(status: String, item: PullResponseItem): Boolean {
             this.status = status
+            val previousPhase = phase
             phase = PHASES[status] ?: phase
-            if (phase == ImagePullLayerPhase.DOWNLOADING) {
-                item.progressDetail?.total?.takeIf { it > 0 }?.let { downloadTotalBytes = it }
-                downloadedBytes = item.progressDetail?.current
-            } else if (phase.isDownloaded) {
-                downloadTotalBytes?.let { downloadedBytes = it }
+
+            val current = item.progressDetail?.current
+            val total = item.progressDetail?.total?.takeIf { it > 0 }
+            when (phase) {
+                ImagePullLayerPhase.DOWNLOADING -> {
+                    total?.let { downloadTotalBytes = it }
+                    downloadedBytes = current
+                }
+
+                ImagePullLayerPhase.EXTRACTING -> {
+                    downloadTotalBytes?.let { downloadedBytes = it }
+                    total?.let { extractTotalBytes = it }
+                    if (extractTotalBytes == null) {
+                        extractElapsedSeconds = current
+                    } else {
+                        extractedBytes = current
+                        extractElapsedSeconds = null
+                    }
+                }
+
+                ImagePullLayerPhase.COMPLETE -> {
+                    downloadTotalBytes?.let { downloadedBytes = it }
+                    extractTotalBytes?.let { extractedBytes = it }
+                }
+
+                ImagePullLayerPhase.DOWNLOADED -> downloadTotalBytes?.let { downloadedBytes = it }
+                ImagePullLayerPhase.WAITING, ImagePullLayerPhase.ALREADY_PRESENT -> Unit
             }
+            return phase != previousPhase
         }
     }
 }
