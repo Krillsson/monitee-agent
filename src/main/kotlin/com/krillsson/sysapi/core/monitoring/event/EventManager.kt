@@ -90,6 +90,51 @@ class EventManager(
         }
     }
 
+    /**
+     * Points every event of a monitored item at another one. Recreating a Docker container gives it
+     * a new id, and an event left behind on the old one deep links to a container the app can no
+     * longer resolve. Stopping the container as part of the update is itself likely to raise one.
+     */
+    fun replaceMonitoredItemId(oldItemId: String, newItemId: String) {
+        val affected = events.count { it.monitoredItemId == oldItemId }
+        if (affected == 0) {
+            return
+        }
+        logger.info("Moving {} events from {} to {}", affected, oldItemId, newItemId)
+        events = events
+            .map { event -> if (event.monitoredItemId == oldItemId) event.withMonitoredItemId(newItemId) else event }
+            .toMutableList()
+        persist()
+    }
+
+    private fun Event.withMonitoredItemId(monitoredItemId: String): Event {
+        return when (this) {
+            is OngoingEvent -> OngoingEvent(
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                monitorType = monitorType,
+                startTime = startTime,
+                threshold = threshold,
+                value = value
+            )
+
+            is PastEvent -> PastEvent(
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                startTime = startTime,
+                endTime = endTime,
+                type = monitorType,
+                threshold = threshold,
+                endValue = value,
+                startValue = startValue
+            )
+
+            else -> this
+        }
+    }
+
     private fun persist() = repository.write(events)
 
     private fun restore() {
