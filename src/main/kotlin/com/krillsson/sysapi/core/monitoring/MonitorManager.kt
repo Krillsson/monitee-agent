@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.core.domain.event.Event
+import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.monitoring.event.EventManager
@@ -222,17 +223,31 @@ class MonitorManager(
         ) != null
     }
 
-    private fun Event.asNotification(inertia: Duration): Notification.OngoingEvent {
-        return Notification.OngoingEvent(
-            id = id,
-            monitorId = monitorId,
-            monitoredItemId = monitoredItemId,
-            monitorType = monitorType,
-            startTime = startTime,
-            threshold = threshold,
-            inertia = inertia,
-            value = value
-        )
+    private fun Event.asNotification(inertia: Duration): Notification {
+        return when (this) {
+            is PastEvent -> Notification.ResolvedEvent(
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                monitorType = monitorType,
+                startTime = startTime,
+                endTime = endTime,
+                threshold = threshold,
+                startValue = startValue,
+                endValue = value
+            )
+
+            else -> Notification.OngoingEvent(
+                id = id,
+                monitorId = monitorId,
+                monitoredItemId = monitoredItemId,
+                monitorType = monitorType,
+                startTime = startTime,
+                threshold = threshold,
+                inertia = inertia,
+                value = value
+            )
+        }
     }
 }
 

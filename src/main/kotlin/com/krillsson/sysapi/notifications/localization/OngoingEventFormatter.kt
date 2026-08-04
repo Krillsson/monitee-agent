@@ -1,16 +1,12 @@
 package com.krillsson.sysapi.notifications.localization
 
-import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.notifications.Notification
-import com.krillsson.sysapi.smart.HealthStatus
 import org.springframework.stereotype.Component
 
 @Component
 class OngoingEventFormatter(
-    val temperatureFormatter: TemperatureFormatter,
-    val byteFormatter: ByteFormatter,
-    val durationFormatter: DurationFormatter,
+    private val monitoredValueFormatter: MonitoredValueFormatter,
 ) {
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
@@ -58,8 +54,8 @@ class OngoingEventFormatter(
         notification: Notification.OngoingEvent
     ): String {
         return with(notification) {
-            val formattedThreshold = threshold.format(monitorType)
-            val formattedValue = value.format(monitorType)
+            val formattedThreshold = monitoredValueFormatter.format(threshold, monitorType)
+            val formattedValue = monitoredValueFormatter.format(value, monitorType)
             return when (monitorType) {
                 Monitor.Type.CPU_LOAD -> "Load went above $formattedThreshold to $formattedValue"
                 Monitor.Type.CPU_TEMP -> "Temperature went above $formattedThreshold to $formattedValue"
@@ -118,74 +114,5 @@ class OngoingEventFormatter(
             }
         }
 
-    }
-
-    fun MonitoredValue.format(
-        type: Monitor.Type,
-    ): String {
-        return when (type) {
-            Monitor.Type.CPU_LOAD -> formatPercent(
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.CPU_TEMP -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
-            Monitor.Type.MEMORY_SPACE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.NETWORK_UP -> if ((this as MonitoredValue.ConditionalValue).value) "up" else "down"
-            Monitor.Type.NETWORK_UPLOAD_RATE -> byteFormatter.formatNetworkRate((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.NETWORK_DOWNLOAD_RATE -> byteFormatter.formatNetworkRate((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_RUNNING -> if ((this as MonitoredValue.ConditionalValue).value) "running" else "stopped"
-            Monitor.Type.PROCESS_MEMORY_SPACE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.PROCESS_CPU_LOAD -> formatPercent(
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.PROCESS_EXISTS -> if ((this as MonitoredValue.ConditionalValue).value) "exists" else "dead"
-            Monitor.Type.CONNECTIVITY -> if ((this as MonitoredValue.ConditionalValue).value) "connected" else "disconnected"
-            Monitor.Type.EXTERNAL_IP_CHANGED -> if ((this as MonitoredValue.ConditionalValue).value) "unchanged" else "changed"
-            Monitor.Type.FILE_SYSTEM_SPACE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.DISK_READ_RATE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value) + "/s"
-            Monitor.Type.DISK_WRITE_RATE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value) + "/s"
-            Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> String.format(
-                "%.2f",
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> String.format(
-                "%.2f",
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> String.format(
-                "%.2f",
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.MEMORY_USED -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_MEMORY_SPACE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_CPU_LOAD -> formatPercent(
-                (this as MonitoredValue.FractionalValue).value
-            )
-
-            Monitor.Type.WEBSERVER_UP -> if ((this as MonitoredValue.ConditionalValue).value) "up" else "down"
-            Monitor.Type.DISK_TEMPERATURE -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
-            Monitor.Type.UPS_OPERATING_NORMALLY -> if ((this as MonitoredValue.ConditionalValue).value) "operating normally" else "not operating normally"
-            Monitor.Type.UPS_LOAD_PERCENTAGE -> formatPercent(
-                (this as MonitoredValue.NumericalValue).value.toFloat()
-            )
-
-            Monitor.Type.DISK_SMART_HEALTH -> {
-                (this as MonitoredValue.EnumValue<HealthStatus>).value.name.lowercase()
-            }
-
-            Monitor.Type.UPS_LOAD_WATT -> "${(this as MonitoredValue.NumericalValue).value}W"
-            Monitor.Type.GPU_VRAM_USAGE -> byteFormatter.format((this as MonitoredValue.NumericalValue).value)
-            Monitor.Type.GPU_TEMPERATURE -> temperatureFormatter.format((this as MonitoredValue.NumericalValue).value.toInt())
-            Monitor.Type.GPU_UTILIZATION -> formatPercent((this as MonitoredValue.FractionalValue).value)
-            Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> if ((this as MonitoredValue.ConditionalValue).value) "up to date" else "outdated"
-        }
-    }
-
-    private fun formatPercent(percent: Float): String {
-        return String.format("%.0f%%", percent)
     }
 }

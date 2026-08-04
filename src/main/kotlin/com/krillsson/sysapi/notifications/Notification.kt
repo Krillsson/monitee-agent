@@ -18,6 +18,18 @@ sealed interface Notification {
         val inertia: Duration
     ) : Notification
 
+    data class ResolvedEvent(
+        val id: UUID,
+        val monitorId: UUID,
+        val monitoredItemId: String?,
+        val monitorType: Monitor.Type,
+        val startTime: Instant,
+        val endTime: Instant,
+        val threshold: MonitoredValue,
+        val startValue: MonitoredValue,
+        val endValue: MonitoredValue
+    ) : Notification
+
     sealed interface GenericEvent : Notification {
         class UpdateAvailable(
             val id: UUID,
