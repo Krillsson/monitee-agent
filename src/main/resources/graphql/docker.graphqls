@@ -4,6 +4,9 @@ extend type Query {
 
 extend type Mutation {
     performDockerContainerCommand(input: PerformDockerContainerCommandInput) : PerformDockerContainerCommandOutput
+    # Recreates the container from the image its reference points at
+    # The container is replaced, so it comes back with a different id
+    updateDockerContainer(input: UpdateDockerContainerInput) : UpdateDockerContainerOutput
 }
 
 extend type Subscription {
@@ -29,6 +32,24 @@ type PerformDockerContainerCommandOutputSucceeded {
 }
 
 union PerformDockerContainerCommandOutput = PerformDockerContainerCommandOutputSucceeded | PerformDockerContainerCommandOutputFailed
+
+input UpdateDockerContainerInput {
+    containerId: String!
+    pullImage: Boolean! = true
+}
+
+type UpdateDockerContainerOutputSucceeded {
+    # The id of the container that replaced the one being updated
+    containerId: String!
+    # Set when the container was started by compose: it now differs from its compose file
+    composeProject: String
+}
+
+type UpdateDockerContainerOutputFailed {
+    reason: String!
+}
+
+union UpdateDockerContainerOutput = UpdateDockerContainerOutputSucceeded | UpdateDockerContainerOutputFailed
 
 type ReadLogsForContainerOutputFailed {
     reason: String!
