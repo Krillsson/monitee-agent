@@ -1,5 +1,14 @@
 ### Unreleased
 
+- Feature: Container image updates
+  - Compares the image behind every container with the one its registry currently serves. Status per container via `DockerContainer.imageUpdate`, and `DockerAvailable.containersWithImageUpdates` for a badge. Images that cannot be compared are reported as skipped rather than up to date: built locally, pinned to a digest, or private without credentials
+  - New monitor type added: "Container update available". An outdated container also raises a generic event, which is what sends the push notification
+  - Update a container with the `updateDockerContainer` mutation. It pulls the image and creates the container again from its own configuration, keeping networks, static IPs, aliases, volumes, port bindings and resource limits
+  - The mutation answers with a `jobId` right away. Follow the update with the `dockerContainerUpdate` subscription to get every step it goes through and the progress of the image pull
+  - Docker cannot update a container in place, so it is replaced and comes back with a new id. Monitors, events and metrics history follow it over
+  - Containers managed by Swarm are refused. Compose managed ones work, but the container differs from its compose file until the next `compose up`
+  - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
+  - See `sample-queries/ContainerUpdates.graphql`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: the native image failed to start on any Linux host with a graphics card, because the NVIDIA NVML binding was missing its native-image proxy registration. GPU sampling can also no longer prevent the agent from starting
 
