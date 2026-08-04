@@ -49,10 +49,6 @@ class ContainerService(
         cacheConfiguration.duration, cacheConfiguration.unit
     )
 
-    /**
-     * Recreating a container replaces it with one that has a different id, which the cache would
-     * otherwise keep hidden for as long as its expiry allows.
-     */
     fun invalidateContainersCache() {
         containersCache.set(newContainersCache())
     }

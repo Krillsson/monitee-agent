@@ -83,11 +83,6 @@ class ContainerUpdateChecker(
         due.forEach { container -> checkAndRecord(container, digests) }
     }
 
-    /**
-     * Carries the status over to the container that replaced this one. The replacement is checked
-     * right away rather than waiting for the next sweep, so the badge and any monitor on it are
-     * answered for as soon as the update is done.
-     */
     fun containerReplaced(oldContainerId: String, replacement: Container) {
         updates.remove(oldContainerId)
         nextCheck.remove(oldContainerId)
