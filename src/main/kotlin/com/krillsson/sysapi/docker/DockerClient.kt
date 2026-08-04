@@ -2,9 +2,17 @@ package com.krillsson.sysapi.docker
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.github.dockerjava.api.async.ResultCallback
+import com.github.dockerjava.api.command.CreateContainerResponse
+import com.github.dockerjava.api.command.PullImageResultCallback
+import com.github.dockerjava.api.model.AuthConfig
+import com.github.dockerjava.api.model.ContainerConfig
+import com.github.dockerjava.api.model.ContainerNetwork
 import com.github.dockerjava.api.model.Frame
+import com.github.dockerjava.api.model.HostConfig
 import com.github.dockerjava.api.model.Statistics
+import com.github.dockerjava.api.model.Volume
 import com.github.dockerjava.core.DefaultDockerClientConfig
 import com.github.dockerjava.core.DockerClientConfig
 import com.github.dockerjava.core.DockerClientConfigDelegate
@@ -37,6 +45,10 @@ class DockerClient(
     companion object {
         val LOGGER by logger()
         const val READ_LOGS_COMMAND_TIMEOUT_SEC = 10L
+        private const val PULL_IMAGE_COMMAND_TIMEOUT_MIN = 30L
+        private const val REPLACED_CONTAINER_SUFFIX = "-old"
+        private const val SHORT_CONTAINER_ID_LENGTH = 12
+        private const val DEFAULT_NETWORK_MODE = "default"
     }
 
     private val defaultConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -47,12 +59,21 @@ class DockerClient(
         }
         .withDockerTlsVerify(false)
         .build()
+
+    /**
+     * docker-java writes the create and network commands out as the request body itself, and its
+     * own mapper allows the empty objects that the exposed ports of a container serialize into.
+     * The application mapper does not, so it is copied rather than reconfigured in place.
+     */
+    private val dockerObjectMapper: ObjectMapper = applicationObjectMapper.copy()
+        .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
+        .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
+
     private val config: DockerClientConfig = object : DockerClientConfigDelegate(
         defaultConfig
     ) {
         override fun getObjectMapper(): ObjectMapper {
-            return applicationObjectMapper
-                .configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true)
+            return dockerObjectMapper
         }
     }
 
@@ -133,6 +154,264 @@ class DockerClient(
             LOGGER.debug("Unable to inspect image {}: {}", imageId, e.message)
             null
         }
+    }
+
+    data class ImagePull(
+        val repository: String,
+        val tag: String,
+        val authConfig: AuthConfig?
+    )
+
+    sealed interface RecreateResult {
+        data class Success(val containerId: String) : RecreateResult
+        data class Failed(val reason: String) : RecreateResult
+    }
+
+    /**
+     * Replaces a container with one created from the same configuration, running the image the
+     * reference now points at. Docker cannot update a container in place, so the replacement is
+     * created from the inspect response of the original and gets a new container id.
+     *
+     * The image is pulled before anything is touched, so a failed pull leaves the container alone.
+     * The original is renamed out of the way instead of removed, and its networks are disconnected
+     * by force, which releases the static addresses and aliases the replacement claims again.
+     * Anything that fails after the rename puts the original back.
+     *
+     * The original is left behind as `<name>-old`, stopped: the caller removes it once everything
+     * keyed on the old container id has followed it to the new one.
+     */
+    fun recreateContainer(containerId: String, pull: ImagePull?): RecreateResult {
+        val inspection = try {
+            client.inspectContainerCmd(containerId).exec()
+        } catch (e: RuntimeException) {
+            return RecreateResult.Failed("Container $containerId could not be inspected: ${e.message}")
+        }
+
+        val config = inspection.config
+        val hostConfig = inspection.hostConfig
+        val name = inspection.name?.removePrefix("/")
+        val image = config?.image
+        if (config == null || hostConfig == null || name == null || image == null) {
+            return RecreateResult.Failed("Container $containerId does not report the configuration it was created with")
+        }
+
+        val replacedImageConfig = inspection.imageId?.let { imageId ->
+            runCatching { client.inspectImageCmd(imageId).exec().config }.getOrNull()
+        }
+
+        if (pull != null) {
+            try {
+                pullImage(pull)
+            } catch (e: Exception) {
+                return RecreateResult.Failed("Pulling ${pull.repository}:${pull.tag} failed: ${e.message}")
+            }
+        }
+
+        val networks = inspection.networkSettings?.networks.orEmpty()
+        val primaryNetwork = primaryNetworkName(hostConfig, networks)
+        val wasRunning = inspection.state?.running == true
+
+        var stopped = false
+        var renamed = false
+        var replacementId: String? = null
+        return try {
+            if (wasRunning) {
+                client.stopContainerCmd(containerId).exec()
+                stopped = true
+            }
+            client.renameContainerCmd(containerId).withName("$name$REPLACED_CONTAINER_SUFFIX").exec()
+            renamed = true
+            networks.keys.forEach { network ->
+                client.disconnectFromNetworkCmd()
+                    .withContainerId(containerId)
+                    .withNetworkId(network)
+                    .withForce(true)
+                    .exec()
+            }
+
+            val replacement = createContainer(
+                name,
+                image,
+                config,
+                replacedImageConfig,
+                hostConfig,
+                networks[primaryNetwork],
+                containerId
+            )
+            replacementId = replacement.id
+            networks.filterKeys { it != primaryNetwork }.forEach { (network, endpoint) ->
+                client.connectToNetworkCmd()
+                    .withContainerId(replacement.id)
+                    .withNetworkId(network)
+                    .withContainerNetwork(endpoint.asEndpointConfig(containerId))
+                    .exec()
+            }
+            if (wasRunning) {
+                client.startContainerCmd(replacement.id).exec()
+            }
+            LOGGER.info("Recreated container {} as {} running {}", name, replacement.id, image)
+            RecreateResult.Success(replacement.id)
+        } catch (e: RuntimeException) {
+            LOGGER.error("Recreating container $name failed, restoring the original", e)
+            restore(containerId, name, networks, stopped, renamed, replacementId)
+            RecreateResult.Failed("Recreating $name failed: ${e.message}")
+        }
+    }
+
+    fun removeContainer(containerId: String): Boolean {
+        return runCatching { client.removeContainerCmd(containerId).exec() }
+            .onFailure { LOGGER.warn("Unable to remove container {}: {}", containerId, it.message) }
+            .isSuccess
+    }
+
+    private fun pullImage(pull: ImagePull) {
+        val timedResult = measureTimeMillis {
+            client.pullImageCmd(pull.repository)
+                .withTag(pull.tag)
+                .apply { pull.authConfig?.let { withAuthConfig(it) } }
+                .exec(PullImageResultCallback())
+                .awaitCompletion(PULL_IMAGE_COMMAND_TIMEOUT_MIN, TimeUnit.MINUTES)
+        }
+        check(timedResult.second) {
+            "Pulling ${pull.repository}:${pull.tag} did not finish within $PULL_IMAGE_COMMAND_TIMEOUT_MIN minutes"
+        }
+        LOGGER.info("Took {} to pull {}:{}", "${timedResult.first.toInt()}ms", pull.repository, pull.tag)
+    }
+
+    /**
+     * The inspect response does not separate what the container was asked for from what its image
+     * supplied: the environment, labels, command and health check it reports are the image's
+     * defaults with the user's additions merged in. Carrying all of that over would pin the
+     * replacement to the image being replaced — a new `NGINX_VERSION`, `PATH` or entry point would
+     * be overwritten by the old one — so anything the replaced image already declared is dropped
+     * and left to the new image.
+     */
+    private fun createContainer(
+        name: String,
+        image: String,
+        config: ContainerConfig,
+        replacedImageConfig: ContainerConfig?,
+        hostConfig: HostConfig,
+        endpoint: ContainerNetwork?,
+        replacedContainerId: String
+    ): CreateContainerResponse {
+        val create = client.createContainerCmd(image)
+            .withName(name)
+            .withHostConfig(hostConfig)
+        config.hostName?.let { create.withHostName(it) }
+        config.domainName?.let { create.withDomainName(it) }
+        config.user.notInheritedFrom(replacedImageConfig?.user)?.let { create.withUser(it) }
+        config.attachStdin?.let { create.withAttachStdin(it) }
+        config.attachStdout?.let { create.withAttachStdout(it) }
+        config.attachStderr?.let { create.withAttachStderr(it) }
+        config.tty?.let { create.withTty(it) }
+        config.stdinOpen?.let { create.withStdinOpen(it) }
+        config.stdInOnce?.let { create.withStdInOnce(it) }
+        config.env.withoutEntriesOf(replacedImageConfig?.env)?.let { create.withEnv(it) }
+        config.cmd.notInheritedFrom(replacedImageConfig?.cmd)?.let { create.withCmd(*it) }
+        config.entrypoint.notInheritedFrom(replacedImageConfig?.entrypoint)?.let { create.withEntrypoint(*it) }
+        config.exposedPorts?.let { create.withExposedPorts(*it) }
+        config.volumes?.let { volumes -> create.withVolumes(volumes.keys.map { Volume(it) }) }
+        config.labels.withoutEntriesOf(replacedImageConfig?.labels)?.let { create.withLabels(it) }
+        config.healthcheck.notInheritedFrom(replacedImageConfig?.healthcheck)?.let { create.withHealthcheck(it) }
+        config.workingDir.notInheritedFrom(replacedImageConfig?.workingDir)?.let { create.withWorkingDir(it) }
+        config.networkDisabled?.let { create.withNetworkDisabled(it) }
+
+        endpoint?.let { network ->
+            network.ipamConfig?.ipv4Address?.let { create.withIpv4Address(it) }
+            network.ipamConfig?.ipv6Address?.let { create.withIpv6Address(it) }
+            network.aliasesToKeep(replacedContainerId)?.let { create.withAliases(it) }
+        }
+        return create.exec()
+    }
+
+    private fun <T> T?.notInheritedFrom(imageValue: T?): T? = takeIf { it != imageValue }
+
+    private fun Array<String>?.notInheritedFrom(imageValue: Array<String>?): Array<String>? =
+        takeIf { it != null && !it.contentEquals(imageValue) }
+
+    private fun Array<String>?.withoutEntriesOf(imageValues: Array<String>?): List<String>? {
+        val inherited = imageValues?.toSet().orEmpty()
+        return this?.filterNot { inherited.contains(it) }
+    }
+
+    private fun Map<String, String>?.withoutEntriesOf(imageValues: Map<String, String>?): Map<String, String>? {
+        val inherited = imageValues.orEmpty()
+        return this?.filterNot { (key, value) -> inherited[key] == value }
+    }
+
+    private fun restore(
+        containerId: String,
+        name: String,
+        networks: Map<String, ContainerNetwork>,
+        stopped: Boolean,
+        renamed: Boolean,
+        replacementId: String?
+    ) {
+        replacementId?.let { id ->
+            runCatching { client.stopContainerCmd(id).exec() }
+            runCatching { client.removeContainerCmd(id).exec() }
+                .onFailure { LOGGER.error("Unable to remove the half created container {}: {}", id, it.message) }
+        }
+        if (renamed) {
+            runCatching { client.renameContainerCmd(containerId).withName(name).exec() }
+                .onFailure { LOGGER.error("Unable to name {} back to {}: {}", containerId, name, it.message) }
+            networks.forEach { (network, endpoint) ->
+                runCatching {
+                    client.connectToNetworkCmd()
+                        .withContainerId(containerId)
+                        .withNetworkId(network)
+                        .withContainerNetwork(endpoint.asEndpointConfig(containerId))
+                        .exec()
+                }.onFailure { LOGGER.error("Unable to reconnect {} to {}: {}", name, network, it.message) }
+            }
+        }
+        if (stopped) {
+            runCatching { client.startContainerCmd(containerId).exec() }
+                .onFailure { LOGGER.error("Unable to start {} again: {}", name, it.message) }
+        }
+    }
+
+    /**
+     * The create call attaches exactly one network, the one the host configuration names, and
+     * creating with none at all silently lands the container on the default bridge with an address
+     * of Docker's choosing. The remaining networks are connected once the container exists.
+     */
+    private fun primaryNetworkName(hostConfig: HostConfig, networks: Map<String, ContainerNetwork>): String? {
+        val mode = hostConfig.networkMode
+        return when {
+            mode == null || mode == DEFAULT_NETWORK_MODE -> networks.keys.firstOrNull()
+            networks.containsKey(mode) -> mode
+            else -> null
+        }
+    }
+
+    /**
+     * Only the parts of an endpoint that have to be asked for again: a static address and the
+     * aliases. The rest of the inspect response is state the engine assigns by itself.
+     */
+    private fun ContainerNetwork.asEndpointConfig(replacedContainerId: String): ContainerNetwork {
+        val aliases = aliasesToKeep(replacedContainerId)
+        val ipam = ipamConfig
+        return ContainerNetwork().apply {
+            aliases?.let { withAliases(it) }
+            ipam?.let {
+                withIpamConfig(
+                    ContainerNetwork.Ipam()
+                        .withIpv4Address(it.ipv4Address)
+                        .withIpv6Address(it.ipv6Address)
+                )
+            }
+        }
+    }
+
+    /**
+     * Docker resolves a container by the first twelve characters of its id, and reports that as an
+     * alias. Carrying it over would name the replacement after the container it replaces.
+     */
+    private fun ContainerNetwork.aliasesToKeep(replacedContainerId: String): List<String>? {
+        val shortId = replacedContainerId.take(SHORT_CONTAINER_ID_LENGTH)
+        return aliases?.filterNot { it == shortId }?.takeIf { it.isNotEmpty() }
     }
 
     fun containerStatistics(containerId: String): ContainerMetrics? {
