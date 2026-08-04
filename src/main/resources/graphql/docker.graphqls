@@ -113,32 +113,49 @@ type DockerContainerUpdateStepChanged implements DockerContainerUpdateEvent {
 
 # How far the image pull has got, sent about once a second while the step is PULLING_IMAGE
 #
-# Counts the download only, and never goes backwards: once a layer reports a size it keeps it,
-# and a layer counts as fully downloaded as soon as it starts extracting. Extraction is visible
-# through the per-layer status but is not counted, since Docker reports it in bytes of its own.
+# A layer is downloaded and then extracted, and only the download is measured in bytes. Docker
+# reports extraction progress as seconds elapsed rather than as bytes, so extraction is followed
+# by counting layers instead: layersExtracted against layersTotal, and the phase of each layer
 #
-# Still best effort. Layers are announced as the registry reaches them, so totalBytes grows
-# during the pull and is only the size of the whole image once every layer has been seen — a
-# percentage from it climbs and then drops as more layers appear. Layers already present locally
-# report no size at all, so a mostly cached pull can complete having counted almost nothing, and
-# an image that is entirely cached reports null for both totals
+# Best effort throughout. Layers are announced as the registry reaches them, so every total grows
+# during the pull and is only the whole image once the last layer has been seen — a percentage
+# from any of them climbs and then drops as more layers appear. Layers already present locally
+# report no size, so a mostly cached pull completes having counted almost no bytes, and an image
+# that is entirely cached reports null for both byte fields while the layer counts still add up
 type DockerContainerUpdateImagePullProgress implements DockerContainerUpdateEvent {
     jobId: UUID!
     containerId: String!
     timestamp: Instant!
     imageRef: String!
-    # Sum over the layers that report a size, null while none of them do
+    # Summed over the layers that report a size, null while none of them do. Neither goes
+    # backwards: a layer keeps its size once known and counts as whole once it stops downloading
     downloadedBytes: Long
-    totalBytes: Long
+    downloadTotalBytes: Long
+    # Layers seen so far, which is the whole image only once the last one has been announced
+    layersTotal: Int!
+    layersDownloaded: Int!
+    layersExtracted: Int!
     layers: [DockerImagePullLayer!]!
+}
+
+enum DockerImagePullLayerPhase {
+    WAITING,
+    DOWNLOADING,
+    DOWNLOADED,
+    EXTRACTING,
+    COMPLETE,
+    # The layer was already on this machine and is neither downloaded nor extracted
+    ALREADY_PRESENT
 }
 
 type DockerImagePullLayer {
     id: String!
-    # Docker's own wording, e.g. Downloading, Extracting, Download complete, Already exists
+    phase: DockerImagePullLayerPhase!
+    # Docker's own wording behind the phase, e.g. Verifying Checksum. Shown as is or not at all,
+    # it is not a stable value to branch on
     status: String!
-    currentBytes: Long
-    totalBytes: Long
+    downloadedBytes: Long
+    downloadTotalBytes: Long
 }
 
 # The container was replaced. Last event of the job

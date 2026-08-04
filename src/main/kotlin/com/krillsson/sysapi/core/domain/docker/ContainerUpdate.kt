@@ -1,9 +1,5 @@
 package com.krillsson.sysapi.core.domain.docker
 
-/**
- * The steps a container update runs through, in the order they happen. Steps with nothing to do
- * are skipped rather than reported as instant.
- */
 enum class ContainerUpdateStep {
     INSPECTING_CONTAINER,
     PULLING_IMAGE,
@@ -18,9 +14,25 @@ enum class ContainerUpdateStep {
     ROLLING_BACK
 }
 
+enum class ImagePullLayerPhase {
+    WAITING,
+    DOWNLOADING,
+    DOWNLOADED,
+    EXTRACTING,
+    COMPLETE,
+    ALREADY_PRESENT;
+
+    val isDownloaded: Boolean
+        get() = this != WAITING && this != DOWNLOADING
+
+    val isExtracted: Boolean
+        get() = this == COMPLETE || this == ALREADY_PRESENT
+}
+
 data class ImagePullLayer(
     val id: String,
     val status: String,
-    val currentBytes: Long?,
-    val totalBytes: Long?
+    val phase: ImagePullLayerPhase,
+    val downloadedBytes: Long?,
+    val downloadTotalBytes: Long?
 )

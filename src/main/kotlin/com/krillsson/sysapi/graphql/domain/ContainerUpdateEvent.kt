@@ -24,7 +24,10 @@ data class DockerContainerUpdateImagePullProgress(
     override val timestamp: Instant,
     val imageRef: String,
     val downloadedBytes: Long?,
-    val totalBytes: Long?,
+    val downloadTotalBytes: Long?,
+    val layersTotal: Int,
+    val layersDownloaded: Int,
+    val layersExtracted: Int,
     val layers: List<ImagePullLayer>
 ) : DockerContainerUpdateEvent
 

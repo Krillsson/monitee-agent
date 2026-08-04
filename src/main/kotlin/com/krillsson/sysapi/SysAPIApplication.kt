@@ -7,6 +7,7 @@ import com.krillsson.sysapi.config.*
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
+import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
@@ -66,6 +67,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     UpdateDockerContainerOutputFailed::class,
     ContainerUpdateStep::class,
     ImagePullLayer::class,
+    ImagePullLayerPhase::class,
     DockerContainerUpdateStepChanged::class,
     DockerContainerUpdateImagePullProgress::class,
     DockerContainerUpdateSucceeded::class,
