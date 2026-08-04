@@ -80,14 +80,33 @@ class ContainerUpdateChecker(
 
         logger.debug("Checking {} of {} containers for image update", due.size, containers.size)
         val digests = mutableMapOf<ImageReference, RegistryClient.DigestResult>()
-        due.forEach { container ->
-            val update = check(container, digests)
-            updates[container.id] = update
-            nextCheck[container.id] = Instant.now().plus(
-                if (update.status == ImageUpdateStatus.ERROR) RETRY_INTERVAL_AFTER_ERROR else interval
-            )
-            reflectInEvents(container, update)
+        due.forEach { container -> checkAndRecord(container, digests) }
+    }
+
+    /**
+     * Carries the status over to the container that replaced this one. The replacement is checked
+     * right away rather than waiting for the next sweep, so the badge and any monitor on it are
+     * answered for as soon as the update is done.
+     */
+    fun containerReplaced(oldContainerId: String, replacement: Container) {
+        updates.remove(oldContainerId)
+        nextCheck.remove(oldContainerId)
+        eventsForContainer(oldContainerId).forEach { genericEventRepository.removeById(it.id) }
+        if (config.enabled) {
+            checkAndRecord(replacement, mutableMapOf())
         }
+    }
+
+    private fun checkAndRecord(
+        container: Container,
+        digests: MutableMap<ImageReference, RegistryClient.DigestResult>
+    ) {
+        val update = check(container, digests)
+        updates[container.id] = update
+        nextCheck[container.id] = Instant.now().plus(
+            if (update.status == ImageUpdateStatus.ERROR) RETRY_INTERVAL_AFTER_ERROR else interval
+        )
+        reflectInEvents(container, update)
     }
 
     private fun check(

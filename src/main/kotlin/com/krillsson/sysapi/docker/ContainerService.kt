@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 
 @Service
 class ContainerService(
@@ -35,7 +36,9 @@ class ContainerService(
     val status = checkAvailability()
 
 
-    private val containersCache: Supplier<List<Container>> = Suppliers.memoizeWithExpiration(
+    private val containersCache = AtomicReference(newContainersCache())
+
+    private fun newContainersCache(): Supplier<List<Container>> = Suppliers.memoizeWithExpiration(
         {
             if (status == Status.Available) {
                 dockerClient.listContainers()
@@ -45,6 +48,14 @@ class ContainerService(
         },
         cacheConfiguration.duration, cacheConfiguration.unit
     )
+
+    /**
+     * Recreating a container replaces it with one that has a different id, which the cache would
+     * otherwise keep hidden for as long as its expiry allows.
+     */
+    fun invalidateContainersCache() {
+        containersCache.set(newContainersCache())
+    }
 
     private val containerStatsCache: LoadingCache<String, Optional<ContainerMetrics>> = CacheBuilder.newBuilder()
         .expireAfterWrite(cacheConfiguration.duration, cacheConfiguration.unit)
@@ -63,7 +74,7 @@ class ContainerService(
         return when {
             status != Status.Available -> emptyList()
             !cacheConfiguration.enabled -> dockerClient.listContainers()
-            else -> containersCache.get()
+            else -> containersCache.get().get()
         }
     }
 
@@ -75,7 +86,7 @@ class ContainerService(
         return when {
             status != Status.Available -> emptyList()
             !cacheConfiguration.enabled -> dockerClient.listContainers(ids)
-            else -> containersCache.get().filter { ids.contains(it.id) }
+            else -> containersCache.get().get().filter { ids.contains(it.id) }
         }
     }
 
