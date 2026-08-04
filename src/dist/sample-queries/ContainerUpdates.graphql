@@ -1,0 +1,177 @@
+# Container image updates, in the order you would use them.
+#
+# 1. ContainersWithUpdates      what is outdated
+# 2. StartContainerUpdate       start updating one, keep the jobId
+# 3. FollowContainerUpdate      watch that job to the end
+# 4. ContainerAfterUpdate       confirm the replacement
+#
+# The rest are the pieces around it: the event that drives the push notification and the
+# monitor you can put on a container to be told when it goes out of date.
+
+# Every container with the status of the image behind it.
+# UP_TO_DATE and OUTDATED are the answers, the rest are reasons there is no answer:
+# SKIPPED for images that cannot be compared (built locally, pinned to a digest, private
+# without credentials), ERROR when the registry could not be reached, UNKNOWN until the
+# first sweep has looked at the container.
+# containersWithImageUpdates is the same thing counted, for a badge.
+query ContainersWithUpdates {
+    docker {
+        __typename
+        ... on DockerAvailable {
+            containersWithImageUpdates {
+                id
+                names
+            }
+            containers {
+                id
+                names
+                image
+                state
+                imageUpdate {
+                    status
+                    imageRef
+                    remoteDigest
+                    reason
+                    checkedAt
+                }
+            }
+        }
+        ... on DockerUnavailable {
+            reason
+            isDisabled
+        }
+    }
+}
+
+# Start an update. Returns immediately, the work carries on in the background.
+# pullImage defaults to true, pass false to recreate on the image already on the machine.
+# Failures that can be decided up front come back here, anything later arrives on the
+# subscription below.
+mutation StartContainerUpdate($containerId: String!) {
+    updateDockerContainer(input: { containerId: $containerId, pullImage: true }) {
+        __typename
+        ... on UpdateDockerContainerOutputStarted {
+            jobId
+            containerId
+        }
+        ... on UpdateDockerContainerOutputFailed {
+            reason
+        }
+    }
+}
+
+# Follow the job from the mutation. Everything it has already emitted is replayed, so
+# subscribing after the mutation returned misses nothing, and the stream completes on
+# DockerContainerUpdateSucceeded or DockerContainerUpdateFailed.
+#
+# Build the step checklist from the DockerContainerUpdateStep enum rather than from what
+# arrives: steps with nothing to do are skipped, so an update with pullImage false never
+# reports PULLING_IMAGE and a container that was not running reports no stop or start.
+#
+# Only the download of an image is measured in bytes. Extraction is followed by counting
+# layers, because Docker reports its progress in seconds elapsed rather than in bytes.
+subscription FollowContainerUpdate($jobId: UUID!) {
+    dockerContainerUpdate(jobId: $jobId) {
+        __typename
+        jobId
+        containerId
+        timestamp
+        ... on DockerContainerUpdateStepChanged {
+            step
+        }
+        ... on DockerContainerUpdateImagePullProgress {
+            imageRef
+            downloadedBytes
+            downloadTotalBytes
+            layersTotal
+            layersDownloaded
+            layersExtracted
+            layers {
+                id
+                phase
+                status
+                downloadedBytes
+                downloadTotalBytes
+            }
+        }
+        ... on DockerContainerUpdateSucceeded {
+            newContainerId
+            composeProject
+        }
+        ... on DockerContainerUpdateFailed {
+            step
+            reason
+            rolledBack
+        }
+    }
+}
+
+# The container is replaced rather than changed, so look it up by the newContainerId the
+# subscription ended with. The old id no longer resolves.
+query ContainerAfterUpdate($containerId: String!) {
+    docker {
+        ... on DockerAvailable {
+            container(id: $containerId) {
+                id
+                names
+                image
+                imageID
+                state
+                status
+                imageUpdate {
+                    status
+                    checkedAt
+                }
+            }
+        }
+    }
+}
+
+# The event behind the push notification. One per outdated container, raised when it is first
+# seen to be outdated and removed once it is up to date again or the container is gone.
+query ContainerUpdateEvents {
+    genericEvents {
+        __typename
+        ... on ContainerImageUpdateAvailable {
+            id
+            timestamp
+            title
+            description
+            containerId
+            containerName
+            imageRef
+            remoteDigest
+        }
+    }
+}
+
+# Containers you can put an update monitor on, with the state each one is in right now.
+query MonitorableContainersForUpdates {
+    monitorableItemsForType(input: { type: CONTAINER_UPDATE_AVAILABLE }) {
+        items {
+            id
+            name
+            description
+            currentValue {
+                ... on ConditionalValue {
+                    condition
+                }
+            }
+        }
+    }
+}
+
+# Alert on a container going out of date. The value being monitored is "the image is current",
+# so the threshold is true and the event is raised when it stops being true.
+mutation MonitorContainerForUpdates($containerId: String!) {
+    createConditionalValueMonitor(
+        input: {
+            inertiaInSeconds: 0
+            type: CONTAINER_UPDATE_AVAILABLE
+            threshold: true
+            monitoredItemId: $containerId
+        }
+    ) {
+        monitorId
+    }
+}
