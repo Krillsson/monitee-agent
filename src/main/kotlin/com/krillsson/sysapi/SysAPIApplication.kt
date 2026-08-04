@@ -8,6 +8,9 @@ import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputSucceeded
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.core.monitoring.MonitorStore
 import com.krillsson.sysapi.core.monitoring.event.EventStore
@@ -52,6 +55,9 @@ import org.springframework.context.annotation.ImportRuntimeHints
     Notification.GenericEvent.ContainerImageUpdateAvailable::class,
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
+    UpdateDockerContainerInput::class,
+    UpdateDockerContainerOutputSucceeded::class,
+    UpdateDockerContainerOutputFailed::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,
