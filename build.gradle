@@ -216,6 +216,12 @@ jar {
     }
 }
 
+// the checked in native-image metadata and the metadata Spring generates during processAot
+// land on the same path, so packaging them together needs a strategy the same way jar does
+bootJar {
+    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+}
+
 shadowDistZip {
     from("$rootDir/config/") {
         into "sysapi-shadow-${project.version}/config/"
