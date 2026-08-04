@@ -163,12 +163,14 @@ class ContainerUpdateChecker(
 
     private fun forgetContainersThatAreGone(containers: List<Container>) {
         val present = containers.map { it.id }.toSet()
-        val gone = updates.keys.filterNot { present.contains(it) }
-        gone.forEach { containerId ->
+        updates.keys.filterNot { present.contains(it) }.forEach { containerId ->
             updates.remove(containerId)
             nextCheck.remove(containerId)
-            eventsForContainer(containerId).forEach { genericEventRepository.removeById(it.id) }
         }
+        genericEventRepository.read()
+            .filterIsInstance<ContainerImageUpdateAvailable>()
+            .filterNot { present.contains(it.containerId) }
+            .forEach { genericEventRepository.removeById(it.id) }
     }
 
     private fun eventsForContainer(containerId: String) = genericEventRepository.read()
