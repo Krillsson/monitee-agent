@@ -68,8 +68,9 @@ mutation StartContainerUpdate($containerId: String!) {
 # arrives: steps with nothing to do are skipped, so an update with pullImage false never
 # reports PULLING_IMAGE and a container that was not running reports no stop or start.
 #
-# Only the download of an image is measured in bytes. Extraction is followed by counting
-# layers, because Docker reports its progress in seconds elapsed rather than in bytes.
+# Whether extraction is measured in bytes depends on the image store the daemon uses: the
+# classic overlay2 store reports bytes, the containerd store reports seconds elapsed instead
+# and leaves the byte fields null. Counting layers works on both.
 subscription FollowContainerUpdate($jobId: UUID!) {
     dockerContainerUpdate(jobId: $jobId) {
         __typename
@@ -83,6 +84,8 @@ subscription FollowContainerUpdate($jobId: UUID!) {
             imageRef
             downloadedBytes
             downloadTotalBytes
+            extractedBytes
+            extractTotalBytes
             layersTotal
             layersDownloaded
             layersExtracted
@@ -92,6 +95,9 @@ subscription FollowContainerUpdate($jobId: UUID!) {
                 status
                 downloadedBytes
                 downloadTotalBytes
+                extractedBytes
+                extractTotalBytes
+                extractElapsedSeconds
             }
         }
         ... on DockerContainerUpdateSucceeded {
