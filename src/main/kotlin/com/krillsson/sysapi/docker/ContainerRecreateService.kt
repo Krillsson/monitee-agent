@@ -23,6 +23,7 @@ class ContainerRecreateService(
     companion object {
         private const val SWARM_SERVICE_LABEL = "com.docker.swarm.service.id"
         private const val COMPOSE_PROJECT_LABEL = "com.docker.compose.project"
+        private const val SHARED_NETWORK_NAMESPACE_MODE_PREFIX = "container:"
     }
 
     private val logger by logger()
@@ -51,6 +52,18 @@ class ContainerRecreateService(
 
         if (container.labels.containsKey(SWARM_SERVICE_LABEL)) {
             return Preparation.Rejected("$name is managed by Swarm, update its service instead")
+        }
+
+        // A container's network mode names the container providing its network by id, so the
+        // containers on this one's network cannot be moved over to the replacement and would be
+        // left without a network for as long as they exist.
+        val dependents = containerService.containers()
+            .filter { it.hostConfig.networkMode == "$SHARED_NETWORK_NAMESPACE_MODE_PREFIX${container.id}" }
+            .map { it.names.firstOrNull()?.removePrefix("/") ?: it.id }
+        if (dependents.isNotEmpty()) {
+            return Preparation.Rejected(
+                "$name's network is used by ${dependents.joinToString()}, which cannot follow it to a new container"
+            )
         }
 
         val pull = if (pullImage) {

@@ -25,6 +25,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         private const val REPLACED_CONTAINER_SUFFIX = "-old"
         private const val SHORT_CONTAINER_ID_LENGTH = 12
         private const val DEFAULT_NETWORK_MODE = "default"
+        private const val SHARED_NETWORK_NAMESPACE_MODE_PREFIX = "container:"
     }
 
     data class ImagePull(
@@ -200,7 +201,14 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         val create = client.createContainerCmd(image)
             .withName(name)
             .withHostConfig(hostConfig)
-        config.hostName?.let { create.withHostName(it) }
+        // Inspect reports a hostname and the image's exposed ports for a container that runs on
+        // another container's network, neither of which the daemon accepts on create in that mode.
+        // Every other container's hostname is the short id it was given when it was created.
+        if (!hostConfig.sharesNetworkNamespace()) {
+            config.hostName.notInheritedFrom(replacedContainerId.take(SHORT_CONTAINER_ID_LENGTH))
+                ?.let { create.withHostName(it) }
+            config.exposedPorts?.let { create.withExposedPorts(*it) }
+        }
         config.domainName?.let { create.withDomainName(it) }
         config.user.notInheritedFrom(replacedImageConfig?.user)?.let { create.withUser(it) }
         config.attachStdin?.let { create.withAttachStdin(it) }
@@ -212,7 +220,6 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         config.env.withoutEntriesOf(replacedImageConfig?.env)?.let { create.withEnv(it) }
         config.cmd.notInheritedFrom(replacedImageConfig?.cmd)?.let { create.withCmd(*it) }
         config.entrypoint.notInheritedFrom(replacedImageConfig?.entrypoint)?.let { create.withEntrypoint(*it) }
-        config.exposedPorts?.let { create.withExposedPorts(*it) }
         config.volumes?.let { volumes -> create.withVolumes(volumes.keys.map { Volume(it) }) }
         config.labels.withoutEntriesOf(replacedImageConfig?.labels)?.let { create.withLabels(it) }
         config.healthcheck.notInheritedFrom(replacedImageConfig?.healthcheck)?.let { create.withHealthcheck(it) }
@@ -226,6 +233,9 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         }
         return create.exec()
     }
+
+    private fun HostConfig.sharesNetworkNamespace() =
+        networkMode?.startsWith(SHARED_NETWORK_NAMESPACE_MODE_PREFIX) == true
 
     private fun <T> T?.notInheritedFrom(imageValue: T?): T? = takeIf { it != imageValue }
 
