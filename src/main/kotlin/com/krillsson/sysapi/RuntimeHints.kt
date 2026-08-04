@@ -1,9 +1,13 @@
 package com.krillsson.sysapi
 
+import com.github.dockerjava.api.command.CreateContainerResponse
 import com.github.dockerjava.api.command.InspectContainerResponse
 import com.github.dockerjava.api.command.InspectImageResponse
 import com.github.dockerjava.api.model.Container
 import com.github.dockerjava.api.model.Statistics
+import com.github.dockerjava.core.command.ConnectToNetworkCmdImpl
+import com.github.dockerjava.core.command.CreateContainerCmdImpl
+import com.github.dockerjava.core.command.DisconnectFromNetworkCmdImpl
 import com.krillsson.sysapi.config.MdnsConfiguration
 import org.springframework.aot.hint.BindingReflectionHintsRegistrar
 import org.springframework.aot.hint.MemberCategory
@@ -32,7 +36,7 @@ class RuntimeHint : RuntimeHintsRegistrar {
                 MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS
             )
         registerNvmlHints(hints)
-        registerDockerResponseHints(hints, classLoader)
+        registerDockerJsonHints(hints, classLoader)
     }
 
     /**
@@ -42,20 +46,28 @@ class RuntimeHint : RuntimeHintsRegistrar {
      * `InvalidDefinitionException: cannot deserialize from Object value (no delegate- or
      * property-based Creator)` and Docker support is dead in the native image.
      *
-     * The entry points are the four responses the agent reads — `listContainersCmd`,
-     * `inspectContainerCmd`, `inspectImageCmd` and `statsCmd`. Walking their properties is not
-     * enough on its own:
+     * The entry points are the responses the agent reads — `listContainersCmd`,
+     * `inspectContainerCmd`, `inspectImageCmd`, `statsCmd` and `createContainerCmd`. Walking their
+     * properties is not enough on its own:
      * the registrar stops at array types, and docker-java holds a lot of the response in arrays
      * (`Container.ports`, `HostConfig.binds`, …), so the whole model package goes in as well.
      * That also keeps the metadata correct across docker-java upgrades. `logContainerCmd` needs
      * nothing: frames arrive over a raw stream that never reaches Jackson.
+     *
+     * The commands that create a container or attach it to a network are themselves the request
+     * body Jackson writes, so they need the same treatment as the responses.
      */
-    private fun registerDockerResponseHints(hints: RuntimeHints, classLoader: ClassLoader?) {
+    private fun registerDockerJsonHints(hints: RuntimeHints, classLoader: ClassLoader?) {
         val types: List<Type> = listOf(
             Container::class.java,
             InspectContainerResponse::class.java,
             InspectImageResponse::class.java,
-            Statistics::class.java
+            Statistics::class.java,
+            CreateContainerResponse::class.java,
+            CreateContainerCmdImpl::class.java,
+            CreateContainerCmdImpl.NetworkingConfig::class.java,
+            ConnectToNetworkCmdImpl::class.java,
+            DisconnectFromNetworkCmdImpl::class.java
         ) + dockerModelTypes(classLoader)
         bindingRegistrar.registerReflectionHints(hints.reflection(), *types.toTypedArray())
     }
