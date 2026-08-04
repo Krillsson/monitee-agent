@@ -10,6 +10,8 @@ import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.docker.ContainerUpdateJobs
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.InternetService
 import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
@@ -21,6 +23,7 @@ import org.springframework.graphql.data.method.annotation.SubscriptionMapping
 import org.springframework.stereotype.Controller
 import oshi.software.os.OperatingSystem
 import reactor.core.publisher.Flux
+import java.util.UUID
 
 @Controller
 class SubscriptionResolver(
@@ -28,6 +31,7 @@ class SubscriptionResolver(
     val operatingSystem: OperatingSystem,
     val logFileService: LogFileService,
     val containerService: ContainerService,
+    val containerUpdateJobs: ContainerUpdateJobs,
     val serverIdService: ServerIdService,
     val upsService: UpsService,
     val systemDaemonManager: SystemDaemonManager
@@ -128,4 +132,8 @@ class SubscriptionResolver(
     @SubscriptionMapping
     fun tailJournalLogs(@Argument serviceName: String, @Argument after: String?, @Argument reverse: Boolean?) =
         systemDaemonManager.openAndTailJournal(serviceName, after, reverse)
+
+    @SubscriptionMapping
+    fun dockerContainerUpdate(@Argument jobId: UUID): Flux<DockerContainerUpdateEvent> =
+        containerUpdateJobs.events(jobId)
 }

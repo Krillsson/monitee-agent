@@ -5,12 +5,18 @@ import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.core.DockerConfigFile
 import com.krillsson.sysapi.config.*
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
+import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
+import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
-import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputSucceeded
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.core.monitoring.MonitorStore
 import com.krillsson.sysapi.core.monitoring.event.EventStore
@@ -56,8 +62,14 @@ import org.springframework.context.annotation.ImportRuntimeHints
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
     UpdateDockerContainerInput::class,
-    UpdateDockerContainerOutputSucceeded::class,
+    UpdateDockerContainerOutputStarted::class,
     UpdateDockerContainerOutputFailed::class,
+    ContainerUpdateStep::class,
+    ImagePullLayer::class,
+    DockerContainerUpdateStepChanged::class,
+    DockerContainerUpdateImagePullProgress::class,
+    DockerContainerUpdateSucceeded::class,
+    DockerContainerUpdateFailed::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,

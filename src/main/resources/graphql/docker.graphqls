@@ -4,8 +4,10 @@ extend type Query {
 
 extend type Mutation {
     performDockerContainerCommand(input: PerformDockerContainerCommandInput) : PerformDockerContainerCommandOutput
-    # Recreates the container from the image its reference points at
-    # The container is replaced, so it comes back with a different id
+    # Starts replacing the container with one running the image its reference points at
+    # Returns as soon as the update is accepted, the work carries on in the background
+    # Follow it with the dockerContainerUpdate subscription, passing the jobId that comes back
+    # The container is replaced rather than changed, so it comes back with a different id
     updateDockerContainer(input: UpdateDockerContainerInput) : UpdateDockerContainerOutput
 }
 
@@ -16,6 +18,21 @@ extend type Subscription {
     # Then pass the endCursor into after here, this ensures no lines are skipped between read + tail
     # If no after is passed, only new lines will be returned
     tailContainerLogs(containerId: String!, after: String, reverse: Boolean): DockerLogMessage!
+
+    # Follow an update started with updateDockerContainer
+    #
+    # Everything the job has emitted so far is replayed on subscribe, so subscribing after the
+    # mutation returned misses nothing, and reconnecting picks up where you left off. The stream
+    # completes after DockerContainerUpdateSucceeded or DockerContainerUpdateFailed.
+    #
+    # The update runs whether or not anyone is listening: unsubscribing does not cancel it, and
+    # there is no way to cancel one. Updates run one at a time, so a job may sit doing nothing
+    # while an earlier one finishes.
+    #
+    # A finished job is forgotten after 30 minutes, and jobs do not survive a restart of the
+    # agent. Subscribing to a job that is not known yields an empty stream rather than an error,
+    # which is indistinguishable from one that finished long ago.
+    dockerContainerUpdate(jobId: UUID!): DockerContainerUpdateEvent!
 }
 
 input PerformDockerContainerCommandInput{
@@ -35,21 +52,119 @@ union PerformDockerContainerCommandOutput = PerformDockerContainerCommandOutputS
 
 input UpdateDockerContainerInput {
     containerId: String!
+    # Pull the image before recreating. False recreates the container on the image already
+    # present locally, which is what you want after pulling by hand, and nothing else
     pullImage: Boolean! = true
 }
 
-type UpdateDockerContainerOutputSucceeded {
-    # The id of the container that replaced the one being updated
+# The update was accepted and is now running
+type UpdateDockerContainerOutputStarted {
+    # Pass this to the dockerContainerUpdate subscription to follow the update
+    jobId: UUID!
+    # The container being replaced, not the one that will replace it
     containerId: String!
-    # Set when the container was started by compose: it now differs from its compose file
-    composeProject: String
 }
 
+# The update was refused before anything happened: no such container, Docker unavailable, the
+# container is managed by Swarm, its image is not a registry reference, or an update of it is
+# already running. Failures during the update arrive on the subscription instead
 type UpdateDockerContainerOutputFailed {
     reason: String!
 }
 
-union UpdateDockerContainerOutput = UpdateDockerContainerOutputSucceeded | UpdateDockerContainerOutputFailed
+union UpdateDockerContainerOutput = UpdateDockerContainerOutputStarted | UpdateDockerContainerOutputFailed
+
+enum DockerContainerUpdateStep {
+    INSPECTING_CONTAINER,
+    PULLING_IMAGE,
+    STOPPING_CONTAINER,
+    RENAMING_CONTAINER,
+    DISCONNECTING_NETWORKS,
+    CREATING_CONTAINER,
+    CONNECTING_NETWORKS,
+    STARTING_CONTAINER,
+    MOVING_MONITORS_AND_HISTORY,
+    REMOVING_REPLACED_CONTAINER,
+    ROLLING_BACK
+}
+
+interface DockerContainerUpdateEvent {
+    jobId: UUID!
+    # The container being replaced. Its id stays the same for every event of a job, including
+    # the last one, by which point that container is gone
+    containerId: String!
+    timestamp: Instant!
+}
+
+# The update moved on to a step
+#
+# Steps arrive in the order of the DockerContainerUpdateStep enum and each is reported once, so
+# the previous one is done when the next arrives. Steps with nothing to do are skipped, not
+# reported as instant: an update with pullImage false never reports PULLING_IMAGE, a container
+# that was not running reports neither STOPPING_CONTAINER nor STARTING_CONTAINER, and one on no
+# network reports no network steps. Do not build the checklist from what arrives, build it from
+# the enum and tick items off
+type DockerContainerUpdateStepChanged implements DockerContainerUpdateEvent {
+    jobId: UUID!
+    containerId: String!
+    timestamp: Instant!
+    step: DockerContainerUpdateStep!
+}
+
+# How far the image pull has got, sent about once a second while the step is PULLING_IMAGE
+#
+# Counts the download only, and never goes backwards: once a layer reports a size it keeps it,
+# and a layer counts as fully downloaded as soon as it starts extracting. Extraction is visible
+# through the per-layer status but is not counted, since Docker reports it in bytes of its own.
+#
+# Still best effort. Layers are announced as the registry reaches them, so totalBytes grows
+# during the pull and is only the size of the whole image once every layer has been seen — a
+# percentage from it climbs and then drops as more layers appear. Layers already present locally
+# report no size at all, so a mostly cached pull can complete having counted almost nothing, and
+# an image that is entirely cached reports null for both totals
+type DockerContainerUpdateImagePullProgress implements DockerContainerUpdateEvent {
+    jobId: UUID!
+    containerId: String!
+    timestamp: Instant!
+    imageRef: String!
+    # Sum over the layers that report a size, null while none of them do
+    downloadedBytes: Long
+    totalBytes: Long
+    layers: [DockerImagePullLayer!]!
+}
+
+type DockerImagePullLayer {
+    id: String!
+    # Docker's own wording, e.g. Downloading, Extracting, Download complete, Already exists
+    status: String!
+    currentBytes: Long
+    totalBytes: Long
+}
+
+# The container was replaced. Last event of the job
+type DockerContainerUpdateSucceeded implements DockerContainerUpdateEvent {
+    jobId: UUID!
+    containerId: String!
+    timestamp: Instant!
+    # The container that replaced it. Monitors, history and the image update status have already
+    # been moved over to this id, and the old id no longer resolves
+    newContainerId: String!
+    # Set when the container was started by compose: it now differs from its compose file
+    composeProject: String
+}
+
+# The update failed. Last event of the job
+type DockerContainerUpdateFailed implements DockerContainerUpdateEvent {
+    jobId: UUID!
+    containerId: String!
+    timestamp: Instant!
+    # The step that failed
+    step: DockerContainerUpdateStep!
+    reason: String!
+    # Whether the original container was put back the way it was. False means it needs attention:
+    # it may be stopped, renamed to <name>-old, or missing networks
+    rolledBack: Boolean!
+}
 
 type ReadLogsForContainerOutputFailed {
     reason: String!

@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql.mutations
 
 import com.krillsson.sysapi.core.domain.docker.CommandType
+import java.util.UUID
 
 interface PerformDockerContainerCommandOutput
 
@@ -19,9 +20,9 @@ data class PerformDockerContainerCommandInput(
 
 interface UpdateDockerContainerOutput
 
-data class UpdateDockerContainerOutputSucceeded(
-        val containerId: String,
-        val composeProject: String?
+data class UpdateDockerContainerOutputStarted(
+        val jobId: UUID,
+        val containerId: String
 ) : UpdateDockerContainerOutput
 
 data class UpdateDockerContainerOutputFailed(

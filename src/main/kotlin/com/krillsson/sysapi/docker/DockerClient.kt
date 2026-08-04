@@ -11,6 +11,7 @@ import com.github.dockerjava.api.model.ContainerConfig
 import com.github.dockerjava.api.model.ContainerNetwork
 import com.github.dockerjava.api.model.Frame
 import com.github.dockerjava.api.model.HostConfig
+import com.github.dockerjava.api.model.PullResponseItem
 import com.github.dockerjava.api.model.Statistics
 import com.github.dockerjava.api.model.Volume
 import com.github.dockerjava.core.DefaultDockerClientConfig
@@ -25,6 +26,8 @@ import com.krillsson.sysapi.core.domain.docker.Command
 import com.krillsson.sysapi.core.domain.docker.CommandType
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
+import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
+import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.core.domain.system.Platform
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.measureTimeMillis
@@ -49,6 +52,7 @@ class DockerClient(
         private const val REPLACED_CONTAINER_SUFFIX = "-old"
         private const val SHORT_CONTAINER_ID_LENGTH = 12
         private const val DEFAULT_NETWORK_MODE = "default"
+        private const val PULL_PROGRESS_INTERVAL_MS = 1000L
     }
 
     private val defaultConfig = DefaultDockerClientConfig.createDefaultConfigBuilder()
@@ -164,7 +168,20 @@ class DockerClient(
 
     sealed interface RecreateResult {
         data class Success(val containerId: String) : RecreateResult
-        data class Failed(val reason: String) : RecreateResult
+        data class Failed(
+            val step: ContainerUpdateStep,
+            val reason: String,
+            val rolledBack: Boolean
+        ) : RecreateResult
+    }
+
+    /**
+     * Reports what the recreate is doing while it does it. Called from the thread running the
+     * update, and for pull progress from the thread docker-java reads the pull stream on.
+     */
+    interface RecreateListener {
+        fun onStep(step: ContainerUpdateStep)
+        fun onPullProgress(layers: List<ImagePullLayer>)
     }
 
     /**
@@ -180,11 +197,15 @@ class DockerClient(
      * The original is left behind as `<name>-old`, stopped: the caller removes it once everything
      * keyed on the old container id has followed it to the new one.
      */
-    fun recreateContainer(containerId: String, pull: ImagePull?): RecreateResult {
+    fun recreateContainer(containerId: String, pull: ImagePull?, listener: RecreateListener): RecreateResult {
+        listener.onStep(ContainerUpdateStep.INSPECTING_CONTAINER)
         val inspection = try {
             client.inspectContainerCmd(containerId).exec()
         } catch (e: RuntimeException) {
-            return RecreateResult.Failed("Container $containerId could not be inspected: ${e.message}")
+            return failedBeforeAnythingChanged(
+                ContainerUpdateStep.INSPECTING_CONTAINER,
+                "Container $containerId could not be inspected: ${e.message}"
+            )
         }
 
         val config = inspection.config
@@ -192,7 +213,10 @@ class DockerClient(
         val name = inspection.name?.removePrefix("/")
         val image = config?.image
         if (config == null || hostConfig == null || name == null || image == null) {
-            return RecreateResult.Failed("Container $containerId does not report the configuration it was created with")
+            return failedBeforeAnythingChanged(
+                ContainerUpdateStep.INSPECTING_CONTAINER,
+                "Container $containerId does not report the configuration it was created with"
+            )
         }
 
         val replacedImageConfig = inspection.imageId?.let { imageId ->
@@ -200,10 +224,14 @@ class DockerClient(
         }
 
         if (pull != null) {
+            listener.onStep(ContainerUpdateStep.PULLING_IMAGE)
             try {
-                pullImage(pull)
+                pullImage(pull, listener)
             } catch (e: Exception) {
-                return RecreateResult.Failed("Pulling ${pull.repository}:${pull.tag} failed: ${e.message}")
+                return failedBeforeAnythingChanged(
+                    ContainerUpdateStep.PULLING_IMAGE,
+                    "Pulling ${pull.repository}:${pull.tag} failed: ${e.message}"
+                )
             }
         }
 
@@ -211,24 +239,36 @@ class DockerClient(
         val primaryNetwork = primaryNetworkName(hostConfig, networks)
         val wasRunning = inspection.state?.running == true
 
+        var step = ContainerUpdateStep.STOPPING_CONTAINER
         var stopped = false
         var renamed = false
         var replacementId: String? = null
         return try {
             if (wasRunning) {
+                listener.onStep(ContainerUpdateStep.STOPPING_CONTAINER)
                 client.stopContainerCmd(containerId).exec()
                 stopped = true
             }
+
+            step = ContainerUpdateStep.RENAMING_CONTAINER
+            listener.onStep(step)
             client.renameContainerCmd(containerId).withName("$name$REPLACED_CONTAINER_SUFFIX").exec()
             renamed = true
-            networks.keys.forEach { network ->
-                client.disconnectFromNetworkCmd()
-                    .withContainerId(containerId)
-                    .withNetworkId(network)
-                    .withForce(true)
-                    .exec()
+
+            if (networks.isNotEmpty()) {
+                step = ContainerUpdateStep.DISCONNECTING_NETWORKS
+                listener.onStep(step)
+                networks.keys.forEach { network ->
+                    client.disconnectFromNetworkCmd()
+                        .withContainerId(containerId)
+                        .withNetworkId(network)
+                        .withForce(true)
+                        .exec()
+                }
             }
 
+            step = ContainerUpdateStep.CREATING_CONTAINER
+            listener.onStep(step)
             val replacement = createContainer(
                 name,
                 image,
@@ -239,24 +279,37 @@ class DockerClient(
                 containerId
             )
             replacementId = replacement.id
-            networks.filterKeys { it != primaryNetwork }.forEach { (network, endpoint) ->
-                client.connectToNetworkCmd()
-                    .withContainerId(replacement.id)
-                    .withNetworkId(network)
-                    .withContainerNetwork(endpoint.asEndpointConfig(containerId))
-                    .exec()
+
+            val remainingNetworks = networks.filterKeys { it != primaryNetwork }
+            if (remainingNetworks.isNotEmpty()) {
+                step = ContainerUpdateStep.CONNECTING_NETWORKS
+                listener.onStep(step)
+                remainingNetworks.forEach { (network, endpoint) ->
+                    client.connectToNetworkCmd()
+                        .withContainerId(replacement.id)
+                        .withNetworkId(network)
+                        .withContainerNetwork(endpoint.asEndpointConfig(containerId))
+                        .exec()
+                }
             }
+
             if (wasRunning) {
+                step = ContainerUpdateStep.STARTING_CONTAINER
+                listener.onStep(step)
                 client.startContainerCmd(replacement.id).exec()
             }
             LOGGER.info("Recreated container {} as {} running {}", name, replacement.id, image)
             RecreateResult.Success(replacement.id)
         } catch (e: RuntimeException) {
             LOGGER.error("Recreating container $name failed, restoring the original", e)
-            restore(containerId, name, networks, stopped, renamed, replacementId)
-            RecreateResult.Failed("Recreating $name failed: ${e.message}")
+            listener.onStep(ContainerUpdateStep.ROLLING_BACK)
+            val rolledBack = restore(containerId, name, networks, stopped, renamed, replacementId)
+            RecreateResult.Failed(step, "Recreating $name failed: ${e.message}", rolledBack)
         }
     }
+
+    private fun failedBeforeAnythingChanged(step: ContainerUpdateStep, reason: String) =
+        RecreateResult.Failed(step, reason, rolledBack = true)
 
     fun removeContainer(containerId: String): Boolean {
         return runCatching { client.removeContainerCmd(containerId).exec() }
@@ -264,18 +317,89 @@ class DockerClient(
             .isSuccess
     }
 
-    private fun pullImage(pull: ImagePull) {
+    private fun pullImage(pull: ImagePull, listener: RecreateListener) {
+        val callback = LayerProgressCallback(listener)
         val timedResult = measureTimeMillis {
             client.pullImageCmd(pull.repository)
                 .withTag(pull.tag)
                 .apply { pull.authConfig?.let { withAuthConfig(it) } }
-                .exec(PullImageResultCallback())
+                .exec(callback)
                 .awaitCompletion(PULL_IMAGE_COMMAND_TIMEOUT_MIN, TimeUnit.MINUTES)
         }
+        callback.reportProgress()
         check(timedResult.second) {
             "Pulling ${pull.repository}:${pull.tag} did not finish within $PULL_IMAGE_COMMAND_TIMEOUT_MIN minutes"
         }
         LOGGER.info("Took {} to pull {}:{}", "${timedResult.first.toInt()}ms", pull.repository, pull.tag)
+    }
+
+    /**
+     * Docker reports the pull as a stream of per-layer status lines, several a second per layer
+     * while they download. They are collapsed into the latest state of every layer and handed on
+     * at a fixed rate, so a subscriber sees smooth progress without one event per line.
+     *
+     * Only the download counts: a layer reports byte counts again while it extracts, and taking
+     * those at face value makes the totals collapse and start over halfway through. A size is
+     * kept once it is known and the layer is counted as fully downloaded as soon as it moves past
+     * downloading, so the numbers only ever grow. Layers that were already present report no size
+     * at all and are left out of the totals.
+     *
+     * Lines that carry no layer id — the digest and the closing status — are not progress, and
+     * neither is the opening line, whose id is the tag being pulled rather than a layer.
+     */
+    private class LayerProgressCallback(private val listener: RecreateListener) : PullImageResultCallback() {
+
+        companion object {
+            private val UNFINISHED_LAYER_STATUSES = setOf("Pulling fs layer", "Waiting", "Downloading")
+            private const val DOWNLOADING_STATUS = "Downloading"
+            private const val OPENING_STATUS_PREFIX = "Pulling from"
+        }
+
+        private class Layer(var status: String) {
+            var currentBytes: Long? = null
+            var totalBytes: Long? = null
+        }
+
+        private val layers = LinkedHashMap<String, Layer>()
+        private var reportedAt = 0L
+
+        override fun onNext(item: PullResponseItem) {
+            super.onNext(item)
+            val id = item.id
+            val status = item.status
+            if (id == null || status == null || status.startsWith(OPENING_STATUS_PREFIX)) {
+                return
+            }
+
+            synchronized(layers) {
+                val layer = layers.getOrPut(id) { Layer(status) }
+                layer.status = status
+                when {
+                    status == DOWNLOADING_STATUS -> {
+                        item.progressDetail?.total?.takeIf { it > 0 }?.let { layer.totalBytes = it }
+                        item.progressDetail?.current?.let { layer.currentBytes = it }
+                    }
+
+                    status !in UNFINISHED_LAYER_STATUSES -> layer.currentBytes = layer.totalBytes
+                    else -> Unit
+                }
+            }
+
+            val now = System.currentTimeMillis()
+            if (now - reportedAt >= PULL_PROGRESS_INTERVAL_MS) {
+                reportedAt = now
+                reportProgress()
+            }
+        }
+
+        fun reportProgress() {
+            val snapshot = synchronized(layers) {
+                layers.map { (id, layer) -> ImagePullLayer(id, layer.status, layer.currentBytes, layer.totalBytes) }
+            }
+            if (snapshot.isNotEmpty()) {
+                listener.onPullProgress(snapshot)
+            }
+        }
     }
 
     /**
@@ -340,6 +464,11 @@ class DockerClient(
         return this?.filterNot { (key, value) -> inherited[key] == value }
     }
 
+    /**
+     * Undoes as much of a failed recreate as it can, and reports whether the original container is
+     * back the way it was. Every step is attempted even when an earlier one fails, so a container
+     * that cannot be renamed back is still restarted.
+     */
     private fun restore(
         containerId: String,
         name: String,
@@ -347,15 +476,22 @@ class DockerClient(
         stopped: Boolean,
         renamed: Boolean,
         replacementId: String?
-    ) {
+    ): Boolean {
+        var restored = true
         replacementId?.let { id ->
             runCatching { client.stopContainerCmd(id).exec() }
             runCatching { client.removeContainerCmd(id).exec() }
-                .onFailure { LOGGER.error("Unable to remove the half created container {}: {}", id, it.message) }
+                .onFailure {
+                    restored = false
+                    LOGGER.error("Unable to remove the half created container {}: {}", id, it.message)
+                }
         }
         if (renamed) {
             runCatching { client.renameContainerCmd(containerId).withName(name).exec() }
-                .onFailure { LOGGER.error("Unable to name {} back to {}: {}", containerId, name, it.message) }
+                .onFailure {
+                    restored = false
+                    LOGGER.error("Unable to name {} back to {}: {}", containerId, name, it.message)
+                }
             networks.forEach { (network, endpoint) ->
                 runCatching {
                     client.connectToNetworkCmd()
@@ -363,13 +499,20 @@ class DockerClient(
                         .withNetworkId(network)
                         .withContainerNetwork(endpoint.asEndpointConfig(containerId))
                         .exec()
-                }.onFailure { LOGGER.error("Unable to reconnect {} to {}: {}", name, network, it.message) }
+                }.onFailure {
+                    restored = false
+                    LOGGER.error("Unable to reconnect {} to {}: {}", name, network, it.message)
+                }
             }
         }
         if (stopped) {
             runCatching { client.startContainerCmd(containerId).exec() }
-                .onFailure { LOGGER.error("Unable to start {} again: {}", name, it.message) }
+                .onFailure {
+                    restored = false
+                    LOGGER.error("Unable to start {} again: {}", name, it.message)
+                }
         }
+        return restored
     }
 
     /**
