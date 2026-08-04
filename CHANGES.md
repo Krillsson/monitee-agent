@@ -7,6 +7,7 @@
   - The mutation answers with a `jobId` right away. Follow the update with the `dockerContainerUpdate` subscription to get every step it goes through and the progress of the image pull
   - Docker cannot update a container in place, so it is replaced and comes back with a new id. Monitors, events and metrics history follow it over
   - Containers managed by Swarm are refused. Compose managed ones work, but the container differs from its compose file until the next `compose up`
+  - A container that runs on another container's network (`--network container:...`, the usual gluetun setup) can be updated too. Updating the container that provides the network is refused, because the containers on it cannot follow it to a new one
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
   - See `sample-queries/ContainerUpdates.graphql`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
