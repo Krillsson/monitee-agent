@@ -6,6 +6,7 @@ import com.krillsson.sysapi.notifications.NotificationService
 import com.krillsson.sysapi.notifications.NtfyInfo
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.util.logger
+import okhttp3.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.springframework.stereotype.Service
 import java.io.IOException
@@ -26,6 +27,11 @@ class NtfyService(
 
     private val topic = config.topic ?: "$TOPIC_PREFIX-${serverIdService.serverId}"
 
+    private val authorization: String? = when {
+        !config.token.isNullOrBlank() -> "Bearer ${config.token}"
+        !config.username.isNullOrBlank() -> Credentials.basic(config.username, config.password.orEmpty())
+        else -> null
+    }
 
     override fun notify(notification: NotificationParameters) {
         sendNotification(
@@ -57,7 +63,7 @@ class NtfyService(
         )
 
         try {
-            val response = ntfyApi.sendNotification(notification).execute()
+            val response = ntfyApi.sendNotification(notification, authorization).execute()
 
             if (response.isSuccessful) {
                 logger.debug("Successfully sent notification: ${response.code()} ${response.body()?.string()}")

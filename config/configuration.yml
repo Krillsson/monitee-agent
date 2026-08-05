@@ -107,6 +107,10 @@ notifications:
     enabled: false
     url: "https://ntfy.sh"
     # topic: my-custom-globally-unique-topic
+    # protected topics need either an access token or a username and password
+    # token: tk_myaccesstoken
+    # username: user
+    # password: password
 # advertise service in local network for easier client setup
 mDNS:
   enabled: true
