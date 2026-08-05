@@ -34,6 +34,10 @@ class NotificationFormatter(
             is Notification.GenericEvent.ContainerImageUpdateAvailable -> genericEventFormatter.formatContainerImageUpdateTitle(
                 serverName
             ) to genericEventFormatter.formatContainerImageUpdateDescription(notification)
+
+            is Notification.GenericEvent.ContainerImageUpdateDigest -> genericEventFormatter.formatContainerImageUpdateDigestTitle(
+                serverName
+            ) to genericEventFormatter.formatContainerImageUpdateDigestDescription(notification)
         }
     }
 }

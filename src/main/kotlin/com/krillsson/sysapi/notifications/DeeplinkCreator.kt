@@ -16,9 +16,10 @@ class DeeplinkCreator(
 
     fun createDeeplink(notification: Notification): String {
         return when (notification) {
-            is Notification.GenericEvent.MonitoredItemMissing -> monitoredItemMissing()
+            is Notification.GenericEvent.MonitoredItemMissing -> events()
             is Notification.GenericEvent.UpdateAvailable -> githubRelease()
             is Notification.GenericEvent.ContainerImageUpdateAvailable -> container(notification.containerId)
+            is Notification.GenericEvent.ContainerImageUpdateDigest -> events()
             is Notification.OngoingEvent -> ongoingEvent(notification.monitorId)
             is Notification.ResolvedEvent -> ongoingEvent(notification.monitorId)
         }
@@ -38,7 +39,7 @@ class DeeplinkCreator(
         }
     }
 
-    fun monitoredItemMissing(): String {
+    fun events(): String {
         return createMoniteeDeeplink {
             addPathSegment("events")
         }

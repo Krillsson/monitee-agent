@@ -9,6 +9,7 @@
   - Containers managed by Swarm are refused. Compose managed ones work, but the container differs from its compose file until the next `compose up`
   - A container that runs on another container's network (`--network container:...`, the usual gluetun setup) can be updated too. Updating the container that provides the network is refused, because the containers on it cannot follow it to a new one
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
+  - Outdated containers are collected into one push a day instead of one per container, sent at mid-day local time. `notifyStyle: EVERY_CONTAINER` goes back to a notification per container, `digestAtHour` moves the digest
   - See `sample-queries/ContainerUpdates.graphql`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: a monitor going back inside its threshold sent a push worded as if a new event had started. Resolved events now get their own notification saying things are back to normal
