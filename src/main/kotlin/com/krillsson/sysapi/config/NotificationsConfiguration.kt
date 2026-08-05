@@ -11,7 +11,8 @@ data class NotificationsConfiguration(
         val topic: String? = null,
         val token: String? = null,
         val username: String? = null,
-        val password: String? = null
+        val password: String? = null,
+        val emoji: Boolean = true
     )
 
     data class WebhookConfiguration(

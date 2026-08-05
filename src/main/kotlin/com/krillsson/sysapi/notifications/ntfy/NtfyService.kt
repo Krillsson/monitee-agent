@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.notifications.ntfy
 
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.notifications.NotificationEmoji
 import com.krillsson.sysapi.notifications.NotificationParameters
 import com.krillsson.sysapi.notifications.NotificationService
 import com.krillsson.sysapi.notifications.NtfyInfo
@@ -40,6 +41,7 @@ class NtfyService(
             priority = notification.priority,
             clickUrl = notification.clickUrl,
             topic = topic,
+            tags = if (config.emoji) NotificationEmoji.ntfyTags(notification) else emptyList()
         )
     }
 

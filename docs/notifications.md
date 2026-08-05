@@ -30,6 +30,10 @@ or a username and password:
 
 `token` wins if both are given. Tokens are made under *Account → Access tokens* in the ntfy web app.
 
+Notifications are sent with ntfy tags for what happened and what it is about — `rotating_light` and
+`computer` for a cpu alert, `white_check_mark` when it is back to normal — which ntfy turns into
+emoji in front of the title. `emoji: false` sends no tags.
+
 ## Webhooks
 
 `webhooks` is a list, and each entry is one HTTP request the agent makes when something happens:
@@ -92,6 +96,8 @@ Messages from a monitor carry the metric instead: 🖥️ cpu, 🧠 memory, 💾
 
 This is on by default and applies to templates too, since it is part of `{{title}}` and
 `{{message}}`. Set `emoji: false` on a webhook whose receiver would rather have plain text.
+
+ntfy gets the same emoji as tags rather than as text, since that is how ntfy does it.
 
 ### Body templates
 

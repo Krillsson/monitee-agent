@@ -19,6 +19,7 @@
   - Deliveries are made in the background, so a receiver that is slow or down does not hold up monitoring
   - See [docs/notifications.md](docs/notifications.md)
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
+- ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: a monitor going back inside its threshold sent a push worded as if a new event had started. Resolved events now get their own notification saying things are back to normal
 - Fix: the native image failed to start on any Linux host with a graphics card, because the NVIDIA NVML binding was missing its native-image proxy registration. GPU sampling can also no longer prevent the agent from starting
