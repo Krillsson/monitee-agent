@@ -44,6 +44,37 @@ type System {
     processes(limit: Int = 0, sortBy: ProcessSortMethod = MEMORY): [Process!]!
     processByPid(pid: Int!): Process
     memory: Memory!
+    # Packages the host's own package manager has waiting to be installed
+    pendingUpdates: SystemUpdates!
+}
+
+union SystemUpdates = SystemUpdatesAvailable | SystemUpdatesUnavailable
+
+type SystemUpdatesAvailable {
+    # The package manager the counts come from, e.g. apt or dnf
+    manager: String!
+    totalCount: Int!
+    # Null on package managers that carry no security metadata, such as pacman and apk
+    securityCount: Int
+    packages: [PendingPackage!]!
+    # The package index is never refreshed, so this is only as fresh as the
+    # distribution's own timers have made the index
+    checkedAt: Instant!
+}
+
+type SystemUpdatesUnavailable {
+    reason: String!
+    isDisabled: Boolean!
+}
+
+type PendingPackage {
+    name: String!
+    # Null on package managers that only report what is available, such as dnf
+    currentVersion: String
+    # Null for updates that carry no version, such as the ones Windows Update lists
+    newVersion: String
+    # Null unless the package manager says which updates are security ones
+    isSecurity: Boolean
 }
 
 enum Platform {

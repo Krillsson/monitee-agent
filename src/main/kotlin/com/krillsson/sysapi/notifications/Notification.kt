@@ -60,6 +60,14 @@ sealed interface Notification {
             val timestamp: Instant,
             val containerNames: List<String>
         ) : GenericEvent
+
+        class PackageUpdatesAvailable(
+            val id: UUID,
+            val timestamp: Instant,
+            val manager: String,
+            val totalCount: Int,
+            val securityCount: Int?
+        ) : GenericEvent
     }
 }
 

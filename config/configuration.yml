@@ -101,6 +101,18 @@ updateCheck:
   address: https://api.github.com
   user: krillsson
   repo: monitee-agent
+# reads what the host's own package manager has waiting to be installed
+# never refreshes the package index, so the counts are as fresh as the distribution's own timers
+packageUpdates:
+  enabled: true
+  # set to false to keep reading pending updates without sending push notifications
+  notify: true
+  # DAILY_DIGEST sends one notification a day while updates are pending,
+  # IMMEDIATELY sends one as soon as the pending updates change
+  notifyStyle: DAILY_DIGEST
+  # hour of the day, local time, the digest goes out
+  digestAtHour: 12
+  intervalHours: 6
 notifications:
   # serverName: MyServer
   ntfy:

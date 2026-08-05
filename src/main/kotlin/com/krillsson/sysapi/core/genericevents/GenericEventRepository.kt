@@ -77,6 +77,14 @@ class GenericEventRepository(private val store: GenericEventStore) {
                 remoteDigest = remoteDigest
             )
 
+            is PackageUpdatesAvailable -> GenericEventStore.StoredGenericEvent.PackageUpdatesAvailable(
+                id = id,
+                dateTime = timestamp.toOffsetDateTime(),
+                manager = manager,
+                totalCount = totalCount,
+                securityCount = securityCount
+            )
+
             else -> null
         }
     }
@@ -108,6 +116,14 @@ class GenericEventRepository(private val store: GenericEventStore) {
                 containerName = containerName,
                 imageRef = imageRef,
                 remoteDigest = remoteDigest
+            )
+
+            is GenericEventStore.StoredGenericEvent.PackageUpdatesAvailable -> PackageUpdatesAvailable(
+                id = id,
+                timestamp = dateTime.toInstant(),
+                manager = manager,
+                totalCount = totalCount,
+                securityCount = securityCount
             )
         }
     }

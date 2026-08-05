@@ -20,10 +20,13 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
+import com.krillsson.sysapi.core.monitoring.monitors.MAX_PENDING_UPDATES
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
+import com.krillsson.sysapi.core.domain.system.SystemUpdates
+import com.krillsson.sysapi.packageupdates.PackageUpdatesChecker
 import com.krillsson.sysapi.notifications.localization.ByteFormatter
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
@@ -42,6 +45,7 @@ class MonitorInputCreator(
     private val byteFormatter: ByteFormatter,
     private val upsService: UpsService,
     private val containerUpdateChecker: ContainerUpdateChecker,
+    private val packageUpdatesChecker: PackageUpdatesChecker,
 ) {
 
     companion object {
@@ -92,6 +96,10 @@ class MonitorInputCreator(
 
     private val containerUpdateTypes = listOf<Monitor.Type>(
         Monitor.Type.CONTAINER_UPDATE_AVAILABLE
+    )
+
+    private val packageUpdateTypes = listOf<Monitor.Type>(
+        Monitor.Type.PACKAGE_UPDATES, Monitor.Type.PACKAGE_SECURITY_UPDATES
     )
 
     private fun List<Monitor<*>>.idsSubset(types: List<Monitor.Type>) =
@@ -152,6 +160,12 @@ class MonitorInputCreator(
             activeTypes.idsSubset(containerUpdateTypes)
         ).values.toList()
 
+        val systemUpdates = if (activeTypes.any { packageUpdateTypes.contains(it.type) }) {
+            packageUpdatesChecker.latest()
+        } else {
+            null
+        }
+
         val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
         return MonitorInput(
             load,
@@ -159,7 +173,8 @@ class MonitorInputCreator(
             containersStats,
             containerImageUpdates,
             webserverChecks,
-            upsDeviceMetrics
+            upsDeviceMetrics,
+            systemUpdates
         )
     }
 
@@ -274,6 +289,8 @@ class MonitorInputCreator(
                     createWebserverUpMonitorableItem(webServerCheck)
                 }
 
+                Monitor.Type.PACKAGE_UPDATES,
+                Monitor.Type.PACKAGE_SECURITY_UPDATES -> getMonitorableItemForType(monitor.type).firstOrNull()
                 Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
                 Monitor.Type.CPU_LOAD -> getMonitorableItemForType(monitor.type).first()
                 Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> getMonitorableItemForType(monitor.type).first()
@@ -473,6 +490,18 @@ class MonitorInputCreator(
                 } else {
                     emptyList()
                 }
+            }
+
+            Monitor.Type.PACKAGE_UPDATES -> {
+                packageUpdatesChecker.latest()?.let {
+                    listOf(createPackageUpdatesMonitorableItem(it))
+                }.orEmpty()
+            }
+
+            Monitor.Type.PACKAGE_SECURITY_UPDATES -> {
+                packageUpdatesChecker.latest()?.takeIf { it.securityCount != null }?.let {
+                    listOf(createPackageSecurityUpdatesMonitorableItem(it))
+                }.orEmpty()
             }
 
             Monitor.Type.PROCESS_MEMORY_SPACE -> {
@@ -760,6 +789,24 @@ class MonitorInputCreator(
         currentValue = (containerUpdateChecker.updateForContainer(container.id)?.status != ImageUpdateStatus.OUTDATED)
             .toConditionalValue(),
         type = Monitor.Type.CONTAINER_UPDATE_AVAILABLE
+    )
+
+    private fun createPackageUpdatesMonitorableItem(updates: SystemUpdates) = MonitorableItem(
+        id = null,
+        name = "Pending updates",
+        description = updates.manager,
+        maxValue = MAX_PENDING_UPDATES.toNumericalValue(),
+        currentValue = updates.totalCount.toNumericalValue(),
+        type = Monitor.Type.PACKAGE_UPDATES
+    )
+
+    private fun createPackageSecurityUpdatesMonitorableItem(updates: SystemUpdates) = MonitorableItem(
+        id = null,
+        name = "Pending security updates",
+        description = updates.manager,
+        maxValue = MAX_PENDING_UPDATES.toNumericalValue(),
+        currentValue = (updates.securityCount ?: 0).toNumericalValue(),
+        type = Monitor.Type.PACKAGE_SECURITY_UPDATES
     )
 
     private fun createContainerRunningMonitorableItem(it: Container) = MonitorableItem(

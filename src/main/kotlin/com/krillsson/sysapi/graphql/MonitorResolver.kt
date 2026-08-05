@@ -131,7 +131,9 @@ class MonitorResolver(
                 }
             }
 
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> emptyList()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.PACKAGE_UPDATES,
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.PACKAGE_SECURITY_UPDATES -> emptyList()
 
             else -> historyRepository.getBasic().mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }
         }
@@ -224,7 +226,9 @@ class MonitorResolver(
                 }
             }
 
-            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> emptyList()
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.PACKAGE_UPDATES,
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.PACKAGE_SECURITY_UPDATES -> emptyList()
 
             else -> historyRepository.getHistoryLimitedToDates(from, to)
                 .mapNotNull { it.asMonitoredValueHistoryEntry(monitor) }

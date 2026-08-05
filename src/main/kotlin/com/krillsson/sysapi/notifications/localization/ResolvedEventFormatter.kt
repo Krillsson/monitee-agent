@@ -47,6 +47,8 @@ class ResolvedEventFormatter(
                 Monitor.Type.GPU_TEMPERATURE -> "GPU temp. back to normal on $serverName"
                 Monitor.Type.GPU_UTILIZATION -> "GPU load back to normal on $serverName"
                 Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "Container image up to date on $serverName"
+                Monitor.Type.PACKAGE_UPDATES -> "Pending updates back to normal on $serverName"
+                Monitor.Type.PACKAGE_SECURITY_UPDATES -> "Pending security updates back to normal on $serverName"
             }
         }
     }
@@ -115,6 +117,9 @@ class ResolvedEventFormatter(
                         ""
                     )
                 } is running an $formattedValue image after $formattedDuration"
+
+                Monitor.Type.PACKAGE_UPDATES -> "Pending updates are back below $formattedThreshold at $formattedValue after $formattedDuration"
+                Monitor.Type.PACKAGE_SECURITY_UPDATES -> "Pending security updates are back below $formattedThreshold at $formattedValue after $formattedDuration"
             }
         }
     }

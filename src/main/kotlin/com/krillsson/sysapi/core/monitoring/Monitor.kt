@@ -38,7 +38,9 @@ abstract class Monitor<out T : MonitoredValue> {
         UPS_LOAD_WATT(ValueType.Numerical),
         GPU_VRAM_USAGE(ValueType.Numerical),
         GPU_TEMPERATURE(ValueType.Numerical),
-        GPU_UTILIZATION(ValueType.Fractional)
+        GPU_UTILIZATION(ValueType.Fractional),
+        PACKAGE_UPDATES(ValueType.Numerical),
+        PACKAGE_SECURITY_UPDATES(ValueType.Numerical)
     }
 
     enum class ValueType {

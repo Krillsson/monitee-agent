@@ -70,6 +70,8 @@ class MonitoredValueFormatter(
             Monitor.Type.GPU_TEMPERATURE -> temperatureFormatter.format((value as MonitoredValue.NumericalValue).value.toInt())
             Monitor.Type.GPU_UTILIZATION -> formatPercent((value as MonitoredValue.FractionalValue).value)
             Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> if ((value as MonitoredValue.ConditionalValue).value) "up to date" else "outdated"
+            Monitor.Type.PACKAGE_UPDATES -> "${(value as MonitoredValue.NumericalValue).value}"
+            Monitor.Type.PACKAGE_SECURITY_UPDATES -> "${(value as MonitoredValue.NumericalValue).value}"
         }
     }
 

@@ -3,6 +3,7 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEvent
 import com.krillsson.sysapi.core.genericevents.MonitoredItemMissing
+import com.krillsson.sysapi.core.genericevents.PackageUpdatesAvailable
 import com.krillsson.sysapi.util.toOffsetDateTime
 import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
@@ -45,6 +46,28 @@ class ContainerImageUpdateAvailableGenericEventResolver {
 
     @SchemaMapping(typeName = "ContainerImageUpdateAvailable", field = "dateTime")
     fun dateTime(event: ContainerImageUpdateAvailable) = event.timestamp.toOffsetDateTime()
+}
+
+@Controller
+@SchemaMapping(typeName = "PackageUpdatesAvailable")
+class PackageUpdatesAvailableGenericEventResolver {
+    @SchemaMapping(typeName = "PackageUpdatesAvailable", field = "title")
+    fun title(event: PackageUpdatesAvailable): String {
+        return "Package updates available"
+    }
+
+    @SchemaMapping(typeName = "PackageUpdatesAvailable", field = "description")
+    fun description(event: PackageUpdatesAvailable): String {
+        val packages = if (event.totalCount == 1) "1 package" else "${event.totalCount} packages"
+        return if (event.securityCount != null && event.securityCount > 0) {
+            "$packages can be updated with ${event.manager}, ${event.securityCount} of them security"
+        } else {
+            "$packages can be updated with ${event.manager}"
+        }
+    }
+
+    @SchemaMapping(typeName = "PackageUpdatesAvailable", field = "dateTime")
+    fun dateTime(event: PackageUpdatesAvailable) = event.timestamp.toOffsetDateTime()
 }
 
 @Controller

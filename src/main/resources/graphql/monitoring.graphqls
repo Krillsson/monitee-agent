@@ -252,7 +252,9 @@ enum MonitorType {
     DISK_SMART_HEALTH,
     GPU_VRAM_USAGE,
     GPU_TEMPERATURE,
-    GPU_UTILIZATION
+    GPU_UTILIZATION,
+    PACKAGE_UPDATES,
+    PACKAGE_SECURITY_UPDATES
 }
 
 type MonitorableItem {
@@ -321,6 +323,19 @@ type ContainerImageUpdateAvailable implements GenericEvent {
     containerName: String!
     imageRef: String!
     remoteDigest: String!
+}
+
+type PackageUpdatesAvailable implements GenericEvent {
+    id: UUID!
+    dateTime: OffsetDateTime! @deprecated(reason: "Replaced by timestamp")
+    timestamp: Instant!
+    title: String!
+    description: String!
+    # The package manager the counts come from, e.g. apt or dnf
+    manager: String!
+    totalCount: Int!
+    # Null on package managers that carry no security metadata, such as pacman and apk
+    securityCount: Int
 }
 
 type MonitoredItemMissing implements GenericEvent {

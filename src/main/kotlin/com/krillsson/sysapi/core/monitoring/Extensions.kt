@@ -65,7 +65,9 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.UPS_LOAD_PERCENTAGE,
         Monitor.Type.GPU_VRAM_USAGE,
         Monitor.Type.GPU_TEMPERATURE,
-        Monitor.Type.GPU_UTILIZATION -> null
+        Monitor.Type.GPU_UTILIZATION,
+        Monitor.Type.PACKAGE_UPDATES,
+        Monitor.Type.PACKAGE_SECURITY_UPDATES -> null
     }
 
 
