@@ -3,6 +3,7 @@ package com.krillsson.sysapi.notifications.webhook
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.NotificationsConfiguration.WebhookConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.notifications.NotificationEmoji
 import com.krillsson.sysapi.notifications.NotificationParameters
 import com.krillsson.sysapi.notifications.NotificationService
 import com.krillsson.sysapi.notifications.WebhookInfo
@@ -53,9 +54,10 @@ class WebhookService(
         return configured.map { WebhookInfo(name = it.displayName(), enabled = it.enabled) }
     }
 
-    private fun send(config: WebhookConfiguration, client: OkHttpClient, notification: NotificationParameters) {
+    private fun send(config: WebhookConfiguration, client: OkHttpClient, parameters: NotificationParameters) {
         val name = config.displayName()
         val method = config.method.uppercase()
+        val notification = if (config.emoji) NotificationEmoji.decorate(parameters) else parameters
         val request = try {
             Request.Builder()
                 .url(template.renderUrl(config.url, notification))
@@ -107,8 +109,8 @@ class WebhookService(
         message = message,
         priority = priority,
         clickUrl = clickUrl,
-        eventType = eventType,
-        monitorType = monitorType,
+        eventType = eventType.name,
+        monitorType = monitorType?.name,
         timestamp = timestamp.toString(),
         serverName = serverName,
         serverId = serverId

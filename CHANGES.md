@@ -15,6 +15,7 @@
   - `notifications.webhooks` takes a list of receivers, each an url with a method, headers, optional basic auth and an optional body template. Every notification goes to all of them, alongside ntfy
   - Without a template the agent posts its own JSON with the title, message, priority, click url, event type, monitor type, timestamp and server name and id
   - A template substitutes `{{title}}` style placeholders and escapes them for the content type, so a body can be shaped into whatever the receiver expects. That covers Gotify, Discord, Slack, Telegram, Apprise, Nextcloud notify_push and Home Assistant, all with configuration only
+  - Titles and messages are prefixed with an emoji for what happened and what it is about — 🚨 for a monitor outside its threshold, ✅ when it is back, and the metric on the message. On by default, `emoji: false` turns it off per webhook
   - Deliveries are made in the background, so a receiver that is slow or down does not hold up monitoring
   - See [docs/notifications.md](docs/notifications.md)
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
