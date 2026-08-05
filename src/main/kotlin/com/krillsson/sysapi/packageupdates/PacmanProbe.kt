@@ -1,25 +1,29 @@
 package com.krillsson.sysapi.packageupdates
 
-import com.krillsson.sysapi.bash.Bash
 import com.krillsson.sysapi.core.domain.system.PendingPackage
 
-class PacmanProbe : CommandProbe("pacman") {
+class PacmanProbe(root: String? = null) : CommandProbe("pacman", root) {
 
     override val manager = "pacman"
 
+    override val databaseMarkers = listOf(DATABASE_PATH)
+
     override fun check(): ProbeResult {
-        val output = if (hasCheckupdates()) {
+        val output = if (root == null && commandExists(CHECKUPDATES_COMMAND)) {
             execute(CHECKUPDATES_COMMAND, setOf(0, 2))
         } else {
-            execute(PACMAN_COMMAND, setOf(0, 1))
+            execute(command(), setOf(0, 1))
         }.getOrElse { return failure(it) }
         return ProbeResult.Success(parse(output), null)
     }
 
-    private fun hasCheckupdates() =
-        Bash.executeToExitStatus("command -v checkupdates >/dev/null 2>&1", TIMEOUT_MILLIS).getOrNull() == 0
+    private fun command(): String {
+        val root = root ?: return PACMAN_COMMAND
+        return "$PACMAN_COMMAND --root $root --dbpath ${underRoot(DATABASE_PATH)}"
+    }
 
     companion object {
+        private const val DATABASE_PATH = "var/lib/pacman"
         private const val CHECKUPDATES_COMMAND = "checkupdates"
         private const val PACMAN_COMMAND = "pacman -Qu"
 

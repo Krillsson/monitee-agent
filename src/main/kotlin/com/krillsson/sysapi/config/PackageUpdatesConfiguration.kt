@@ -7,7 +7,8 @@ data class PackageUpdatesConfiguration(
     @JsonProperty val notify: Boolean = true,
     @JsonProperty val notifyStyle: PackageUpdateNotifyStyle = PackageUpdateNotifyStyle.DAILY_DIGEST,
     @JsonProperty val digestAtHour: Int = 12,
-    @JsonProperty val intervalHours: Long = 6
+    @JsonProperty val intervalHours: Long = 6,
+    @JsonProperty val hostRoot: String = "/host"
 )
 
 enum class PackageUpdateNotifyStyle {

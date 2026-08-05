@@ -34,6 +34,11 @@ services:
       - /dev:/dev:ro
       # show correct os info in about server screen
       - /etc/os-release:/etc/os-release
+      # to read the host's pending package updates instead of the image's
+      # these are for a Debian or Ubuntu host, adjust for other package managers
+      - /var/lib/dpkg:/host/var/lib/dpkg:ro
+      - /var/lib/apt:/host/var/lib/apt:ro
+      - /etc/apt:/host/etc/apt:ro
     # temperature monitoring of disks
     #devices:
     #  - "/dev/sda:/dev/sda"

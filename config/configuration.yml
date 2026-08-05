@@ -113,6 +113,11 @@ packageUpdates:
   # hour of the day, local time, the digest goes out
   digestAtHour: 12
   intervalHours: 6
+  # only used when the agent runs in a container, where the host's package database
+  # has to be mounted read-only for it to be readable at all. See docker-compose.yml
+  # the count can differ by a package or two from what the host itself reports,
+  # since the reading is done by the package manager in the image
+  hostRoot: /host
 notifications:
   # serverName: MyServer
   ntfy:

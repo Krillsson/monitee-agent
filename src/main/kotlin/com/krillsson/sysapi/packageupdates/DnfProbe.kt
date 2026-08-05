@@ -2,12 +2,14 @@ package com.krillsson.sysapi.packageupdates
 
 import com.krillsson.sysapi.core.domain.system.PendingPackage
 
-class DnfProbe(private val executable: String) : CommandProbe(executable) {
+class DnfProbe(private val executable: String, root: String? = null) : CommandProbe(executable, root) {
 
     override val manager = executable
 
+    override val databaseMarkers = RPM_DATABASES
+
     override fun check(): ProbeResult {
-        val output = execute("$executable -q check-update", UPDATES_AVAILABLE).getOrElse { return failure(it) }
+        val output = execute("${command()} check-update", UPDATES_AVAILABLE).getOrElse { return failure(it) }
         val packages = parse(output)
         val securityNames = securityPackageNames()
             ?: return ProbeResult.Success(packages, null)
@@ -15,14 +17,18 @@ class DnfProbe(private val executable: String) : CommandProbe(executable) {
         return ProbeResult.Success(withSecurity, withSecurity.count { it.isSecurity == true })
     }
 
+    private fun command() = if (root == null) "$executable -q" else "$executable -q --installroot=$root"
+
     private fun securityPackageNames(): Set<String>? {
-        val output = execute("$executable -q updateinfo list --security").getOrNull()
-            ?: execute("$executable -q updateinfo list security").getOrNull()
+        val output = execute("${command()} updateinfo list --security").getOrNull()
+            ?: execute("${command()} updateinfo list security").getOrNull()
             ?: return null
         return parseSecurityNames(output)
     }
 
     companion object {
+        val RPM_DATABASES = listOf("var/lib/rpm", "usr/lib/sysimage/rpm")
+
         private val UPDATES_AVAILABLE = setOf(0, 100)
 
         fun parse(output: String): List<PendingPackage> {

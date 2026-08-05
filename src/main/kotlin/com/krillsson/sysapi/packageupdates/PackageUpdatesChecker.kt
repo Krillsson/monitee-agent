@@ -40,9 +40,23 @@ class PackageUpdatesChecker(
     private val config = yamlConfigFile.packageUpdates
     private val interval: Duration = Duration.ofHours(config.intervalHours)
 
-    private val probes: List<PackageManagerProbe> = when (platform) {
-        Platform.WINDOWS -> listOf(WindowsUpdateProbe())
-        Platform.LINUX -> listOf(AptProbe(), DnfProbe("dnf"), DnfProbe("yum"), ZypperProbe(), PacmanProbe(), ApkProbe())
+    private val inContainer = runningInContainer()
+
+    private val hostRoot: String? = config.hostRoot
+        .takeIf { it.isNotBlank() && inContainer && File(it).list()?.isNotEmpty() == true }
+
+    private val probes: List<PackageManagerProbe> = when {
+        inContainer && hostRoot == null -> emptyList()
+        platform == Platform.WINDOWS -> listOf(WindowsUpdateProbe())
+        platform == Platform.LINUX -> listOf(
+            AptProbe(hostRoot),
+            DnfProbe("dnf", hostRoot),
+            DnfProbe("yum", hostRoot),
+            ZypperProbe(hostRoot),
+            PacmanProbe(hostRoot),
+            ApkProbe(hostRoot)
+        )
+
         else -> emptyList()
     }
 
@@ -57,8 +71,15 @@ class PackageUpdatesChecker(
     val status: Status by lazy {
         when {
             !config.enabled -> Status.Disabled
-            runningInContainer() -> Status.Unavailable("The agent is running in a container, where the packages it can see belong to the image and not to the host")
+            inContainer && hostRoot == null -> Status.Unavailable(
+                "The agent is running in a container. Mount the host's package database read-only under ${config.hostRoot} to read its pending updates, e.g. /var/lib/dpkg, /var/lib/apt and /etc/apt on Debian and Ubuntu"
+            )
+
             probe != null -> Status.Available
+            inContainer -> Status.Unavailable(
+                "No package manager in this image can read the package database mounted at ${config.hostRoot}"
+            )
+
             else -> Status.Unavailable("No supported package manager was found")
         }
     }

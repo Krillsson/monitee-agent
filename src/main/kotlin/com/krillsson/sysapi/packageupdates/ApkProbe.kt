@@ -2,14 +2,18 @@ package com.krillsson.sysapi.packageupdates
 
 import com.krillsson.sysapi.core.domain.system.PendingPackage
 
-class ApkProbe : CommandProbe("apk") {
+class ApkProbe(root: String? = null) : CommandProbe("apk", root) {
 
     override val manager = "apk"
 
+    override val databaseMarkers = listOf("lib/apk/db/installed")
+
     override fun check(): ProbeResult {
-        val output = execute(COMMAND).getOrElse { return failure(it) }
+        val output = execute(command()).getOrElse { return failure(it) }
         return ProbeResult.Success(parse(output), null)
     }
+
+    private fun command() = if (root == null) COMMAND else "$COMMAND --root $root"
 
     companion object {
         private const val COMMAND = "apk list --upgradable"
