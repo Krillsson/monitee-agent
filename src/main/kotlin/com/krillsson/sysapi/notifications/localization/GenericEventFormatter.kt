@@ -10,6 +10,10 @@ import java.time.format.DateTimeFormatter
 @Component
 class GenericEventFormatter {
 
+    companion object {
+        private const val MAX_NAMES_IN_DIGEST = 5
+    }
+
     fun formatUpdateEventTitle(serverName: String): String {
         return "New monitee-agent version available for ${EnvironmentUtils.hostName}"
     }
@@ -30,6 +34,24 @@ class GenericEventFormatter {
     fun formatContainerImageUpdateDescription(notification: Notification.GenericEvent.ContainerImageUpdateAvailable): String {
         return with(notification) {
             "${containerName.removePrefix("/")} is running an outdated $imageRef"
+        }
+    }
+
+    fun formatContainerImageUpdateDigestTitle(serverName: String): String {
+        return "Container updates available on $serverName"
+    }
+
+    fun formatContainerImageUpdateDigestDescription(notification: Notification.GenericEvent.ContainerImageUpdateDigest): String {
+        val names = notification.containerNames.sorted()
+        if (names.size == 1) {
+            return "${names.single()} is running an outdated image"
+        }
+        val listed = names.take(MAX_NAMES_IN_DIGEST).joinToString()
+        val remaining = names.size - MAX_NAMES_IN_DIGEST
+        return if (remaining > 0) {
+            "${names.size} containers have updates: $listed and $remaining more"
+        } else {
+            "${names.size} containers have updates: $listed"
         }
     }
 

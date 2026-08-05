@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.docker.updates
 
+import com.krillsson.sysapi.config.ContainerUpdateNotifyStyle
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
@@ -170,7 +171,7 @@ class ContainerUpdateChecker(
             remoteDigest = remoteDigest
         )
         genericEventRepository.add(event)
-        if (config.notify) {
+        if (config.notify && config.notifyStyle == ContainerUpdateNotifyStyle.EVERY_CONTAINER) {
             notificationManager.notify(event.asNotification())
         }
     }

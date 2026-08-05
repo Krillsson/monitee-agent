@@ -55,6 +55,11 @@ sealed interface Notification {
             val containerName: String,
             val imageRef: String,
         ) : GenericEvent
+
+        class ContainerImageUpdateDigest(
+            val timestamp: Instant,
+            val containerNames: List<String>
+        ) : GenericEvent
     }
 }
 

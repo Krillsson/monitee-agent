@@ -67,6 +67,11 @@ docker:
     enabled: true
     # set to false to keep detecting updates without sending push notifications
     notify: true
+    # DAILY_DIGEST sends one notification a day summing up every outdated container,
+    # EVERY_CONTAINER sends one as soon as a container falls behind
+    notifyStyle: DAILY_DIGEST
+    # hour of the day, local time, the digest goes out
+    digestAtHour: 12
     intervalMinutes: 60
     # container names to leave out, * matches any part of a name
     excludeContainers: [ ]
