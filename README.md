@@ -74,6 +74,10 @@ Install Monitee from Google Play and tap **+**. On your own network it usually f
 - [Connection guide](docs/connect-app-to-server.md)
 - [SSL troubleshooting](docs/ssl-troubleshooting.md)
 
+### 3. Decide where alerts go
+
+- [Notifications](docs/notifications.md)
+
 ## Configuration
 The application expects a user config file (_configuration.yml_) and a spring configuration file (_application.properties_) in the _/config_ directory.
 See the sample files in the [/config](/config) repository directory.

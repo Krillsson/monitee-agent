@@ -11,6 +11,12 @@
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
   - Outdated containers are collected into one push a day instead of one per container, sent at mid-day local time. `notifyStyle: EVERY_CONTAINER` goes back to a notification per container, `digestAtHour` moves the digest
   - See `sample-queries/ContainerUpdates.graphql`
+- Feature: Notifications to a generic webhook
+  - `notifications.webhooks` takes a list of receivers, each an url with a method, headers, optional basic auth and an optional body template. Every notification goes to all of them, alongside ntfy
+  - Without a template the agent posts its own JSON with the title, message, priority, click url, event type, monitor type, timestamp and server name and id
+  - A template substitutes `{{title}}` style placeholders and escapes them for the content type, so a body can be shaped into whatever the receiver expects. That covers Gotify, Discord, Slack, Telegram, Apprise, Nextcloud notify_push and Home Assistant, all with configuration only
+  - Deliveries are made in the background, so a receiver that is slow or down does not hold up monitoring
+  - See [docs/notifications.md](docs/notifications.md)
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: a monitor going back inside its threshold sent a push worded as if a new event had started. Resolved events now get their own notification saying things are back to normal

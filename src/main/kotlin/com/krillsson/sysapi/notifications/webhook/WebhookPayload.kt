@@ -1,15 +1,13 @@
-package com.krillsson.sysapi.notifications
+package com.krillsson.sysapi.notifications.webhook
 
-import java.time.Instant
-
-data class NotificationParameters(
+data class WebhookPayload(
     val title: String,
     val message: String,
-    val clickUrl: String,
     val priority: Int,
+    val clickUrl: String,
     val eventType: String,
     val monitorType: String?,
-    val timestamp: Instant,
+    val timestamp: String,
     val serverName: String,
     val serverId: String
 )

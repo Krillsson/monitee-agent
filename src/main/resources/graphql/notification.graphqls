@@ -5,6 +5,8 @@ extend type Query {
 type NotificationServicesInfo{
     serverId: String,
     ntfy: NtfyInfo!
+    "Webhooks configured under notifications.webhooks in configuration.yml"
+    webhooks: [WebhookInfo!]!
 }
 
 
@@ -12,4 +14,10 @@ type NtfyInfo{
     enabled: Boolean
     ntfyAppTopicDeeplink: String
     topic: String,
+}
+
+type WebhookInfo{
+    "The configured name, or the host of the webhook url when it has none"
+    name: String!
+    enabled: Boolean!
 }
