@@ -111,6 +111,8 @@ notifications:
     # token: tk_myaccesstoken
     # username: user
     # password: password
+    # notifications are tagged so ntfy shows an emoji for what happened, set to false for no tags
+    # emoji: true
   # every notification is posted to each webhook below, alongside ntfy
   # without a body the agent posts its own JSON, see docs/notifications.md
   # titles and messages are prefixed with an emoji, turn it off per webhook with emoji: false
