@@ -24,6 +24,7 @@ data class NotificationsConfiguration(
         val username: String? = null,
         val password: String? = null,
         val body: String? = null,
+        val emoji: Boolean = true,
         val timeoutSeconds: Long = 10
     )
 }

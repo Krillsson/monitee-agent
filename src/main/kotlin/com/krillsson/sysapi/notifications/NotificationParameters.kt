@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.notifications
 
+import com.krillsson.sysapi.core.monitoring.Monitor
 import java.time.Instant
 
 data class NotificationParameters(
@@ -7,8 +8,8 @@ data class NotificationParameters(
     val message: String,
     val clickUrl: String,
     val priority: Int,
-    val eventType: String,
-    val monitorType: String?,
+    val eventType: NotificationEventType,
+    val monitorType: Monitor.Type?,
     val timestamp: Instant,
     val serverName: String,
     val serverId: String

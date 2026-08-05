@@ -43,8 +43,8 @@ class WebhookTemplate(private val mapper: ObjectMapper) {
         "message" -> message
         "priority" -> priority.toString()
         "clickUrl" -> clickUrl
-        "eventType" -> eventType
-        "monitorType" -> monitorType.orEmpty()
+        "eventType" -> eventType.name
+        "monitorType" -> monitorType?.name.orEmpty()
         "timestamp" -> timestamp.toString()
         "serverName" -> serverName
         "serverId" -> serverId

@@ -56,7 +56,7 @@ class NotificationManager(
             clickUrl = deeplinkCreator.createDeeplink(this),
             priority = if (this is Notification.OngoingEvent) 4 else 3,
             eventType = eventType(),
-            monitorType = monitorType()?.name,
+            monitorType = monitorType(),
             timestamp = timestamp(),
             serverName = serverName,
             serverId = serverIdService.serverId.toString()
@@ -64,12 +64,12 @@ class NotificationManager(
     }
 
     private fun Notification.eventType() = when (this) {
-        is Notification.OngoingEvent -> "ONGOING_EVENT"
-        is Notification.ResolvedEvent -> "RESOLVED_EVENT"
-        is Notification.GenericEvent.UpdateAvailable -> "UPDATE_AVAILABLE"
-        is Notification.GenericEvent.MonitoredItemMissing -> "MONITORED_ITEM_MISSING"
-        is Notification.GenericEvent.ContainerImageUpdateAvailable -> "CONTAINER_IMAGE_UPDATE_AVAILABLE"
-        is Notification.GenericEvent.ContainerImageUpdateDigest -> "CONTAINER_IMAGE_UPDATE_DIGEST"
+        is Notification.OngoingEvent -> NotificationEventType.ONGOING_EVENT
+        is Notification.ResolvedEvent -> NotificationEventType.RESOLVED_EVENT
+        is Notification.GenericEvent.UpdateAvailable -> NotificationEventType.UPDATE_AVAILABLE
+        is Notification.GenericEvent.MonitoredItemMissing -> NotificationEventType.MONITORED_ITEM_MISSING
+        is Notification.GenericEvent.ContainerImageUpdateAvailable -> NotificationEventType.CONTAINER_IMAGE_UPDATE_AVAILABLE
+        is Notification.GenericEvent.ContainerImageUpdateDigest -> NotificationEventType.CONTAINER_IMAGE_UPDATE_DIGEST
     }
 
     private fun Notification.monitorType() = when (this) {

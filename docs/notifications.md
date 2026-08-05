@@ -46,6 +46,7 @@ notifications:
         X-Api-Key: secret
       username: user
       password: password
+      emoji: true
       timeoutSeconds: 10
       body: '{"text": "{{title}}"}'
 ```
@@ -58,8 +59,8 @@ Without a `body` the agent posts this JSON, which is enough for anything that ca
 
 ```json
 {
-  "title": "MyServer: CPU Load",
-  "message": "CPU Load is above 80% (currently 94%)",
+  "title": "🚨 CPU load too high on MyServer",
+  "message": "🖥️ Load went above 80% to 94%",
   "priority": 4,
   "clickUrl": "https://monitee.app/server/<server id>/monitor/<monitor id>",
   "eventType": "ONGOING_EVENT",
@@ -71,6 +72,26 @@ Without a `body` the agent posts this JSON, which is enough for anything that ca
 ```
 
 `eventType` is one of `ONGOING_EVENT`, `RESOLVED_EVENT`, `UPDATE_AVAILABLE`, `MONITORED_ITEM_MISSING`, `CONTAINER_IMAGE_UPDATE_AVAILABLE` or `CONTAINER_IMAGE_UPDATE_DIGEST`. `monitorType` is null for the events that do not come from a monitor.
+
+### Emoji
+
+The title is prefixed with an emoji for what happened, and the message with one for what it is
+about, so an alert is recognisable before reading it:
+
+| | |
+|---|---|
+| 🚨 | a monitor went outside its threshold |
+| ✅ | a monitor came back inside it |
+| 🆕 | a new monitee-agent release |
+| 🐳 | container image updates |
+| ❓ | a monitored item is gone |
+
+Messages from a monitor carry the metric instead: 🖥️ cpu, 🧠 memory, 💾 file system, 💽 disk,
+🌡️ temperature, 🩺 SMART health, 📈 load average, 🌐 network, 🌍 web server, 📡 connectivity,
+📍 external ip, 🐳 container, ⚙️ process, 🎮 gpu, 🔋 UPS.
+
+This is on by default and applies to templates too, since it is part of `{{title}}` and
+`{{message}}`. Set `emoji: false` on a webhook whose receiver would rather have plain text.
 
 ### Body templates
 

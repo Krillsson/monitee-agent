@@ -113,6 +113,7 @@ notifications:
     # password: password
   # every notification is posted to each webhook below, alongside ntfy
   # without a body the agent posts its own JSON, see docs/notifications.md
+  # titles and messages are prefixed with an emoji, turn it off per webhook with emoji: false
   webhooks: [ ]
   #  - name: Gotify
   #    url: "https://gotify.example.com/message?token=APP_TOKEN"
