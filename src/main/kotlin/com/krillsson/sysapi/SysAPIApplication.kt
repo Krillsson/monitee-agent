@@ -19,6 +19,8 @@ import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.notifications.WebhookInfo
+import com.krillsson.sysapi.notifications.webhook.WebhookPayload
 import com.krillsson.sysapi.core.monitoring.MonitorStore
 import com.krillsson.sysapi.core.monitoring.event.EventStore
 import com.krillsson.sysapi.tls.CertificateNamesCreator
@@ -80,6 +82,9 @@ import org.springframework.context.annotation.ImportRuntimeHints
     SlowResolverWarningInstrumentation::class,
     NotificationsConfiguration::class,
     NotificationsConfiguration.NtfyConfiguration::class,
+    NotificationsConfiguration.WebhookConfiguration::class,
+    WebhookInfo::class,
+    WebhookPayload::class,
 )
 // https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/JNI/
 // Failed to parse docker config.json

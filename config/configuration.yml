@@ -111,6 +111,15 @@ notifications:
     # token: tk_myaccesstoken
     # username: user
     # password: password
+  # every notification is posted to each webhook below, alongside ntfy
+  # without a body the agent posts its own JSON, see docs/notifications.md
+  webhooks: [ ]
+  #  - name: Gotify
+  #    url: "https://gotify.example.com/message?token=APP_TOKEN"
+  #    body: '{"title": "{{title}}", "message": "{{message}}", "priority": {{priority}}}'
+  #  - name: Discord
+  #    url: "https://discord.com/api/webhooks/ID/TOKEN"
+  #    body: '{"content": "**{{title}}**\n{{message}}\n{{clickUrl}}"}'
 # advertise service in local network for easier client setup
 mDNS:
   enabled: true
