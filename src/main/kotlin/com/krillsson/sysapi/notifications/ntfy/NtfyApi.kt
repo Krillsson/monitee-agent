@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 
 interface NtfyApi {
@@ -13,7 +14,8 @@ interface NtfyApi {
      */
     @POST(".")
     fun sendNotification(
-        @Body notification: Notification
+        @Body notification: Notification,
+        @Header("Authorization") authorization: String?
     ): Call<ResponseBody>
 
     @JsonInclude(JsonInclude.Include.NON_NULL)

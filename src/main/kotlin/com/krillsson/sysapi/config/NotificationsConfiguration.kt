@@ -7,6 +7,9 @@ data class NotificationsConfiguration(
     data class NtfyConfiguration(
         val enabled: Boolean = false,
         val url: String = "https://ntfy.sh",
-        val topic: String? = null
+        val topic: String? = null,
+        val token: String? = null,
+        val username: String? = null,
+        val password: String? = null
     )
 }

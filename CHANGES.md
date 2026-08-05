@@ -11,6 +11,7 @@
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
   - Outdated containers are collected into one push a day instead of one per container, sent at mid-day local time. `notifyStyle: EVERY_CONTAINER` goes back to a notification per container, `digestAtHour` moves the digest
   - See `sample-queries/ContainerUpdates.graphql`
+- Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
 - Fix: a monitor going back inside its threshold sent a push worded as if a new event had started. Resolved events now get their own notification saying things are back to normal
 - Fix: the native image failed to start on any Linux host with a graphics card, because the NVIDIA NVML binding was missing its native-image proxy registration. GPU sampling can also no longer prevent the agent from starting
