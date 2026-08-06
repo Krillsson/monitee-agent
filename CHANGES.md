@@ -7,16 +7,13 @@
   - The mutation answers with a `jobId` right away. Follow the update with the `dockerContainerUpdate` subscription to get every step it goes through and the progress of the image pull
   - Docker cannot update a container in place, so it is replaced and comes back with a new id. Monitors, events and metrics history follow it over
   - Containers managed by Swarm are refused. Compose managed ones work, but the container differs from its compose file until the next `compose up`
-  - A container that runs on another container's network (`--network container:...`, the usual gluetun setup) can be updated too. Updating the container that provides the network is refused, because the containers on it cannot follow it to a new one
   - Configured under the `docker.updateCheck` section in configuration.yml, where `notify` turns the push off while detection keeps running
-  - Outdated containers are collected into one push a day instead of one per container, sent at mid-day local time. `notifyStyle: EVERY_CONTAINER` goes back to a notification per container, `digestAtHour` moves the digest
   - See `sample-queries/ContainerUpdates.graphql`
 - Feature: Notifications to a generic webhook
   - `notifications.webhooks` takes a list of receivers, each an url with a method, headers, optional basic auth and an optional body template. Every notification goes to all of them, alongside ntfy
   - Without a template the agent posts its own JSON with the title, message, priority, click url, event type, monitor type, timestamp and server name and id
-  - A template substitutes `{{title}}` style placeholders and escapes them for the content type, so a body can be shaped into whatever the receiver expects. That covers Gotify, Discord, Slack, Telegram, Apprise, Nextcloud notify_push and Home Assistant, all with configuration only
-  - Titles and messages are prefixed with an emoji for what happened and what it is about — 🚨 for a monitor outside its threshold, ✅ when it is back, and the metric on the message. On by default, `emoji: false` turns it off per webhook
-  - Deliveries are made in the background, so a receiver that is slow or down does not hold up monitoring
+  - A template substitutes `{{title}}` style placeholders and escapes them for the content type, so a body can be shaped into whatever the receiver expects. 
+  - Templating covers Gotify, Discord, Slack, Telegram, Apprise, Nextcloud notify_push and Home Assistant, all with configuration only
   - See [docs/notifications.md](docs/notifications.md)
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags
