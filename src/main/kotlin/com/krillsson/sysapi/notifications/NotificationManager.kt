@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.notifications
 
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.mqtt.MqttNotificationService
 import com.krillsson.sysapi.notifications.localization.NotificationFormatter
 import com.krillsson.sysapi.notifications.ntfy.NtfyService
 import com.krillsson.sysapi.notifications.webhook.WebhookService
@@ -15,6 +16,7 @@ class NotificationManager(
     private val serverIdService: ServerIdService,
     private val ntfyService: NtfyService,
     private val webhookService: WebhookService,
+    private val mqttNotificationService: MqttNotificationService,
     private val notificationFormatter: NotificationFormatter,
     private val configFile: YAMLConfigFile,
     private val deeplinkCreator: DeeplinkCreator
@@ -27,7 +29,8 @@ class NotificationManager(
 
     private val notificationServices = listOf<NotificationService>(
         ntfyService,
-        webhookService
+        webhookService,
+        mqttNotificationService
     )
 
     fun notificationServiceInfo(): NotificationServiceInfo {
@@ -35,7 +38,8 @@ class NotificationManager(
             serverName = serverName,
             serverId = serverIdService.serverId.toString(),
             ntfy = ntfyService.ntfyInfo(),
-            webhooks = webhookService.webhookInfo()
+            webhooks = webhookService.webhookInfo(),
+            mqtt = mqttNotificationService.mqttInfo()
         )
     }
 

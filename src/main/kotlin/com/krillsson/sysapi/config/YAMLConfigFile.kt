@@ -30,6 +30,7 @@ data class YAMLConfigFile(
     val connectivityCheck: ConnectivityCheckConfiguration,
     val internetServicesCheck: InternetServicesCheckConfiguration = InternetServicesCheckConfiguration(),
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
+    val mqtt: MqttConfiguration = MqttConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
     val docker: DockerConfiguration,
     val smart: SmartConfig = SmartConfig(),

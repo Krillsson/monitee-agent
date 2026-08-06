@@ -23,6 +23,9 @@ class RuntimeHint : RuntimeHintsRegistrar {
 
     companion object {
         private const val DOCKER_MODEL_PACKAGE = "com.github.dockerjava.api.model"
+        private const val PAHO_JSR47_LOGGER = "org.eclipse.paho.client.mqttv3.logging.JSR47Logger"
+        private const val PAHO_LOGCAT_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.logcat"
+        private const val PAHO_MESSAGES_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.messages"
     }
 
     private val bindingRegistrar = BindingReflectionHintsRegistrar()
@@ -37,6 +40,24 @@ class RuntimeHint : RuntimeHintsRegistrar {
             )
         registerNvmlHints(hints)
         registerDockerJsonHints(hints, classLoader)
+        registerPahoHints(hints)
+    }
+
+    /**
+     * Paho picks its logger with `Class.forName` and reads every log message it writes out of a
+     * resource bundle, both of which the native image drops. The lookup is guarded against
+     * `Exception`, but an unregistered class surfaces as a `MissingReflectionRegistrationError`
+     * that escapes the guard, so creating an `MqttAsyncClient` fails outright.
+     */
+    private fun registerPahoHints(hints: RuntimeHints) {
+        hints.reflection().registerTypeIfPresent(
+            null,
+            PAHO_JSR47_LOGGER,
+            MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+            MemberCategory.INVOKE_PUBLIC_METHODS
+        )
+        hints.resources().registerResourceBundle(PAHO_LOGCAT_BUNDLE)
+        hints.resources().registerResourceBundle(PAHO_MESSAGES_BUNDLE)
     }
 
     /**

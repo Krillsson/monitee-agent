@@ -15,6 +15,13 @@
   - A template substitutes `{{title}}` style placeholders and escapes them for the content type, so a body can be shaped into whatever the receiver expects. 
   - Templating covers Gotify, Discord, Slack, Telegram, Apprise, Nextcloud notify_push and Home Assistant, all with configuration only
   - See [docs/notifications.md](docs/notifications.md)
+- Feature: MQTT publishing with Home Assistant discovery
+  - `mqtt.enabled` connects to a broker and publishes every metric to one retained JSON topic, with an `online`/`offline` last will next to it and every notification on a topic of its own
+  - Each value is announced to Home Assistant, so the server turns up as a device with sensors for CPU, memory, boot time, file systems, disks, network interfaces, GPUs, connectivity and containers. Nothing to install on the Home Assistant side
+  - Every monitor added in the app becomes a problem sensor that follows its ongoing event, carrying the value, threshold and start time as attributes
+  - The entity list is worked out on every publish, so monitors, containers and disks that come and go appear and disappear without a restart
+  - `containers` and `networkInterfaces` leave those entities out on a host that has too many of them
+  - See [docs/mqtt.md](docs/mqtt.md)
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
