@@ -137,8 +137,8 @@ Values are escaped for the `contentType`, so a message containing quotes or newl
 
 ```yaml
     - name: Telegram
-      url: "https://api.telegram.org/botTOKEN/sendMessage"
-      body: '{"chat_id": "123456789", "text": "{{title}}\n{{message}}"}'
+      url: "https://api.telegram.org/bot<TOKEN>/sendMessage"
+      body: '{"chat_id": "123456789", "text": "{{title}}\n{{message}}\n{{clickUrl}}"}'
 ```
 
 **Apprise**, running as an API server, which reaches the ~100 services it supports from one webhook:
