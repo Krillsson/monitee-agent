@@ -24,8 +24,10 @@ class MqttPublisher(
 
     private val config = configFile.mqtt
 
+    @Volatile
     private var publishedEntities: Map<String, MqttEntity> = emptyMap()
 
+    @Volatile
     private var generation = -1
 
     @PostConstruct
