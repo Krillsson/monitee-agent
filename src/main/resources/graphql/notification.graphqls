@@ -7,6 +7,8 @@ type NotificationServicesInfo{
     ntfy: NtfyInfo!
     "Webhooks configured under notifications.webhooks in configuration.yml"
     webhooks: [WebhookInfo!]!
+    "The MQTT broker the agent publishes metrics and events to, configured under mqtt in configuration.yml"
+    mqtt: MqttInfo!
 }
 
 
@@ -20,4 +22,17 @@ type WebhookInfo{
     "The configured name, or the host of the webhook url when it has none"
     name: String!
     enabled: Boolean!
+}
+
+type MqttInfo{
+    "True when a broker url is configured and publishing is turned on"
+    enabled: Boolean!
+    "Whether the agent currently holds a connection to the broker"
+    connected: Boolean!
+    "The broker url the agent connects to"
+    url: String!
+    "Retained topic carrying every metric as one JSON object"
+    stateTopic: String!
+    "Topic every notification is published to as it happens"
+    eventTopic: String!
 }

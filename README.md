@@ -77,6 +77,7 @@ Install Monitee from Google Play and tap **+**. On your own network it usually f
 ### 3. Decide where alerts go
 
 - [Notifications](docs/notifications.md)
+- [MQTT and Home Assistant](docs/mqtt.md)
 
 ## Configuration
 The application expects a user config file (_configuration.yml_) and a spring configuration file (_application.properties_) in the _/config_ directory.
