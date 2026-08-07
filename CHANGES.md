@@ -26,6 +26,10 @@
   - Diagnostic values are marked as such, and the per-interface link state and the read/write rates are discovered disabled, so a server arrives with a usable default view instead of a wall of entities. Turning one on in Home Assistant starts recording it
   - A binary sensor per container is now off by default, since a busy server runs a lot of them
   - See [docs/home-assistant.md](docs/home-assistant.md)
+- Feature: Home Assistant add-on
+  - Installs the agent on Home Assistant OS from [its own repository](https://github.com/Krillsson/monitee-home-assistant-addon), so the machine Home Assistant runs on can be watched from the app like any other server
+  - It picks up the broker Home Assistant already uses, so the machine turns up as a device without any configuration
+  - See [docs/home-assistant.md](docs/home-assistant.md)
 - The interfaces docker creates for itself (`docker0`, `br-<network id>`, `veth*`) are no longer reported as network interfaces. `docker.hideContainerNetworks: false` brings them back.
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags

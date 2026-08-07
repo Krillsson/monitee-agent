@@ -1,8 +1,28 @@
 The agent can publish everything it measures to an MQTT broker, and announce each value to Home Assistant so the server turns up as a device with sensors. Nothing has to be installed on the Home Assistant side beyond its MQTT integration, which most installs already have.
 
-Everything here lives under `mqtt` in `configuration.yml`. It is off by default.
+If the machine you want to watch is the one Home Assistant runs on, the add-on below installs the agent and sets all of this up on its own. For any other server, turn on `mqtt` in its `configuration.yml`.
+
+## The add-on
+
+Add the repository under *Settings → Apps → Install app*, three dots in the top right, *Repositories*:
+
+```
+https://github.com/Krillsson/monitee-home-assistant-addon
+```
+
+Install **Monitee agent** from the list that appears, then:
+
+1. Set a **password** under *Configuration*. There is no default and it will not start without one.
+2. Turn off **Protection mode** under *Info*. Add-ons are kept away from the host by default, which leaves the agent unable to see the host's processes, its physical disks or its containers. Everything else works either way.
+3. Start it.
+
+With the Mosquitto broker add-on installed there is nothing else to do — the add-on asks Home Assistant which broker to use, credentials and all, and the machine appears as a device within a minute. Point the app at the Home Assistant machine on port **8443**, with the username and password from *Configuration*.
+
+The add-on writes `configuration.yml` from a handful of options covering what most installs need. Turning on **Custom configuration** hands the file back to you, in `/addon_configs/xxxxxxxx_monitee-agent/`, and everything below applies as usual. It runs on amd64 and aarch64.
 
 ## Getting started
+
+Everything here lives under `mqtt` in `configuration.yml`. It is off by default.
 
 ```yaml
 mqtt:
