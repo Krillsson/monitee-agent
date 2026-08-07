@@ -72,7 +72,7 @@ class WebServerCheckService(
             val errorMessage = e.message ?: e::class.java.simpleName
             val end = Instant.now()
             val latencyMs = Duration.between(start, end).toMillis()
-            logger.warn("Request FAIL ${url}: $errorMessage (${latencyMs}ms)")
+            logger.debug("Request FAIL ${url}: $errorMessage (${latencyMs}ms)")
             OneOffWebserverResult(
                 Instant.now(),
                 -1,
@@ -109,7 +109,7 @@ class WebServerCheckService(
                 val errorMessage = e.message ?: e::class.java.simpleName
                 val end = Instant.now()
                 val latencyMs = Duration.between(start, end).toMillis()
-                logger.warn("Request FAIL ${check.url}: $errorMessage (${latencyMs}ms)")
+                logger.debug("Request FAIL ${check.url}: $errorMessage (${latencyMs}ms)")
                 WebServerCheckHistoryEntity(
                     UUID.randomUUID(),
                     entity.id,
@@ -235,7 +235,7 @@ class WebServerCheckService(
                 val errorMessage = e.message ?: e::class.java.simpleName
                 val end = Instant.now()
                 val latencyMs = Duration.between(start, end).toMillis()
-                logger.warn("Request FAIL ${entity.url}: $errorMessage (${latencyMs}ms)")
+                logger.debug("Request FAIL ${entity.url}: $errorMessage (${latencyMs}ms)")
                 val entity = WebServerCheckHistoryEntity(
                     UUID.randomUUID(),
                     entity.id,
