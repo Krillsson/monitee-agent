@@ -43,6 +43,7 @@ class HomeAssistantDiscovery(
             "state_class" to entity.stateClass,
             "suggested_display_precision" to entity.precision,
             "entity_category" to if (entity.diagnostic) "diagnostic" else null,
+            "enabled_by_default" to if (entity.enabledByDefault) null else false,
             "device" to device,
             "origin" to origin
         )

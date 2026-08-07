@@ -47,19 +47,52 @@ Everything is published under `<topicPrefix>/<server id>`, `monitee/<server id>`
 
 ## What shows up in Home Assistant
 
-- **CPU** — load, temperature, process and thread count, load averages
-- **Memory** — usage, used, total, swap
-- **System** — boot time, internet connectivity, external IP
-- **File systems** — usage and free space per file system
-- **Disks** — temperature, SMART health, read and write rate per disk
-- **Network** — link state, receive and send rate per interface that is up
-- **GPUs** — load, temperature, VRAM used
-- **Containers** — how many are running, how many have an image update, and whether each one is running
-- **Monitors** — a problem sensor per monitor you have added in the app, on for as long as the monitor is outside its threshold, with its value, threshold and start time as attributes
+Measurements are sensors and states are binary sensors, so a temperature and the health of the
+same disk stay two separate things.
 
-Load averages, totals and the like are marked as diagnostic, so Home Assistant keeps them out of the way rather than on the main card.
+| | Sensors | Binary sensors |
+|---|---|---|
+| **CPU** | load, temperature, processes, threads, load averages | |
+| **Memory** | usage, used, total, swap | |
+| **System** | boot time, external IP, agent version, operating system | internet connectivity |
+| **File systems** | usage, free space | |
+| **Disks** | temperature, read and write rate | SMART health |
+| **Network** | receive and send rate | link state |
+| **GPUs** | load, temperature, VRAM used | |
+| **Containers** | how many run, how many have an image update | whether each container runs |
+| **UPS** | battery charge, runtime, load, power | whether it is operating normally |
+| **Monitors** | | one per monitor added in the app |
 
-The entity list is worked out fresh every interval. Add a monitor in the app, pull a disk or stop a container and the matching entity appears or disappears on the next publish without a restart. A host running a lot of containers or docker networks can end up with a lot of entities — `containers: false` and `networkInterfaces: false` leave those out while everything else keeps working.
+A monitor's binary sensor is on for as long as that monitor is outside its threshold, and carries
+its value, threshold and start time as attributes. It is named after the monitor with *alert* on
+the end — `CPU load alert` — so it does not read like a second copy of the `CPU load` sensor.
+
+### Keeping the default view usable
+
+Three things stop a busy server from arriving as a wall of entities:
+
+- **Diagnostics.** Boot time, load averages, process and thread counts, memory total, swap,
+  external IP, agent version, operating system and disk health are marked as diagnostic, so
+  Home Assistant files them under the device rather than on the main card.
+- **Discovered but disabled.** Per-interface link state and the read/write and receive/send rates
+  arrive disabled. They are on the device, and switching one on in Home Assistant starts recording
+  it — nothing is lost, it is just out of the way until asked for.
+- **Off entirely.** A binary sensor per container is off until `containers: true`, since a server
+  can easily run fifty of them. `networkInterfaces: false` drops the per-interface entities.
+
+Interfaces docker creates for itself never reach Home Assistant at all — see
+`docker.hideContainerNetworks` below.
+
+### Naming
+
+Names come from whatever the agent knows that a person would recognise. A file system is named
+after its label, falling back to its mount point and only then to the device, so a labelled array
+reads `Array usage` rather than `/dev/md1p1 usage`. Containers use their container name. Entity
+ids are derived from the device or interface name instead, so a relabelled file system keeps its
+history.
+
+The entity list is worked out fresh every interval. Add a monitor in the app, pull a disk or stop
+a container and the matching entity appears or disappears on the next publish without a restart.
 
 ## Every option
 
@@ -74,7 +107,7 @@ mqtt:
   intervalSeconds: 30
   qos: 0
   emoji: true
-  containers: true
+  containers: false
   networkInterfaces: true
   homeAssistant:
     enabled: true
@@ -82,6 +115,25 @@ mqtt:
 ```
 
 `homeAssistant.enabled: false` keeps publishing to `state` and `event` without announcing anything, which is what you want when something other than Home Assistant is reading the topics. `discoveryPrefix` only needs changing if the MQTT integration was set up with a prefix other than the default.
+
+## Docker's own network interfaces
+
+A host running docker grows an interface per network and per container — `docker0`,
+`br-0fef9fbb2e3d`, `veth2cdce89` — and on a server like Unraid there can be dozens. They are
+matched by name rather than by address, because the address says very little: docker's default
+pool sits inside `172.16.0.0/12`, which is also where plenty of real networks live, and the pool
+is configurable anyway. The names are not. `br0` and other host bridges are deliberately left
+alone, since on Unraid that is where the LAN address lives.
+
+```yaml
+docker:
+  hideContainerNetworks: true
+```
+
+This is not an MQTT setting — it applies everywhere the agent reports network interfaces,
+including the app and the GraphQL API. Set it to `false` to get them back. A monitor already
+watching one of these interfaces keeps working either way; only the lists it can be picked from
+are filtered.
 
 ## Troubleshooting
 

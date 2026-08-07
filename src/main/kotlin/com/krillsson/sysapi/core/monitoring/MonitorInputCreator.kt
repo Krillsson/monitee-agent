@@ -103,7 +103,7 @@ class MonitorInputCreator(
             cpuInfo = metrics.cpuMetrics().cpuInfo(),
             memory = metrics.memoryMetrics().memoryInfo(),
             fileSystems = metrics.fileSystemMetrics().fileSystems(),
-            networkInterfaces = metrics.networkMetrics().networkInterfaces(),
+            networkInterfaces = metrics.networkMetrics().allNetworkInterfaces(),
             upsDevices = upsService.upsDevices(),
             gpus = metrics.gpuMetrics().gpus(),
         )
@@ -115,7 +115,7 @@ class MonitorInputCreator(
         val containerIds = activeTypes.idsSubset(containerTypes)
         val containerStatisticsIds = activeTypes.idsSubset(containerStatisticsTypes)
         val nicLoads = if (activeTypes.any { networkTypes.contains(it.type) }) metrics.networkMetrics()
-            .networkInterfaceLoads() else emptyList()
+            .allNetworkInterfaceLoads() else emptyList()
         val diskLoads =
             if (activeTypes.any { diskTypes.contains(it.type) }) metrics.diskMetrics().diskLoads() else emptyList()
         val fileSystemLoads = if (activeTypes.any { fileSystemTypes.contains(it.type) }) metrics.fileSystemMetrics()
@@ -194,28 +194,31 @@ class MonitorInputCreator(
 
                 Monitor.Type.NETWORK_UP -> {
                     val nicLoad =
-                        metrics.networkMetrics().networkInterfaceLoads()
+                        metrics.networkMetrics().allNetworkInterfaceLoads()
                             .first { it.name == monitor.config.monitoredItemId }
                     val nic =
-                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                        metrics.networkMetrics().allNetworkInterfaces()
+                            .first { it.name == monitor.config.monitoredItemId }
                     createNetworkUpMonitorableItem(nic, nicLoad)
                 }
 
                 Monitor.Type.NETWORK_UPLOAD_RATE -> {
                     val nicLoad =
-                        metrics.networkMetrics().networkInterfaceLoads()
+                        metrics.networkMetrics().allNetworkInterfaceLoads()
                             .first { it.name == monitor.config.monitoredItemId }
                     val nic =
-                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                        metrics.networkMetrics().allNetworkInterfaces()
+                            .first { it.name == monitor.config.monitoredItemId }
                     createNetworkUploadRateMonitorableItem(nic, nicLoad)
                 }
 
                 Monitor.Type.NETWORK_DOWNLOAD_RATE -> {
                     val nicLoad =
-                        metrics.networkMetrics().networkInterfaceLoads()
+                        metrics.networkMetrics().allNetworkInterfaceLoads()
                             .first { it.name == monitor.config.monitoredItemId }
                     val nic =
-                        metrics.networkMetrics().networkInterfaces().first { it.name == monitor.config.monitoredItemId }
+                        metrics.networkMetrics().allNetworkInterfaces()
+                            .first { it.name == monitor.config.monitoredItemId }
                     createNetworkDownloadRateMonitorableItem(nic, nicLoad)
                 }
 

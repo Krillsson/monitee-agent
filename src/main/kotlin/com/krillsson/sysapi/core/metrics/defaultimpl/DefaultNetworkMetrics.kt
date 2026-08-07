@@ -42,7 +42,8 @@ open class DefaultNetworkMetrics(
     private val hal: HardwareAbstractionLayer,
     private val speedMeasurementManager: NetworkUploadDownloadRateMeasurementManager,
     private val connectivityCheckService: ConnectivityCheckService,
-    private val internetServicesCheckService: InternetServicesCheckService
+    private val internetServicesCheckService: InternetServicesCheckService,
+    private val containerNetworkInterfaces: ContainerNetworkInterfaces
 ) : NetworkMetrics {
 
     private val networkInterfaces: MutableList<NetworkIF> = hal.networkIFs
@@ -88,6 +89,14 @@ open class DefaultNetworkMetrics(
     }
 
     override fun networkInterfaces(): List<NetworkInterface> {
+        return containerNetworkInterfaces.visible(allNetworkInterfaces()) { it.name }
+    }
+
+    override fun networkInterfaceLoads(): List<NetworkInterfaceLoad> {
+        return containerNetworkInterfaces.visible(allNetworkInterfaceLoads()) { it.name }
+    }
+
+    override fun allNetworkInterfaces(): List<NetworkInterface> {
         return networkInterfaces
             .map {
                 var isLoopback = false
@@ -120,7 +129,7 @@ open class DefaultNetworkMetrics(
             })
     }
 
-    override fun networkInterfaceLoads(): List<NetworkInterfaceLoad> {
+    override fun allNetworkInterfaceLoads(): List<NetworkInterfaceLoad> {
         return networkInterfaces.map {
             var up = false
             try {

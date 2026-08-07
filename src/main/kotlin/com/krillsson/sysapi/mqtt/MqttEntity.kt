@@ -8,7 +8,8 @@ data class MqttEntity(
     val deviceClass: String? = null,
     val stateClass: String? = null,
     val precision: Int? = null,
-    val diagnostic: Boolean = false
+    val diagnostic: Boolean = false,
+    val enabledByDefault: Boolean = true
 ) {
     enum class Component(val id: String) {
         SENSOR("sensor"),
@@ -27,6 +28,8 @@ object MqttUnits {
     const val CELSIUS = "°C"
     const val BYTES = "B"
     const val BYTES_PER_SECOND = "B/s"
+    const val SECONDS = "s"
+    const val WATT = "W"
 }
 
 object MqttKeys {

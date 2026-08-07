@@ -28,6 +28,16 @@ class CachingNetworkMetrics(
             Suppliers.synchronizedSupplier { networkMetrics.networkInterfaceLoads() },
             cacheConfiguration.duration, cacheConfiguration.unit
         )
+    private val allNetworkInterfacesCache: Supplier<List<NetworkInterface>> =
+        Suppliers.memoizeWithExpiration(
+            Suppliers.synchronizedSupplier { networkMetrics.allNetworkInterfaces() },
+            cacheConfiguration.duration, cacheConfiguration.unit
+        )
+    private val allNetworkInterfaceLoadsCache: Supplier<List<NetworkInterfaceLoad>> =
+        Suppliers.memoizeWithExpiration(
+            Suppliers.synchronizedSupplier { networkMetrics.allNetworkInterfaceLoads() },
+            cacheConfiguration.duration, cacheConfiguration.unit
+        )
     private val connectivityCache: Supplier<Connectivity> = Suppliers.memoizeWithExpiration(
         Suppliers.synchronizedSupplier { networkMetrics.connectivity() },
         cacheConfiguration.duration, cacheConfiguration.unit
@@ -71,6 +81,14 @@ class CachingNetworkMetrics(
 
     override fun networkInterfaceLoads(): List<NetworkInterfaceLoad> {
         return networkInterfaceLoadsCache.get()
+    }
+
+    override fun allNetworkInterfaces(): List<NetworkInterface> {
+        return allNetworkInterfacesCache.get()
+    }
+
+    override fun allNetworkInterfaceLoads(): List<NetworkInterfaceLoad> {
+        return allNetworkInterfaceLoadsCache.get()
     }
 
     override fun internetServiceAvailabilities(): List<InternetServicesCheckService.InternetServiceAvailability> {

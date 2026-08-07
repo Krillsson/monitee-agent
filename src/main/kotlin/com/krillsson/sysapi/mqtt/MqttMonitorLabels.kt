@@ -8,7 +8,7 @@ object MqttMonitorLabels {
 
     fun name(type: Monitor.Type, monitoredItemId: String?): String {
         val item = monitoredItemId?.trim()?.trimStart('/')?.takeIf { it.isNotBlank() }?.abbreviateIdentifier()
-        return listOfNotNull(label(type), item).joinToString(" ")
+        return listOfNotNull(label(type), item, "alert").joinToString(" ")
     }
 
     private fun String.abbreviateIdentifier() = if (identifier.matches(this)) take(12) else this
