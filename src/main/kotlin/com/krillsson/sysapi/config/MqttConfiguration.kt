@@ -10,7 +10,7 @@ data class MqttConfiguration(
     val intervalSeconds: Long = 30,
     val qos: Int = 0,
     val emoji: Boolean = true,
-    val containers: Boolean = true,
+    val containers: Boolean = false,
     val networkInterfaces: Boolean = true,
     val homeAssistant: HomeAssistantConfiguration = HomeAssistantConfiguration()
 ) {

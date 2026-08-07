@@ -27,5 +27,6 @@ data class DockerConfiguration(
         @JsonProperty val enabled: Boolean = true,
         @JsonProperty val host: String? = null,
         @JsonProperty val cache: CacheConfiguration = CacheConfiguration(true, 5, TimeUnit.SECONDS),
-        @JsonProperty val updateCheck: ContainerUpdateCheckConfiguration = ContainerUpdateCheckConfiguration()
+        @JsonProperty val updateCheck: ContainerUpdateCheckConfiguration = ContainerUpdateCheckConfiguration(),
+        @JsonProperty val hideContainerNetworks: Boolean = true
 )

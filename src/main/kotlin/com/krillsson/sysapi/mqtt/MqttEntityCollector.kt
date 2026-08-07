@@ -1,16 +1,19 @@
 package com.krillsson.sysapi.mqtt
 
+import com.krillsson.sysapi.BuildConfig
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
+import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.domain.gpu.GpuLoad
 import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
+import com.krillsson.sysapi.core.domain.system.SystemInfo
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.MonitorManager
@@ -23,6 +26,11 @@ import com.krillsson.sysapi.mqtt.MqttUnits.BYTES
 import com.krillsson.sysapi.mqtt.MqttUnits.BYTES_PER_SECOND
 import com.krillsson.sysapi.mqtt.MqttUnits.CELSIUS
 import com.krillsson.sysapi.mqtt.MqttUnits.PERCENT
+import com.krillsson.sysapi.mqtt.MqttUnits.SECONDS
+import com.krillsson.sysapi.mqtt.MqttUnits.WATT
+import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.ups.UpsDevice
+import com.krillsson.sysapi.ups.UpsService
 import org.springframework.stereotype.Component as SpringComponent
 import java.time.Clock
 import java.time.Instant
@@ -35,6 +43,7 @@ class MqttEntityCollector(
     private val eventManager: EventManager,
     private val containerService: ContainerService,
     private val containerUpdateChecker: ContainerUpdateChecker,
+    private val upsService: UpsService,
     private val clock: Clock
 ) {
 
@@ -42,16 +51,19 @@ class MqttEntityCollector(
 
     private var bootTime: Instant? = null
 
+    private var systemInfo: SystemInfo? = null
+
     fun collect(): List<MeasuredEntity> {
         val entities = Entities()
         entities.cpu(metrics.cpuMetrics().cpuLoad())
         entities.memory(metrics.memoryMetrics().memoryLoad())
         entities.system(metrics.cpuMetrics().uptime(), metrics.networkMetrics().connectivity())
-        entities.fileSystems(metrics.fileSystemMetrics().fileSystemLoads())
+        entities.fileSystems(metrics.fileSystemMetrics().fileSystemLoads(), metrics.fileSystemMetrics().fileSystems())
         entities.disks(metrics.diskMetrics().diskLoads())
         entities.networkInterfaces(metrics.networkMetrics().networkInterfaceLoads())
         entities.gpus(metrics.gpuMetrics().gpuLoads())
         entities.containers()
+        entities.upsDevices()
         entities.monitors()
         return entities.build()
     }
@@ -101,6 +113,7 @@ class MqttEntityCollector(
     }
 
     private fun Entities.system(uptimeSeconds: Long, connectivity: Connectivity) {
+        binarySensor("connectivity", "Internet", connectivity.connected, deviceClass = "connectivity")
         sensor(
             key = "boot_time",
             name = "Boot time",
@@ -109,17 +122,28 @@ class MqttEntityCollector(
             stateClass = null,
             diagnostic = true
         )
-        binarySensor("connectivity", "Internet", connectivity.connected, deviceClass = "connectivity")
         connectivity.externalIp?.let { sensor("external_ip", "External IP", it, stateClass = null, diagnostic = true) }
+        sensor("agent_version", "Agent version", BuildConfig.APP_VERSION, stateClass = null, diagnostic = true)
+        with(systemInfo().operatingSystem) {
+            sensor(
+                key = "operating_system",
+                name = "Operating system",
+                value = listOf(family, versionInfo.version).filter { it.isNotBlank() }.joinToString(" "),
+                stateClass = null,
+                diagnostic = true
+            )
+        }
     }
 
-    private fun Entities.fileSystems(loads: List<FileSystemLoad>) {
+    private fun Entities.fileSystems(loads: List<FileSystemLoad>, fileSystems: List<FileSystem>) {
+        val byId = fileSystems.associateBy { it.id }
         MqttKeys.uniqueSlugs(loads) { if (it.name == "/") "root" else it.name }.forEach { (slug, load) ->
+            val label = byId[load.id].displayName(load)
             if (load.totalSpaceBytes > 0) {
                 val used = load.totalSpaceBytes - load.usableSpaceBytes
                 sensor(
                     key = "fs_${slug}_usage",
-                    name = "${load.name} usage",
+                    name = "$label usage",
                     value = used * 100.0 / load.totalSpaceBytes,
                     unit = PERCENT,
                     precision = 1
@@ -127,7 +151,7 @@ class MqttEntityCollector(
             }
             sensor(
                 key = "fs_${slug}_free",
-                name = "${load.name} free",
+                name = "$label free",
                 value = load.usableSpaceBytes,
                 unit = BYTES,
                 deviceClass = "data_size",
@@ -148,13 +172,17 @@ class MqttEntityCollector(
                     precision = 0
                 )
             }
-            load.health?.let {
-                sensor(
+            load.health?.let { health ->
+                binarySensor(
                     key = "disk_${slug}_health",
                     name = "${load.name} health",
-                    value = it.status.name,
-                    stateClass = null,
-                    diagnostic = true
+                    value = health.status != HealthStatus.HEALTHY,
+                    deviceClass = "problem",
+                    diagnostic = true,
+                    attributes = mapOf(
+                        "status" to health.status.name,
+                        "messages" to health.messages
+                    )
                 )
             }
             sensor(
@@ -163,7 +191,9 @@ class MqttEntityCollector(
                 value = load.speed.readBytesPerSecond.asRate(),
                 unit = BYTES_PER_SECOND,
                 deviceClass = "data_rate",
-                precision = 0
+                precision = 0,
+                diagnostic = true,
+                enabledByDefault = false
             )
             sensor(
                 key = "disk_${slug}_write_rate",
@@ -171,7 +201,9 @@ class MqttEntityCollector(
                 value = load.speed.writeBytesPerSecond.asRate(),
                 unit = BYTES_PER_SECOND,
                 deviceClass = "data_rate",
-                precision = 0
+                precision = 0,
+                diagnostic = true,
+                enabledByDefault = false
             )
         }
     }
@@ -181,14 +213,23 @@ class MqttEntityCollector(
             return
         }
         MqttKeys.uniqueSlugs(loads.filter { it.isUp }) { it.name }.forEach { (slug, load) ->
-            binarySensor("net_${slug}_up", "${load.name} link", load.isUp, deviceClass = "connectivity")
+            binarySensor(
+                key = "net_${slug}_up",
+                name = "${load.name} link",
+                value = load.isUp,
+                deviceClass = "connectivity",
+                diagnostic = true,
+                enabledByDefault = false
+            )
             sensor(
                 key = "net_${slug}_receive_rate",
                 name = "${load.name} receive rate",
                 value = load.speed.receiveBytesPerSecond.asRate(),
                 unit = BYTES_PER_SECOND,
                 deviceClass = "data_rate",
-                precision = 0
+                precision = 0,
+                diagnostic = true,
+                enabledByDefault = false
             )
             sensor(
                 key = "net_${slug}_send_rate",
@@ -196,7 +237,9 @@ class MqttEntityCollector(
                 value = load.speed.sendBytesPerSecond.asRate(),
                 unit = BYTES_PER_SECOND,
                 deviceClass = "data_rate",
-                precision = 0
+                precision = 0,
+                diagnostic = true,
+                enabledByDefault = false
             )
         }
     }
@@ -247,6 +290,35 @@ class MqttEntityCollector(
         }
     }
 
+    private fun Entities.upsDevices() {
+        if (upsService.status() != UpsService.Status.Available) {
+            return
+        }
+        val devices = upsService.upsDevices()
+        val qualify = devices.size > 1
+        MqttKeys.uniqueSlugs(devices) { it.name }.forEach { (slug, device) ->
+            val label = if (qualify) device.name else "UPS"
+            val metrics = device.metrics
+            binarySensor(
+                key = "ups_${slug}_status",
+                name = "$label status",
+                value = !metrics.isOperatingNormally(),
+                deviceClass = "problem",
+                attributes = mapOf("status" to metrics.upsStatus.map { it.name })
+            )
+            metrics.batteryMetrics?.chargePercent?.let {
+                sensor("ups_${slug}_battery", "$label battery", it, unit = PERCENT, deviceClass = "battery")
+            }
+            metrics.batteryMetrics?.runtimeSeconds?.let {
+                sensor("ups_${slug}_runtime", "$label runtime", it, unit = SECONDS, deviceClass = "duration")
+            }
+            metrics.loadPercent?.let { sensor("ups_${slug}_load", "$label load", it, unit = PERCENT, precision = 0) }
+            metrics.realPowerLoadWatts?.let {
+                sensor("ups_${slug}_power", "$label power", it, unit = WATT, deviceClass = "power")
+            }
+        }
+    }
+
     private fun Entities.monitors() {
         val ongoing = eventManager.getAll()
             .filterIsInstance<OngoingEvent>()
@@ -274,6 +346,17 @@ class MqttEntityCollector(
         return bootTime ?: clock.instant().minusSeconds(uptimeSeconds).also { bootTime = it }
     }
 
+    private fun systemInfo(): SystemInfo {
+        return systemInfo ?: metrics.systemInfo().also { systemInfo = it }
+    }
+
+    private fun FileSystem?.displayName(load: FileSystemLoad): String {
+        val candidate = listOfNotNull(this?.label, this?.mount, load.name)
+            .firstOrNull { it.isNotBlank() }
+            .orEmpty()
+        return if (candidate == "/" || candidate.isBlank()) "Root" else candidate
+    }
+
     private fun Container.displayName() = names.firstOrNull()?.trimStart('/')?.takeIf { it.isNotBlank() } ?: id.take(12)
 
     private fun Long.asRate() = takeIf { it >= 0 }
@@ -297,7 +380,8 @@ class MqttEntityCollector(
             deviceClass: String? = null,
             stateClass: String? = "measurement",
             precision: Int? = null,
-            diagnostic: Boolean = false
+            diagnostic: Boolean = false,
+            enabledByDefault: Boolean = true
         ) {
             measured += MeasuredEntity(
                 entity = MqttEntity(
@@ -308,7 +392,8 @@ class MqttEntityCollector(
                     deviceClass = deviceClass,
                     stateClass = stateClass,
                     precision = precision,
-                    diagnostic = diagnostic
+                    diagnostic = diagnostic,
+                    enabledByDefault = enabledByDefault
                 ),
                 value = value
             )
@@ -320,6 +405,7 @@ class MqttEntityCollector(
             value: Boolean?,
             deviceClass: String? = null,
             diagnostic: Boolean = false,
+            enabledByDefault: Boolean = true,
             attributes: Map<String, Any?>? = null
         ) {
             measured += MeasuredEntity(
@@ -328,7 +414,8 @@ class MqttEntityCollector(
                     name = name,
                     component = Component.BINARY_SENSOR,
                     deviceClass = deviceClass,
-                    diagnostic = diagnostic
+                    diagnostic = diagnostic,
+                    enabledByDefault = enabledByDefault
                 ),
                 value = value?.let { if (it) ON else OFF },
                 attributes = attributes

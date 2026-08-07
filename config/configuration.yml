@@ -56,6 +56,9 @@ ups:
 #      flags: "-d sntasmedia"
 docker:
   enabled: true
+  # keep the interfaces docker makes for itself (docker0, br-<network id>, veth*) out of the
+  # network interfaces the agent reports. Set to false to see them everywhere again
+  hideContainerNetworks: true
   #  cache:
   #    enabled: true
   #    duration: 2
@@ -131,9 +134,9 @@ mqtt:
   # password: password
   # topicPrefix: monitee
   # intervalSeconds: 30
-  # a binary sensor per container, turn off on a host with a lot of them
-  # containers: true
-  # rates and link state per network interface, turn off on a host with a lot of them
+  # a binary sensor per container, off because a busy host has a lot of them
+  # containers: false
+  # link state and rates per network interface, discovered disabled so they stay out of the way
   # networkInterfaces: true
   homeAssistant:
     # announce every entity to Home Assistant, which makes the server show up as a device

@@ -62,18 +62,30 @@ class MqttPublisher(
             generation = connection.generation
             publishedEntities = emptyMap()
         }
-        measured.filterNot { publishedEntities.containsKey(it.entity.key) }.forEach { entity ->
-            connection.publish(
-                discovery.configTopic(entity.entity),
-                mapper.writeValueAsString(discovery.configPayload(entity)),
-                retain = true
-            )
-        }
         val current = measured.associate { it.entity.key to it.entity }
+        measured.filterNot { discovery.configTopic(it.entity) == publishedEntities[it.entity.key]?.let(discovery::configTopic) }
+            .forEach { entity ->
+                clearOtherComponents(entity.entity)
+                connection.publish(
+                    discovery.configTopic(entity.entity),
+                    mapper.writeValueAsString(discovery.configPayload(entity)),
+                    retain = true
+                )
+            }
         publishedEntities.filterKeys { !current.containsKey(it) }.values.forEach { entity ->
             connection.publish(discovery.configTopic(entity), "", retain = true)
         }
         publishedEntities = current
+    }
+
+    /**
+     * A key that moves between sensor and binary sensor lands on a different discovery topic, and
+     * the retained config on the old one would leave Home Assistant showing the entity twice.
+     */
+    private fun clearOtherComponents(entity: MqttEntity) {
+        MqttEntity.Component.entries.filter { it != entity.component }.forEach { component ->
+            connection.publish(discovery.configTopic(entity.copy(component = component)), "", retain = true)
+        }
     }
 
     private fun publishState(measured: List<MeasuredEntity>) {

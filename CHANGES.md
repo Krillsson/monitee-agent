@@ -20,8 +20,12 @@
   - Each value is announced to Home Assistant, so the server turns up as a device with sensors for CPU, memory, boot time, file systems, disks, network interfaces, GPUs, connectivity and containers. Nothing to install on the Home Assistant side
   - Every monitor added in the app becomes a problem sensor that follows its ongoing event, carrying the value, threshold and start time as attributes
   - The entity list is worked out on every publish, so monitors, containers and disks that come and go appear and disappear without a restart
-  - `containers` and `networkInterfaces` leave those entities out on a host that has too many of them
+  - Measurements are sensors and states are binary sensors, so a disk's temperature and its SMART health are two entities rather than two readings with the same name. UPS status, battery, runtime, load and power are published too
+  - Diagnostic values are marked as such, and the per-interface link state and the read/write rates are discovered disabled, so a server arrives with a usable default view instead of a wall of entities. Turning one on in Home Assistant starts recording it
+  - File systems are named after their label, then their mount point, and only then the device, so a labelled array reads `Array usage` rather than `/dev/md1p1 usage`. Entity ids are unchanged
+  - A binary sensor per container is now off by default, since a busy server runs a lot of them
   - See [docs/mqtt.md](docs/mqtt.md)
+- The interfaces docker creates for itself (`docker0`, `br-<network id>`, `veth*`) are no longer reported as network interfaces. They are matched by name rather than address range, because docker's default pool overlaps with real networks, and host bridges like `br0` are left alone. `docker.hideContainerNetworks: false` brings them back. Monitors already watching one keep working
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags
 - Update OSHI to v7.4.3 (fixes GPU bugs on a Linux host)
