@@ -63,6 +63,7 @@ Monitee is two pieces: the app on your phone, and an agent you run on the server
 - [Docker](docs/docker.md)
 - [Unraid](docs/unraid.md)
 - [TrueNAS Scale](docs/truenas.md)
+- [Home Assistant](docs/home-assistant.md)
 - [Deb package](docs/deb-package.md)
 - [Command line](docs/command-line.md)
 - [Windows setup.exe](docs/windows-setup-exe.md)
