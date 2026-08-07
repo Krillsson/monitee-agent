@@ -126,7 +126,7 @@ notifications:
   #  - name: Discord
   #    url: "https://discord.com/api/webhooks/ID/TOKEN"
   #    body: '{"content": "**{{title}}**\n{{message}}\n{{clickUrl}}"}'
-# publish metrics and notifications to an MQTT broker, see docs/mqtt.md
+# publish metrics and notifications to an MQTT broker, see docs/home-assistant.md
 mqtt:
   enabled: false
   # url: "tcp://192.168.0.10:1883"
