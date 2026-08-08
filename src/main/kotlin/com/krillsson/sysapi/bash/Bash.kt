@@ -6,6 +6,8 @@ import org.apache.commons.io.output.ByteArrayOutputStream
 import reactor.core.publisher.Flux
 import java.nio.charset.Charset
 
+data class CommandOutput(val exitCode: Int, val text: String)
+
 object Bash {
 
     val logger by logger()
@@ -29,6 +31,31 @@ object Bash {
             val result = stdout.toString(Charset.defaultCharset())
             logger.debug("Result: $result")
             Result.success(result)
+        } catch (throwable: Throwable) {
+            logger.error("Failed to execute ${commandLine.toStrings().joinToString(" ")}", throwable)
+            Result.failure(throwable)
+        }
+    }
+
+    fun executeToTextAndExitStatus(
+        command: String,
+        timeoutAmountMillis: Long = 3 * 1000
+    ): Result<CommandOutput> {
+        val commandLine = createBashCommand(command)
+        return try {
+            val watchdog = ExecuteWatchdog(timeoutAmountMillis)
+            val resultHandler = DefaultExecuteResultHandler()
+            val stdout = ByteArrayOutputStream()
+            val psh = PumpStreamHandler(stdout)
+            logger.debug("Executing ${commandLine.toStrings().joinToString(" ")}")
+            val exec = DefaultExecutor()
+            exec.streamHandler = psh
+            exec.watchdog = watchdog
+            exec.execute(commandLine, resultHandler)
+            resultHandler.waitFor()
+            val text = stdout.toString(Charset.defaultCharset())
+            logger.debug("Result: $text")
+            Result.success(CommandOutput(resultHandler.exitValue, text))
         } catch (throwable: Throwable) {
             logger.error("Failed to execute ${commandLine.toStrings().joinToString(" ")}", throwable)
             Result.failure(throwable)

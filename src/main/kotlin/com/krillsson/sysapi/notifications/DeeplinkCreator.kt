@@ -20,6 +20,7 @@ class DeeplinkCreator(
             is Notification.GenericEvent.UpdateAvailable -> githubRelease()
             is Notification.GenericEvent.ContainerImageUpdateAvailable -> container(notification.containerId)
             is Notification.GenericEvent.ContainerImageUpdateDigest -> events()
+            is Notification.GenericEvent.PackageUpdatesAvailable -> events()
             is Notification.OngoingEvent -> ongoingEvent(notification.monitorId)
             is Notification.ResolvedEvent -> ongoingEvent(notification.monitorId)
         }

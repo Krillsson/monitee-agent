@@ -1,0 +1,22 @@
+query pendingUpdates {
+    system {
+        pendingUpdates {
+            ... on SystemUpdatesUnavailable {
+                reason
+                isDisabled
+            }
+            ... on SystemUpdatesAvailable {
+                manager
+                totalCount
+                securityCount
+                checkedAt
+                packages {
+                    name
+                    currentVersion
+                    newVersion
+                    isSecurity
+                }
+            }
+        }
+    }
+}

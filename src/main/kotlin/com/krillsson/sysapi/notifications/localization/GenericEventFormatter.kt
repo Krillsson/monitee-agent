@@ -55,6 +55,21 @@ class GenericEventFormatter {
         }
     }
 
+    fun formatPackageUpdatesTitle(serverName: String): String {
+        return "Package updates available on $serverName"
+    }
+
+    fun formatPackageUpdatesDescription(notification: Notification.GenericEvent.PackageUpdatesAvailable): String {
+        return with(notification) {
+            val packages = if (totalCount == 1) "1 package" else "$totalCount packages"
+            if (securityCount != null && securityCount > 0) {
+                "$packages can be updated with $manager, $securityCount of them security"
+            } else {
+                "$packages can be updated with $manager"
+            }
+        }
+    }
+
     fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing, serverName: String): String {
         return "Monitored item missing from ${EnvironmentUtils.hostName}"
     }
@@ -96,6 +111,8 @@ class GenericEventFormatter {
             Monitor.Type.GPU_TEMPERATURE -> "GPU — Temperature"
             Monitor.Type.GPU_UTILIZATION -> "GPU — Load percent"
             Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "Docker — Container image up to date"
+            Monitor.Type.PACKAGE_UPDATES -> "System — Pending updates"
+            Monitor.Type.PACKAGE_SECURITY_UPDATES -> "System — Pending security updates"
         }
     }
 }

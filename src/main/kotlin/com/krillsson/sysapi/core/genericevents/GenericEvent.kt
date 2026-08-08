@@ -36,3 +36,11 @@ abstract class GenericEvent(
         val imageRef: String,
         val remoteDigest: String
     ) : GenericEvent(id, timestamp)
+
+    class PackageUpdatesAvailable(
+        id: UUID,
+        timestamp: Instant,
+        val manager: String,
+        val totalCount: Int,
+        val securityCount: Int?
+    ) : GenericEvent(id, timestamp)

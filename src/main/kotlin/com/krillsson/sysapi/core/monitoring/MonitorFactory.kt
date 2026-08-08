@@ -144,6 +144,16 @@ class MonitorFactory {
                 id,
                 config as MonitorConfig<MonitoredValue.FractionalValue>
             )
+
+            Monitor.Type.PACKAGE_UPDATES -> PackageUpdatesMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
+            Monitor.Type.PACKAGE_SECURITY_UPDATES -> PackageSecurityUpdatesMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
         }
     }
 }

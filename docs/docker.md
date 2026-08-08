@@ -29,33 +29,84 @@ Now we can start the container.
 
 ```bash
 docker run -d \
-    --net=host \
-    --pid=host \
     --name monitee-agent \
-    --cap-add SYS_RAWIO \
-    -v ~/monitee-agent/data:/data \
+    --net=host \
     -v ~/monitee-agent/config:/config \
+    -v ~/monitee-agent/data:/data \
     -v /etc/localtime:/etc/localtime:ro \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v /run/udev:/run/udev:ro \
-    -v /run/systemd:/run/systemd \
-    -v /etc/machine-id:/etc/machine-id:ro \
-    -v /run/systemd/journal/socket:/run/systemd/journal/socket:ro \
-    -v /run/log/journal:/run/log/journal:ro \
-    -v /dev:/dev:ro \
-    -v /srv:/srv:ro \
     -v /etc/os-release:/etc/os-release:ro \
     krillsson/sys-api
 ```
 
-Want to monitor the temperature of disks? Each device you’d like to monitor has to be added to the command above through **--device=/dev/sdX** (sda, sdb, etc). List disks on your system with **lsblk --nodeps -n -o name**
+That gives you CPU, memory, network and file system metrics, with monitors and notifications on top. Everything else stays outside the container until you hand it in. Pick the sections below that you want and paste their lines into the command, above the `krillsson/sys-api` line.
 
-Want to monitor a nvidia GPU? Also add this to the command:  
--e 'NVIDIA_VISIBLE_DEVICES'='all'  
--e 'NVIDIA_DRIVER_CAPABILITIES'='utility'  
---runtime=nvidia
+## Docker containers
 
-or substitute all with the specific gpu index (e.g “0”)
+Lists and manages the containers running next to the agent, including image update detection.
+
+```bash
+    -v /var/run/docker.sock:/var/run/docker.sock \
+```
+
+## Processes
+
+Without this the agent only sees its own process.
+
+```bash
+    --pid=host \
+```
+
+## Disks and S.M.A.R.T
+
+Reads disk models, serials and health. Each device you’d like the temperature of needs its own `--device`. List the disks on your system with **lsblk --nodeps -n -o name**
+
+```bash
+    --cap-add SYS_RAWIO \
+    -v /run/udev:/run/udev:ro \
+    -v /dev:/dev:ro \
+    --device=/dev/sda \
+```
+
+## systemd services and journal logs
+
+```bash
+    -v /run/systemd:/run/systemd \
+    -v /etc/machine-id:/etc/machine-id:ro \
+    -v /run/systemd/journal/socket:/run/systemd/journal/socket:ro \
+    -v /run/log/journal:/run/log/journal:ro \
+```
+
+## NVIDIA GPU
+
+Requires the NVIDIA Container Toolkit on the host. Substitute *all* with the index of a specific GPU (e.g. “0”) if you have more than one. AMD and Intel GPUs are read through the disk section above and need nothing else.
+
+```bash
+    -e NVIDIA_VISIBLE_DEVICES=all \
+    -e NVIDIA_DRIVER_CAPABILITIES=utility \
+    --runtime=nvidia \
+```
+
+## Pending package updates
+
+The package database inside the container belongs to the image, so the host’s has to be mounted read-only under `/host` before the agent can read it. These are the paths on a Debian or Ubuntu host:
+
+```bash
+    -v /var/lib/dpkg:/host/var/lib/dpkg:ro \
+    -v /var/lib/apt:/host/var/lib/apt:ro \
+    -v /etc/apt:/host/etc/apt:ro \
+```
+
+The reading is done by the package manager in the image, which is apt, so this covers Debian, Ubuntu and Raspberry Pi OS hosts. Other distributions report that no package manager in the image can read the database. The count can differ by a package or two from what the host reports itself, since the image’s apt is usually older than the host’s.
+
+`/host` is `packageUpdates.hostRoot` in *configuration.yml*. Installations outside a container read the host directly and need none of this.
+
+## Log files
+
+Every directory you want to read logs from has to be mounted, and listed under `logReader` in *configuration.yml*
+
+```bash
+    -v /var/log:/var/log:ro \
+```
 
 Let’s verify the server started correctly
 

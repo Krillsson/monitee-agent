@@ -32,6 +32,7 @@ data class YAMLConfigFile(
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val mqtt: MqttConfiguration = MqttConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
+    val packageUpdates: PackageUpdatesConfiguration = PackageUpdatesConfiguration(),
     val docker: DockerConfiguration,
     val smart: SmartConfig = SmartConfig(),
     val forwardHttpToHttps: Boolean,

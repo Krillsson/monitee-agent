@@ -4,6 +4,7 @@ import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.system.SystemLoad
+import com.krillsson.sysapi.core.domain.system.SystemUpdates
 import com.krillsson.sysapi.core.webservicecheck.WebServerCheckHistoryEntry
 import com.krillsson.sysapi.ups.UpsDevice
 
@@ -14,4 +15,5 @@ class MonitorInput(
     val containerImageUpdates: List<ContainerImageUpdate>,
     val webServerChecks: List<WebServerCheckHistoryEntry>,
     val upsDeviceMetrics: List<UpsDevice.Metrics>,
+    val systemUpdates: SystemUpdates?,
 )

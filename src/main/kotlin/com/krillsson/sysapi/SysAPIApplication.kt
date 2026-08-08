@@ -9,12 +9,16 @@ import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
+import com.krillsson.sysapi.core.domain.system.PendingPackage
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.core.genericevents.PackageUpdatesAvailable
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
+import com.krillsson.sysapi.graphql.domain.SystemUpdatesAvailable
+import com.krillsson.sysapi.graphql.domain.SystemUpdatesUnavailable
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
@@ -63,9 +67,17 @@ import org.springframework.context.annotation.ImportRuntimeHints
     GenericEventStore.StoredGenericEvent.UpdateAvailable::class,
     GenericEventStore.StoredGenericEvent.MonitoredItemMissing::class,
     GenericEventStore.StoredGenericEvent.ContainerImageUpdateAvailable::class,
+    GenericEventStore.StoredGenericEvent.PackageUpdatesAvailable::class,
     ContainerImageUpdateAvailable::class,
+    PackageUpdatesAvailable::class,
     Notification.GenericEvent.ContainerImageUpdateAvailable::class,
     Notification.GenericEvent.ContainerImageUpdateDigest::class,
+    Notification.GenericEvent.PackageUpdatesAvailable::class,
+    PackageUpdatesConfiguration::class,
+    PackageUpdateNotifyStyle::class,
+    SystemUpdatesAvailable::class,
+    SystemUpdatesUnavailable::class,
+    PendingPackage::class,
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
     UpdateDockerContainerInput::class,

@@ -45,6 +45,8 @@ class OngoingEventFormatter(
                 Monitor.Type.GPU_TEMPERATURE -> "GPU temp. too high on $serverName"
                 Monitor.Type.GPU_UTILIZATION -> "GPU load too high on $serverName"
                 Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> "New container image available on $serverName"
+                Monitor.Type.PACKAGE_UPDATES -> "Package updates available on $serverName"
+                Monitor.Type.PACKAGE_SECURITY_UPDATES -> "Security updates available on $serverName"
             }
         }
 
@@ -111,6 +113,9 @@ class OngoingEventFormatter(
                         ""
                     )
                 } is running an $formattedValue image"
+
+                Monitor.Type.PACKAGE_UPDATES -> "Pending updates went above $formattedThreshold to $formattedValue"
+                Monitor.Type.PACKAGE_SECURITY_UPDATES -> "Pending security updates went above $formattedThreshold to $formattedValue"
             }
         }
 

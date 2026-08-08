@@ -8,6 +8,10 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.graphql.domain.System
+import com.krillsson.sysapi.graphql.domain.SystemUpdates
+import com.krillsson.sysapi.graphql.domain.SystemUpdatesAvailable
+import com.krillsson.sysapi.graphql.domain.SystemUpdatesUnavailable
+import com.krillsson.sysapi.packageupdates.PackageUpdatesChecker
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -17,7 +21,35 @@ import kotlin.jvm.optionals.getOrNull
 
 @Controller
 @SchemaMapping(typeName = "System")
-class SystemResolver(val metrics: Metrics) {
+class SystemResolver(val metrics: Metrics, val packageUpdatesChecker: PackageUpdatesChecker) {
+
+    @SchemaMapping
+    fun pendingUpdates(system: System): SystemUpdates {
+        return when (val status = packageUpdatesChecker.status) {
+            PackageUpdatesChecker.Status.Disabled -> SystemUpdatesUnavailable(
+                "The pending updates support is currently disabled. You can change this in configuration.yml",
+                isDisabled = true
+            )
+
+            is PackageUpdatesChecker.Status.Unavailable -> SystemUpdatesUnavailable(
+                status.reason,
+                isDisabled = false
+            )
+
+            PackageUpdatesChecker.Status.Available -> packageUpdatesChecker.latest()?.let { updates ->
+                SystemUpdatesAvailable(
+                    manager = updates.manager,
+                    totalCount = updates.totalCount,
+                    securityCount = updates.securityCount,
+                    packages = updates.packages,
+                    checkedAt = updates.checkedAt
+                )
+            } ?: SystemUpdatesUnavailable(
+                "Reading the pending updates failed, see the agent log for the reason",
+                isDisabled = false
+            )
+        }
+    }
 
     @SchemaMapping
     fun baseboard(system: System): Motherboard {
