@@ -101,7 +101,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
         jib {
             container {
                 ports = ["8080", "8443", "2375"]
-                volumes = ["/config", "/data", "/var/run/docker.sock"]
+                volumes = ["/config", "/data"]
                 jvmFlags = jvmArgs
             }
             from {
@@ -141,7 +141,7 @@ task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
         jib {
             container {
                 ports = ["8080", "8443", "2375"]
-                volumes = ["/config", "/data", "/var/run/docker.sock"]
+                volumes = ["/config", "/data"]
             }
             jib.from {
                 image = nativeBaseImage
