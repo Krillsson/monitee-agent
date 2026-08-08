@@ -15,8 +15,8 @@ class WebServerUpMonitor(
     override val type: Type = Type.WEBSERVER_UP
 
     override fun selectValue(event: MonitorInput): MonitoredValue.ConditionalValue? {
-        val check = event.webServerChecks.firstOrNull { it.webserverCheckId.toString() == config.monitoredItemId }
-        return (check?.responseCode == 200).toConditionalValue()
+        val result = event.checkResults.firstOrNull { it.checkId.toString() == config.monitoredItemId }
+        return (result?.successful == true).toConditionalValue()
     }
 
     override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.ConditionalValue {

@@ -84,7 +84,7 @@ class GenericEventFormatter {
             Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "Load average — 15m"
             Monitor.Type.CONTAINER_MEMORY_SPACE -> "Container — Memory usage"
             Monitor.Type.CONTAINER_CPU_LOAD -> "Container — CPU usage"
-            Monitor.Type.WEBSERVER_UP -> "Webserver — Replies 200/OK"
+            Monitor.Type.WEBSERVER_UP -> "Check — Passing"
             Monitor.Type.DISK_TEMPERATURE -> "Drive — Temperature"
             Monitor.Type.DISK_SMART_HEALTH -> "Drive — S.M.A.R.T health"
             Monitor.Type.MEMORY_USED -> "Memory — Usage"

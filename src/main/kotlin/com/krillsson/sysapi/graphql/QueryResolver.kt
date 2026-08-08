@@ -12,10 +12,13 @@ import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.toEnumEntries
-import com.krillsson.sysapi.core.webservicecheck.OneOffWebserverResult
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheckHistoryEntry
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
+import com.krillsson.sysapi.core.check.Check
+import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.core.check.CheckService
+import com.krillsson.sysapi.core.check.HttpCheck
+import com.krillsson.sysapi.core.check.HttpCheckSpec
+import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.RunCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
@@ -42,7 +45,7 @@ class QueryResolver(
     private val oshiOperatingSystem: OshiOsOperatingSystem,
     private val platform: Platform,
     private val containerManager: ContainerService,
-    private val webServerCheckService: WebServerCheckService,
+    private val checkService: CheckService,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
@@ -152,19 +155,40 @@ class QueryResolver(
     fun ongoingEvents() = eventManager.getAll().filterIsInstance<OngoingEvent>()
 
     @QueryMapping
-    fun webServerChecks(): List<WebServerCheck> = webServerCheckService.getAll()
+    fun checks(): List<Check> = checkService.getAll()
 
     @QueryMapping
-    fun webServerCheckById(@Argument id: UUID): WebServerCheck? = webServerCheckService.getById(id)
+    fun checkById(@Argument id: UUID): Check? = checkService.getById(id)
 
     @QueryMapping
-    fun oneOffWebserverCheck(@Argument url: String): OneOffWebserverResult {
-        return webServerCheckService.checkNow(url)
+    fun webServerChecks(): List<HttpCheck> = checkService.getAll().filterIsInstance<HttpCheck>()
+
+    @QueryMapping
+    fun webServerCheckById(@Argument id: UUID): HttpCheck? = checkService.getById(id) as? HttpCheck
+
+    @QueryMapping
+    fun oneOffWebserverCheck(@Argument url: String): CheckResult {
+        return checkService.runOneOff(
+            HttpCheckSpec(
+                name = null,
+                enabled = true,
+                intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
+                timeoutSeconds = CheckService.DEFAULT_TIMEOUT_SECONDS,
+                url = url,
+                method = HttpMethod.GET,
+                expectedStatusCodes = CheckService.DEFAULT_EXPECTED_STATUS_CODES,
+                keyword = null,
+                keywordInverted = false,
+                ignoreCertificateErrors = false,
+                followRedirects = true,
+                headers = emptyList()
+            )
+        )
     }
 
     @QueryMapping
-    fun runWebServerCheckNow(@Argument webserverCheckId: UUID): WebServerCheckHistoryEntry? {
-        return webServerCheckService.runWebServerCheckNow(webserverCheckId)
+    fun runWebServerCheckNow(@Argument webserverCheckId: UUID): CheckResult? {
+        return (checkService.runNow(webserverCheckId) as? RunCheckResult.Success)?.result
     }
 
     @QueryMapping

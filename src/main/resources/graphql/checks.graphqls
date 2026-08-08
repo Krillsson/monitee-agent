@@ -1,0 +1,225 @@
+extend type Query {
+    checks: [Check!]!
+    checkById(id: UUID!): Check
+}
+
+extend type Mutation {
+    createHttpCheck(input: CreateHttpCheckInput!): CreateCheckOutput!
+    updateHttpCheck(input: UpdateHttpCheckInput!): UpdateCheckOutput!
+    deleteCheck(input: DeleteCheckInput!): DeleteCheckOutput!
+    setCheckEnabled(input: SetCheckEnabledInput!): UpdateCheckOutput!
+    # Runs a stored check right away and persists the result, regardless of when it was last due
+    runCheckNow(input: RunCheckNowInput!): RunCheckNowOutput!
+    # Probes without storing anything, for trying a check out before saving it
+    runOneOffHttpCheck(input: OneOffHttpCheckInput!): CheckResult!
+}
+
+enum CheckType {
+    HTTP
+}
+
+interface Check {
+    id: UUID!
+    # Falls back to the address being checked when the user has not named it
+    name: String!
+    type: CheckType!
+    enabled: Boolean!
+    intervalSeconds: Int!
+    timeoutSeconds: Int!
+    # The most recent result, null until the check has run once
+    status: CheckResult
+    uptimeMetrics(from: Instant, to: Instant): CheckUptime!
+    history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
+    # Individual probe results with their messages and error bodies. Only kept for the raw
+    # retention window, which defaults to 48 hours
+    results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
+}
+
+type HttpCheck implements Check {
+    id: UUID!
+    name: String!
+    type: CheckType!
+    enabled: Boolean!
+    intervalSeconds: Int!
+    timeoutSeconds: Int!
+    status: CheckResult
+    uptimeMetrics(from: Instant, to: Instant): CheckUptime!
+    history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
+    results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
+    url: String!
+    method: HttpMethod!
+    # Status codes counted as up, as a comma separated list of codes and ranges: "200-299,301"
+    expectedStatusCodes: String!
+    # When set, the response body must contain this text for the check to pass
+    keyword: String
+    # Inverts the keyword assertion, so the check passes when the body does not contain it
+    keywordInverted: Boolean!
+    # Accepts self signed and otherwise untrusted certificates for this check only
+    ignoreCertificateErrors: Boolean!
+    followRedirects: Boolean!
+    headers: [HttpHeader!]!
+}
+
+enum HttpMethod {
+    GET
+    HEAD
+    POST
+}
+
+type HttpHeader {
+    name: String!
+    value: String!
+}
+
+type CheckResult {
+    # Null for one-off probes, which are not stored
+    checkId: UUID
+    checkType: CheckType!
+    timestamp: Instant!
+    successful: Boolean!
+    latencyMs: Long!
+    message: String!
+    # HTTP only. -1 when no response was received at all
+    responseCode: Int
+    # HTTP only. The first 512 characters of the response body
+    errorBody: String
+}
+
+enum CheckResolution {
+    # Picks a resolution from the requested range: raw for the last few hours,
+    # hourly up to a month, daily beyond that
+    AUTO
+    RAW
+    HOURLY
+    DAILY
+}
+
+type CheckHistory {
+    # The resolution actually served, which may be coarser than the one asked for
+    resolution: CheckResolution!
+    from: Instant!
+    to: Instant!
+    points: [CheckHistoryPoint!]!
+}
+
+type CheckHistoryPoint {
+    # Start of the bucket, or the probe timestamp at RAW resolution
+    timestamp: Instant!
+    samples: Int!
+    successful: Int!
+    failed: Int!
+    uptimePercent: Float!
+    downtimeSeconds: Long!
+    minLatencyMs: Long!
+    avgLatencyMs: Long!
+    maxLatencyMs: Long!
+    # Computed while the raw results still exist. At DAILY resolution it is the highest
+    # of the day's hourly p95 values, since a percentile cannot be re-derived from buckets
+    p95LatencyMs: Long!
+}
+
+type CheckUptime {
+    from: Instant!
+    to: Instant!
+    samples: Int!
+    successful: Int!
+    failed: Int!
+    uptimePercent: Float!
+    downtimeSeconds: Long!
+    totalSeconds: Long!
+}
+
+input CreateHttpCheckInput {
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    url: String!
+    method: HttpMethod
+    expectedStatusCodes: String
+    keyword: String
+    keywordInverted: Boolean
+    ignoreCertificateErrors: Boolean
+    followRedirects: Boolean
+    headers: [HttpHeaderInput!]
+}
+
+input UpdateHttpCheckInput {
+    id: UUID!
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    url: String!
+    method: HttpMethod
+    expectedStatusCodes: String
+    keyword: String
+    keywordInverted: Boolean
+    ignoreCertificateErrors: Boolean
+    followRedirects: Boolean
+    headers: [HttpHeaderInput!]
+}
+
+input OneOffHttpCheckInput {
+    url: String!
+    method: HttpMethod
+    expectedStatusCodes: String
+    keyword: String
+    keywordInverted: Boolean
+    ignoreCertificateErrors: Boolean
+    followRedirects: Boolean
+    timeoutSeconds: Int
+    headers: [HttpHeaderInput!]
+}
+
+input HttpHeaderInput {
+    name: String!
+    value: String!
+}
+
+input DeleteCheckInput {
+    id: UUID!
+}
+
+input SetCheckEnabledInput {
+    id: UUID!
+    enabled: Boolean!
+}
+
+input RunCheckNowInput {
+    id: UUID!
+}
+
+union CreateCheckOutput = CreateCheckSuccess | CreateCheckFailed
+
+type CreateCheckSuccess {
+    id: UUID!
+}
+
+type CreateCheckFailed {
+    reason: String!
+}
+
+union UpdateCheckOutput = UpdateCheckSuccess | UpdateCheckFailed
+
+type UpdateCheckSuccess {
+    id: UUID!
+}
+
+type UpdateCheckFailed {
+    reason: String!
+}
+
+type DeleteCheckOutput {
+    removed: Boolean!
+}
+
+union RunCheckNowOutput = RunCheckNowSuccess | RunCheckNowFailed
+
+type RunCheckNowSuccess {
+    result: CheckResult!
+}
+
+type RunCheckNowFailed {
+    reason: String!
+}

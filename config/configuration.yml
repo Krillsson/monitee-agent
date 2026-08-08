@@ -13,6 +13,18 @@ metricsConfig:
       unit: DAYS
       purgeEvery: 1
       purgeEveryUnit: DAYS
+    # Check results are rolled up into hourly and daily buckets once an hour.
+    # Each tier is kept for as long as it says here, the purging section above does not apply to them
+    checks:
+      raw:
+        olderThan: 48
+        unit: HOURS
+      hourly:
+        olderThan: 90
+        unit: DAYS
+      daily:
+        olderThan: 730
+        unit: DAYS
   cache:
     enabled: true
     duration: 5

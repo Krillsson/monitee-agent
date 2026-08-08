@@ -4,6 +4,18 @@ import SlowResolverWarningInstrumentation
 import com.github.dockerjava.api.model.AuthConfig
 import com.github.dockerjava.core.DockerConfigFile
 import com.krillsson.sysapi.config.*
+import com.krillsson.sysapi.core.check.CheckHistory
+import com.krillsson.sysapi.core.check.CheckHistoryPoint
+import com.krillsson.sysapi.core.check.CheckResolution
+import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.core.check.CheckType
+import com.krillsson.sysapi.core.check.CheckUptime
+import com.krillsson.sysapi.core.check.HttpCheck
+import com.krillsson.sysapi.core.check.HttpHeader
+import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.UptimeDay
+import com.krillsson.sysapi.core.check.UptimeMetrics
+import com.krillsson.sysapi.core.check.UptimePeriod
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
@@ -15,9 +27,23 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
+import com.krillsson.sysapi.graphql.mutations.CreateCheckFailed
+import com.krillsson.sysapi.graphql.mutations.CreateCheckSuccess
+import com.krillsson.sysapi.graphql.mutations.CreateHttpCheckInput
+import com.krillsson.sysapi.graphql.mutations.DeleteCheckInput
+import com.krillsson.sysapi.graphql.mutations.DeleteCheckOutput
+import com.krillsson.sysapi.graphql.mutations.HttpHeaderInput
+import com.krillsson.sysapi.graphql.mutations.OneOffHttpCheckInput
+import com.krillsson.sysapi.graphql.mutations.RunCheckNowFailed
+import com.krillsson.sysapi.graphql.mutations.RunCheckNowInput
+import com.krillsson.sysapi.graphql.mutations.RunCheckNowSuccess
+import com.krillsson.sysapi.graphql.mutations.SetCheckEnabledInput
+import com.krillsson.sysapi.graphql.mutations.UpdateCheckFailed
+import com.krillsson.sysapi.graphql.mutations.UpdateCheckSuccess
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
+import com.krillsson.sysapi.graphql.mutations.UpdateHttpCheckInput
 import com.krillsson.sysapi.mqtt.MqttEventPayload
 import com.krillsson.sysapi.notifications.MqttInfo
 import com.krillsson.sysapi.notifications.Notification
@@ -96,6 +122,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerConfiguration::class,
     HistoryConfiguration::class,
     HistoryPurgingConfiguration::class,
+    CheckHistoryConfiguration::class,
+    RetentionConfiguration::class,
     LinuxConfiguration::class,
     LogReaderConfiguration::class,
     MdnsConfiguration::class,
@@ -141,6 +169,32 @@ import org.springframework.context.annotation.ImportRuntimeHints
     MqttConfiguration.HomeAssistantConfiguration::class,
     MqttInfo::class,
     MqttEventPayload::class,
+    CheckType::class,
+    HttpMethod::class,
+    HttpHeader::class,
+    HttpCheck::class,
+    CheckResult::class,
+    CheckResolution::class,
+    CheckHistory::class,
+    CheckHistoryPoint::class,
+    CheckUptime::class,
+    UptimeMetrics::class,
+    UptimePeriod::class,
+    UptimeDay::class,
+    CreateHttpCheckInput::class,
+    UpdateHttpCheckInput::class,
+    OneOffHttpCheckInput::class,
+    HttpHeaderInput::class,
+    DeleteCheckInput::class,
+    SetCheckEnabledInput::class,
+    RunCheckNowInput::class,
+    CreateCheckSuccess::class,
+    CreateCheckFailed::class,
+    UpdateCheckSuccess::class,
+    UpdateCheckFailed::class,
+    DeleteCheckOutput::class,
+    RunCheckNowSuccess::class,
+    RunCheckNowFailed::class,
 )
 // https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/JNI/
 // Failed to parse docker config.json

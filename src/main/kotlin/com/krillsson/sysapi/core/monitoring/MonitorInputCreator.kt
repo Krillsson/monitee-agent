@@ -20,8 +20,9 @@ import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheck
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
+import com.krillsson.sysapi.core.check.Check
+import com.krillsson.sysapi.core.check.CheckService
+import com.krillsson.sysapi.core.check.CheckType
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.notifications.localization.ByteFormatter
@@ -38,7 +39,7 @@ import kotlin.jvm.optionals.getOrNull
 class MonitorInputCreator(
     private val metrics: Metrics,
     private val containerService: ContainerService,
-    private val webServerCheckService: WebServerCheckService,
+    private val checkService: CheckService,
     private val byteFormatter: ByteFormatter,
     private val upsService: UpsService,
     private val containerUpdateChecker: ContainerUpdateChecker,
@@ -82,7 +83,7 @@ class MonitorInputCreator(
         Monitor.Type.CONTAINER_RUNNING
     )
 
-    private val webserverCheckTypes = listOf<Monitor.Type>(
+    private val checkTypes = listOf<Monitor.Type>(
         Monitor.Type.WEBSERVER_UP
     )
 
@@ -127,8 +128,8 @@ class MonitorInputCreator(
                 metrics.processesMetrics().getProcessByPid(pid).orElse(null)
             }
         }
-        val webserverChecks = activeTypes.filter { webserverCheckTypes.contains(it.type) }.mapNotNull {
-            webServerCheckService.getStatusForWebServer(UUID.fromString(it.config.monitoredItemId))
+        val checkResults = activeTypes.filter { checkTypes.contains(it.type) }.mapNotNull {
+            checkService.latestResult(UUID.fromString(it.config.monitoredItemId))
         }
 
         val load = SystemLoad(
@@ -158,7 +159,7 @@ class MonitorInputCreator(
             containers,
             containersStats,
             containerImageUpdates,
-            webserverChecks,
+            checkResults,
             upsDeviceMetrics
         )
     }
@@ -272,9 +273,9 @@ class MonitorInputCreator(
                 }
 
                 Monitor.Type.WEBSERVER_UP -> {
-                    val webServerCheck =
-                        requireNotNull(webServerCheckService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
-                    createWebserverUpMonitorableItem(webServerCheck)
+                    val check =
+                        requireNotNull(checkService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
+                    createCheckUpMonitorableItem(check)
                 }
 
                 Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
@@ -521,8 +522,8 @@ class MonitorInputCreator(
             }
 
             Monitor.Type.WEBSERVER_UP -> {
-                webServerCheckService.getAll().map {
-                    createWebserverUpMonitorableItem(it)
+                checkService.getAll().map {
+                    createCheckUpMonitorableItem(it)
                 }
             }
 
@@ -674,12 +675,14 @@ class MonitorInputCreator(
         type = Monitor.Type.DISK_SMART_HEALTH
     )
 
-    private fun createWebserverUpMonitorableItem(it: WebServerCheck) = MonitorableItem(
+    private fun createCheckUpMonitorableItem(it: Check) = MonitorableItem(
         id = it.id.toString(),
-        name = it.url,
-        description = "Returns status 200 on a GET request",
+        name = it.name,
+        description = when (it.type) {
+            CheckType.HTTP -> "Answers an HTTP request as expected"
+        },
         maxValue = true.toConditionalValue(),
-        currentValue = (webServerCheckService.getStatusForWebServer(it.id)?.responseCode == 200).toConditionalValue(),
+        currentValue = (checkService.latestResult(it.id)?.successful == true).toConditionalValue(),
         type = Monitor.Type.WEBSERVER_UP
     )
 

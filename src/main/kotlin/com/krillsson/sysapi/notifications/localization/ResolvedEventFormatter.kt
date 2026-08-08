@@ -101,7 +101,7 @@ class ResolvedEventFormatter(
                     )
                 } CPU usage is back below $formattedThreshold at $formattedValue after $formattedDuration"
 
-                Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is responding with 200/OK again after $formattedDuration"
+                Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is passing its check again after $formattedDuration"
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is operating normally again after $formattedDuration"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load is back below $formattedThreshold at $formattedValue after $formattedDuration"
