@@ -1,6 +1,6 @@
 ### Unreleased
 
-- Fix: the docker image no longer declares a volume for `/var/run/docker.sock`. Docker created an anonymous volume there whenever the socket was not mounted, and since `/var/run` is a symlink to `/run`, a socket mounted at `/run/docker.sock` collided with it and the container refused to start
+- Fix: the docker image no longer declares a volume for `/var/run/docker.sock`
 
 ### 0.42.0
 
