@@ -1,5 +1,7 @@
 ### Unreleased
 
+### 0.42.0
+
 - Feature: Container image updates
   - Compares the image behind every container with the one its registry currently serves. Status per container via `DockerContainer.imageUpdate`, and `DockerAvailable.containersWithImageUpdates` for a badge. Images that cannot be compared are reported as skipped rather than up to date: built locally, pinned to a digest, or private without credentials
   - New monitor type added: "Container update available". An outdated container also raises a generic event, which is what sends the push notification
@@ -24,7 +26,7 @@
   - Diagnostic values are marked as such, and the per-interface link state and the read/write rates are discovered disabled, so a server arrives with a usable default view instead of a wall of entities. Turning one on in Home Assistant starts recording it
   - A binary sensor per container is now off by default, since a busy server runs a lot of them
   - See [docs/home-assistant.md](docs/home-assistant.md)
-- The interfaces docker creates for itself (`docker0`, `br-<network id>`, `veth*`) are no longer reported as network interfaces. They are matched by name rather than address range, because docker's default pool overlaps with real networks, and host bridges like `br0` are left alone. `docker.hideContainerNetworks: false` brings them back. Monitors already watching one keep working
+- The interfaces docker creates for itself (`docker0`, `br-<network id>`, `veth*`) are no longer reported as network interfaces. `docker.hideContainerNetworks: false` brings them back.
 - Feature: ntfy authentication. A protected topic takes either `token` or `username` and `password` under `notifications.ntfy`
 - ntfy notifications are now tagged with what happened and what it is about, which ntfy shows as an emoji in front of the title. `notifications.ntfy.emoji: false` sends no tags
 - Update OSHI to v7.4.4 (fixes GPU bugs on a Linux host)

@@ -29,7 +29,7 @@ plugins {
 apply plugin: 'io.github.fvarrui.javapackager.plugin'
 
 group = 'com.krillsson'
-version = '0.41.1'
+version = '0.42.0'
 
 def imageArch = findProperty("imageArch")?.toString()?.trim()
 def largestSupportedPageSize = 65536
