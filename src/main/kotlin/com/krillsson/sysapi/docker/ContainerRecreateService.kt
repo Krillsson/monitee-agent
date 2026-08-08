@@ -16,6 +16,7 @@ class ContainerRecreateService(
     private val dockerClient: DockerClient,
     private val registryClient: RegistryClient,
     private val containerUpdateChecker: ContainerUpdateChecker,
+    private val selfContainer: SelfContainer,
     private val containersHistoryRepository: ContainersHistoryRepository,
     private val monitorManager: MonitorManager,
     private val eventManager: EventManager
@@ -49,6 +50,17 @@ class ContainerRecreateService(
         val container = containerService.container(containerId)
             ?: return Preparation.Rejected("No container with id $containerId")
         val name = container.names.firstOrNull()?.removePrefix("/") ?: containerId
+
+        if (selfContainer.isSelf(container.id)) {
+            logger.warn(
+                "Refusing to update {} ({}): monitee-agent runs in it and would be stopped before it could finish",
+                name,
+                containerId
+            )
+            return Preparation.Rejected(
+                "$name is running monitee-agent itself, which cannot survive being replaced mid-update. Update it from the host instead"
+            )
+        }
 
         if (container.labels.containsKey(SWARM_SERVICE_LABEL)) {
             return Preparation.Rejected("$name is managed by Swarm, update its service instead")
