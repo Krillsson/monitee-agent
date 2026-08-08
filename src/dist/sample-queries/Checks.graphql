@@ -1,0 +1,190 @@
+# Checks: probes the agent runs against something on the network, on their own schedule.
+# HTTP is the only type so far, but everything below is written against the Check interface
+# so it keeps working when more arrive.
+#
+# The old webServerChecks queries and their WebserverCheck types still answer, marked
+# deprecated. They see HTTP checks only.
+
+# Every check with its latest result and how it has been doing this month.
+query Checks {
+    checks {
+        __typename
+        id
+        name
+        type
+        enabled
+        intervalSeconds
+        timeoutSeconds
+        status {
+            timestamp
+            successful
+            latencyMs
+            message
+            responseCode
+        }
+        uptimeMetrics {
+            uptimePercent
+            downtimeSeconds
+            totalSeconds
+            samples
+        }
+        ... on HttpCheck {
+            url
+            method
+            expectedStatusCodes
+            keyword
+            keywordInverted
+            ignoreCertificateErrors
+            followRedirects
+            headers {
+                name
+                value
+            }
+        }
+    }
+}
+
+# Try a check before saving it. Nothing is stored.
+mutation TestHttpCheck($url: String!) {
+    runOneOffHttpCheck(input: { url: $url, method: GET, expectedStatusCodes: "200-299" }) {
+        successful
+        latencyMs
+        responseCode
+        message
+        errorBody
+    }
+}
+
+# Create one. Everything except url has a default: enabled, 60s interval, 20s timeout,
+# GET, 200-299, redirects followed.
+#
+# expectedStatusCodes is a comma separated list of codes and ranges, so "200-299,301" or
+# "401" both work. keyword asserts on the response body, and keywordInverted flips it into
+# "must not contain". ignoreCertificateErrors applies to this check alone and is what you
+# want for a server with a self signed certificate.
+mutation CreateHttpCheck($url: String!) {
+    createHttpCheck(
+        input: {
+            name: "Router"
+            url: $url
+            method: GET
+            expectedStatusCodes: "200-299"
+            intervalSeconds: 60
+            timeoutSeconds: 10
+            ignoreCertificateErrors: true
+            headers: [{ name: "Authorization", value: "Bearer ..." }]
+        }
+    ) {
+        __typename
+        ... on CreateCheckSuccess {
+            id
+        }
+        ... on CreateCheckFailed {
+            reason
+        }
+    }
+}
+
+# Updates replace the whole check, so send every field, not only the changed ones.
+mutation UpdateHttpCheck($id: UUID!, $url: String!) {
+    updateHttpCheck(input: { id: $id, name: "Router", url: $url, intervalSeconds: 120 }) {
+        __typename
+        ... on UpdateCheckSuccess {
+            id
+        }
+        ... on UpdateCheckFailed {
+            reason
+        }
+    }
+}
+
+# Turn a check off without losing it or its history.
+mutation DisableCheck($id: UUID!) {
+    setCheckEnabled(input: { id: $id, enabled: false }) {
+        __typename
+        ... on UpdateCheckSuccess {
+            id
+        }
+        ... on UpdateCheckFailed {
+            reason
+        }
+    }
+}
+
+# Run a stored check right now, whenever it was last due. The result is stored like any other.
+mutation RunCheckNow($id: UUID!) {
+    runCheckNow(input: { id: $id }) {
+        __typename
+        ... on RunCheckNowSuccess {
+            result {
+                timestamp
+                successful
+                latencyMs
+                responseCode
+                message
+            }
+        }
+        ... on RunCheckNowFailed {
+            reason
+        }
+    }
+}
+
+# Deleting a check takes its results, buckets and monitor with it.
+mutation DeleteCheck($id: UUID!) {
+    deleteCheck(input: { id: $id }) {
+        removed
+    }
+}
+
+# History for a graph. Results are condensed into hourly and daily buckets as they age, so
+# ask for a range and let AUTO pick: raw points for the last few hours, hourly up to a
+# month, daily beyond that. The answer says which resolution it actually served, and every
+# point has the same shape whichever tier it came from.
+query CheckHistory($id: UUID!, $from: Instant!, $to: Instant!) {
+    checkById(id: $id) {
+        name
+        history(from: $from, to: $to, resolution: AUTO) {
+            resolution
+            from
+            to
+            points {
+                timestamp
+                samples
+                successful
+                failed
+                uptimePercent
+                downtimeSeconds
+                minLatencyMs
+                avgLatencyMs
+                maxLatencyMs
+                p95LatencyMs
+            }
+        }
+    }
+}
+
+# Individual probes with their messages and error bodies, for a "recent checks" list.
+# Only the raw retention window has these, 48 hours by default.
+query RecentCheckResults($id: UUID!, $from: Instant!, $to: Instant!) {
+    checkById(id: $id) {
+        results(from: $from, to: $to, limit: 50) {
+            timestamp
+            successful
+            latencyMs
+            responseCode
+            message
+            errorBody
+        }
+    }
+}
+
+# Alert when a check fails. The value being monitored is "the check passes", so the
+# threshold is true and the event is raised when it stops being true.
+mutation MonitorCheck($id: String!) {
+    createConditionalValueMonitor(
+        input: { inertiaInSeconds: 0, type: WEBSERVER_UP, threshold: true, monitoredItemId: $id }
+    ) {
+        monitorId
+    }
+}

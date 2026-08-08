@@ -10,8 +10,14 @@ import com.krillsson.sysapi.core.monitoring.toEnumValueFromString
 import com.krillsson.sysapi.core.monitoring.toFractionalValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.pkill.ProcessKillerService
-import com.krillsson.sysapi.core.webservicecheck.AddWebServerResult
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
+import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.core.check.CheckService
+import com.krillsson.sysapi.core.check.CreateCheckResult
+import com.krillsson.sysapi.core.check.HttpCheckSpec
+import com.krillsson.sysapi.core.check.HttpHeader
+import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.RunCheckResult
+import com.krillsson.sysapi.core.check.UpdateCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.graphql.mutations.*
@@ -34,7 +40,7 @@ class MutationResolver(
     private val systemDaemonManager: SystemDaemonManager,
     private val windowsManager: WindowsManager,
     private val processKiller: ProcessKillerService,
-    private val webServerCheckService: WebServerCheckService
+    private val checkService: CheckService
 ) {
 
     @MutationMapping
@@ -241,22 +247,125 @@ class MutationResolver(
     }
 
     @MutationMapping
+    fun createHttpCheck(@Argument input: CreateHttpCheckInput): CreateCheckOutput {
+        return checkService.createHttpCheck(input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun updateHttpCheck(@Argument input: UpdateHttpCheckInput): UpdateCheckOutput {
+        return checkService.updateHttpCheck(input.id, input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun deleteCheck(@Argument input: DeleteCheckInput): DeleteCheckOutput {
+        return DeleteCheckOutput(checkService.delete(input.id))
+    }
+
+    @MutationMapping
+    fun setCheckEnabled(@Argument input: SetCheckEnabledInput): UpdateCheckOutput {
+        return checkService.setEnabled(input.id, input.enabled).asOutput()
+    }
+
+    @MutationMapping
+    fun runCheckNow(@Argument input: RunCheckNowInput): RunCheckNowOutput {
+        return when (val result = checkService.runNow(input.id)) {
+            is RunCheckResult.Success -> RunCheckNowSuccess(result.result)
+            is RunCheckResult.Fail -> RunCheckNowFailed(result.reason)
+        }
+    }
+
+    @MutationMapping
+    fun runOneOffHttpCheck(@Argument input: OneOffHttpCheckInput): CheckResult {
+        return checkService.runOneOff(input.asSpec())
+    }
+
+    @MutationMapping
     fun addWebServerCheck(@Argument input: AddWebServerCheckInput): AddWebServerCheckOutput {
-        return when (val result = webServerCheckService.addWebServer(input.url)) {
-            is AddWebServerResult.Success -> AddWebServerCheckOutputSuccess(result.id)
-            is AddWebServerResult.Fail -> AddWebServerCheckOutputFailed(result.reason)
+        val spec = CreateHttpCheckInput(
+            name = null,
+            enabled = null,
+            intervalSeconds = null,
+            timeoutSeconds = null,
+            url = input.url,
+            method = null,
+            expectedStatusCodes = null,
+            keyword = null,
+            keywordInverted = null,
+            ignoreCertificateErrors = null,
+            followRedirects = null,
+            headers = null
+        ).asSpec()
+        return when (val result = checkService.createHttpCheck(spec)) {
+            is CreateCheckResult.Success -> AddWebServerCheckOutputSuccess(result.id)
+            is CreateCheckResult.Fail -> AddWebServerCheckOutputFailed(result.reason)
         }
     }
 
     @MutationMapping
     fun deleteWebServerCheck(@Argument input: DeleteWebServerCheckInput): DeleteWebServerCheckOutput {
-        val result = webServerCheckService.removeWebServerById(input.id)
-        return DeleteWebServerCheckOutput(result)
+        return DeleteWebServerCheckOutput(checkService.delete(input.id))
     }
 
     @MutationMapping
     fun killProcess(@Argument pid: Int, @Argument forcibly: Boolean): ProcessKillerService.ProcessKillResult {
         return processKiller.kill(pid.toLong(), forcibly)
+    }
+
+    private fun CreateHttpCheckInput.asSpec() = HttpCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        url = url,
+        method = method ?: HttpMethod.GET,
+        expectedStatusCodes = expectedStatusCodes ?: CheckService.DEFAULT_EXPECTED_STATUS_CODES,
+        keyword = keyword,
+        keywordInverted = keywordInverted ?: false,
+        ignoreCertificateErrors = ignoreCertificateErrors ?: false,
+        followRedirects = followRedirects ?: true,
+        headers = headers.asDomain()
+    )
+
+    private fun UpdateHttpCheckInput.asSpec() = HttpCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        url = url,
+        method = method ?: HttpMethod.GET,
+        expectedStatusCodes = expectedStatusCodes ?: CheckService.DEFAULT_EXPECTED_STATUS_CODES,
+        keyword = keyword,
+        keywordInverted = keywordInverted ?: false,
+        ignoreCertificateErrors = ignoreCertificateErrors ?: false,
+        followRedirects = followRedirects ?: true,
+        headers = headers.asDomain()
+    )
+
+    private fun OneOffHttpCheckInput.asSpec() = HttpCheckSpec(
+        name = null,
+        enabled = true,
+        intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        url = url,
+        method = method ?: HttpMethod.GET,
+        expectedStatusCodes = expectedStatusCodes ?: CheckService.DEFAULT_EXPECTED_STATUS_CODES,
+        keyword = keyword,
+        keywordInverted = keywordInverted ?: false,
+        ignoreCertificateErrors = ignoreCertificateErrors ?: false,
+        followRedirects = followRedirects ?: true,
+        headers = headers.asDomain()
+    )
+
+    private fun List<HttpHeaderInput>?.asDomain() = orEmpty().map { HttpHeader(it.name, it.value) }
+
+    private fun CreateCheckResult.asOutput(): CreateCheckOutput = when (this) {
+        is CreateCheckResult.Success -> CreateCheckSuccess(id)
+        is CreateCheckResult.Fail -> CreateCheckFailed(reason)
+    }
+
+    private fun UpdateCheckResult.asOutput(): UpdateCheckOutput = when (this) {
+        is UpdateCheckResult.Success -> UpdateCheckSuccess(id)
+        is UpdateCheckResult.Fail -> UpdateCheckFailed(reason)
     }
 
 }

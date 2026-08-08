@@ -97,7 +97,7 @@ class OngoingEventFormatter(
                     )
                 } CPU usage went above $formattedThreshold to $formattedValue"
 
-                Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is not responding with 200/OK"
+                Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is failing its check"
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"

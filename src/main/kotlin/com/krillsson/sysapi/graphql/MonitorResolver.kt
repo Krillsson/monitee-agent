@@ -13,7 +13,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.MonitorableItem
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.monitors.*
-import com.krillsson.sysapi.core.webservicecheck.WebServerCheckService
+import com.krillsson.sysapi.core.check.CheckHistoryService
 import com.krillsson.sysapi.docker.ContainersHistoryRepository
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.ups.UpsMetricsHistoryRepository
@@ -33,7 +33,7 @@ class MonitorResolver(
     val eventManager: EventManager,
     val monitorManager: MonitorManager,
     val upsMetricsHistoryRepository: UpsMetricsHistoryRepository,
-    val webServerCheckService: WebServerCheckService,
+    val checkHistoryService: CheckHistoryService,
     val metrics: Metrics,
     val monitorInputCreator: com.krillsson.sysapi.core.monitoring.MonitorInputCreator
 ) {
@@ -43,12 +43,13 @@ class MonitorResolver(
         val longTimeAgo = OffsetDateTime.now().minusYears(3).toInstant()
         return when (monitor.type) {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
-                webServerCheckService.getHistoryForWebServerBetweenTimestamps(
+                checkHistoryService.resultsBetween(
                     UUID.fromString(monitor.monitoredItemId),
                     longTimeAgo,
-                    Instant.now()
+                    Instant.now(),
+                    null
                 ).map {
-                    MonitoredValueHistoryEntry(it.timeStamp, it.isSuccessful.toConditionalValue().asMonitoredValue())
+                    MonitoredValueHistoryEntry(it.timestamp, it.successful.toConditionalValue().asMonitoredValue())
                 }
             }
 
@@ -145,12 +146,13 @@ class MonitorResolver(
     ): List<MonitoredValueHistoryEntry> {
         return when (monitor.type) {
             com.krillsson.sysapi.core.monitoring.Monitor.Type.WEBSERVER_UP -> {
-                webServerCheckService.getHistoryForWebServerBetweenTimestamps(
+                checkHistoryService.resultsBetween(
                     UUID.fromString(monitor.monitoredItemId),
                     from,
-                    to
+                    to,
+                    null
                 ).map {
-                    MonitoredValueHistoryEntry(it.timeStamp, it.isSuccessful.toConditionalValue().asMonitoredValue())
+                    MonitoredValueHistoryEntry(it.timestamp, it.successful.toConditionalValue().asMonitoredValue())
                 }
             }
 

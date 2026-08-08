@@ -9,10 +9,10 @@ extend type Query {
     ongoingEvents: [OngoingEvent!]!
     monitorableItemsForType(input: MonitorableItemsInput): MonitorableItemsOutput!
     monitorableEnums: [MonitorableEnum]!
-    webServerChecks: [WebserverCheck!]!
-    webServerCheckById(id: UUID!): WebserverCheck
-    oneOffWebserverCheck(url: String!): OneOffWebserverCheck!
-    runWebServerCheckNow(webserverCheckId: UUID!): WebserverCheckHistoryEntry
+    webServerChecks: [WebserverCheck!]! @deprecated(reason: "Replaced by checks 2026-08-08")
+    webServerCheckById(id: UUID!): WebserverCheck @deprecated(reason: "Replaced by checkById 2026-08-08")
+    oneOffWebserverCheck(url: String!): OneOffWebserverCheck! @deprecated(reason: "Replaced by the runOneOffHttpCheck mutation 2026-08-08")
+    runWebServerCheckNow(webserverCheckId: UUID!): WebserverCheckHistoryEntry @deprecated(reason: "Replaced by the runCheckNow mutation 2026-08-08")
 }
 
 extend type Mutation {
@@ -30,8 +30,8 @@ extend type Mutation {
     deletePastEventsForMonitor(input: DeleteEventsForMonitorInput): DeleteEventOutput
     closeOngoingEventForMonitor(input: DeleteEventsForMonitorInput): DeleteEventOutput
     deleteGenericEvent(input: DeleteGenericEventInput): DeleteGenericEventOutput
-    addWebServerCheck(input: AddWebServerCheckInput): AddWebServerCheckOutput
-    deleteWebServerCheck(input: DeleteWebServerCheckInput): DeleteWebServerCheckOutput
+    addWebServerCheck(input: AddWebServerCheckInput): AddWebServerCheckOutput @deprecated(reason: "Replaced by createHttpCheck 2026-08-08")
+    deleteWebServerCheck(input: DeleteWebServerCheckInput): DeleteWebServerCheckOutput @deprecated(reason: "Replaced by deleteCheck 2026-08-08")
 }
 
 input CreateNumericalMonitorInput {
@@ -334,6 +334,7 @@ type MonitoredItemMissing implements GenericEvent {
     monitoredItemId: String
 }
 
+# An HTTP check seen through the pre-2026-08-08 API. Replaced by HttpCheck
 type WebserverCheck {
     id: UUID!
     url: String!
@@ -351,17 +352,22 @@ type UptimePeriod {
     periodStart: Instant!
     periodEnd: Instant!
     totalDownTimeSeconds: Long!
-    totalUptimePercent: Float!
+    # Carries the percentage of the period spent DOWN, despite the name. Kept as it is
+    # because the shipped app compensates for it
+    totalUptimePercent: Float! @deprecated(reason: "Holds downtime percent. Replaced by CheckUptime.uptimePercent 2026-08-08")
     totalSeconds: Long!
 }
 
 type UptimeDay {
     timestampAtStartOfDay: Instant!
-    uptimePercent: Float!
+    # Carries the percentage of the day spent DOWN, despite the name. Kept as it is
+    # because the shipped app compensates for it
+    uptimePercent: Float! @deprecated(reason: "Holds downtime percent. Replaced by CheckHistoryPoint.uptimePercent 2026-08-08")
     downTimeSeconds: Long!
     totalSeconds: Long!
 }
 
+# Replaced by CheckResult
 type WebserverCheckHistoryEntry {
     id: UUID!
     webserverCheckId: UUID!
@@ -372,6 +378,7 @@ type WebserverCheckHistoryEntry {
     errorBody: String
 }
 
+# Replaced by CheckResult
 type OneOffWebserverCheck {
     timeStamp: Instant!
     responseCode: Int!

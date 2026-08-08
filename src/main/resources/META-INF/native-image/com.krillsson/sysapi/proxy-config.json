@@ -27,10 +27,13 @@
     "interfaces":["com.krillsson.sysapi.core.history.db.NetworkLoadDAO","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
   },
   {
-    "interfaces":["com.krillsson.sysapi.core.webservicecheck.WebServerCheckRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
+    "interfaces":["com.krillsson.sysapi.core.check.CheckRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
   },
   {
-    "interfaces":["com.krillsson.sysapi.core.webservicecheck.WebServerHistoryEntryRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
+    "interfaces":["com.krillsson.sysapi.core.check.CheckResultBucketRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
+  },
+  {
+    "interfaces":["com.krillsson.sysapi.core.check.CheckResultRepository","org.springframework.data.repository.Repository","org.springframework.transaction.interceptor.TransactionalProxy","org.springframework.aop.framework.Advised","org.springframework.core.DecoratingProxy"]
   },
   {
     "interfaces":["com.krillsson.sysapi.notifications.ntfy.NtfyApi"]

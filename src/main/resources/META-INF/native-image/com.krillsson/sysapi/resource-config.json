@@ -998,30 +998,6 @@
         "pattern": "\\Qcom/krillsson/sysapi/core/speed/SpeedMeasurementManager.class\\E"
       },
       {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/AddWebServerResult.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerCheckEntity.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerCheckHistoryEntity.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerCheckRepository.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerCheckService$URLValidationResult.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerCheckService.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerHistoryEntryRepository.class\\E"
-      },
-      {
-        "pattern": "\\Qcom/krillsson/sysapi/core/webservicecheck/WebServerUptimeCalculator.class\\E"
-      },
-      {
         "pattern": "\\Qcom/krillsson/sysapi/docker/CommandResult.class\\E"
       },
       {

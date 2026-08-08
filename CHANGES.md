@@ -1,6 +1,17 @@
 ### Unreleased
 
+- Feature: Web server checks are now checks
+  - A check has a name, can be turned off without being deleted, and runs on its own interval and timeout instead of sharing one 30 second schedule
+  - Up or down is decided by expected status codes, the request method, headers and an optional body keyword, rather than by a hardcoded 200
+  - `ignoreCertificateErrors` accepts a self signed certificate for one check without loosening anything else
+  - Read them through the `Check` interface with `checks` and `checkById`, and change them with the create, update, delete, enable and run mutations
+  - The `webServerChecks` queries, mutations and types still answer and are marked deprecated
+  - See `sample-queries/Checks.graphql`
+- Feature: Check results are condensed into hourly and daily buckets once an hour, so two years of uptime history costs about 5,800 rows per check where two weeks used to cost 40,000
+  - `Check.history(from:to:resolution:)` serves raw, hourly or daily points of the same shape and reports which resolution it picked
+  - How long each tier is kept is configured under `metricsConfig.history.checks`, and the existing `purging` section no longer governs check results
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
+- Fix: a day with more than one outage counted only the last one towards its downtime
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
 - Fix: `openLogFileConnection` and the `tailLogFile` subscription now only read files the `logReader` configuration exposes, instead of any path they are given
 
