@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.metrics.defaultimpl
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
+import com.google.common.collect.Ordering
 import com.krillsson.sysapi.config.ProcessesConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.processes.Process
@@ -19,6 +20,7 @@ import oshi.software.os.OSProcess
 import oshi.software.os.OperatingSystem
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -32,8 +34,8 @@ class DefaultProcessesMetrics(
         private val LOGGER = LoggerFactory.getLogger(ProcessesMetrics::class.java)
     }
 
-    private val priorSnapshotMap: MutableMap<Int, OSProcess> = mutableMapOf()
-    private val currentLoad: MutableMap<Int, Double> = mutableMapOf()
+    private val priorSnapshotMap: MutableMap<Int, OSProcess> = ConcurrentHashMap()
+    private val currentLoad: MutableMap<Int, Double> = ConcurrentHashMap()
 
     // profiling showed that user and group was expensive in Linux
     private val cachedUserAndGroup: Cache<Int, Pair<String, String>> = CacheBuilder.newBuilder()
@@ -68,26 +70,28 @@ class DefaultProcessesMetrics(
         )
     }
 
+    private fun comparatorFor(sortBy: ProcessSort): Comparator<OSProcess> = when (sortBy) {
+        CPU -> OSProcessComparators.CPU_LOAD_COMPARATOR
+        MEMORY -> OSProcessComparators.MEMORY_COMPARATOR
+        OLDEST -> OSProcessComparators.OLDEST_COMPARATOR
+        NEWEST -> OSProcessComparators.NEWEST_COMPARATOR
+        PID -> OSProcessComparators.PID_COMPARATOR
+        PARENTPID -> OSProcessComparators.PARENT_PID_COMPARATOR
+        NAME -> OSProcessComparators.NAME_COMPARATOR
+    }
+
     private fun sortAndLimit(
-        processes: MutableList<OSProcess>,
+        processes: Collection<OSProcess>,
         sortBy: ProcessSort,
         limit: Int
     ): List<OSProcess> {
-        when (sortBy) {
-            CPU -> processes.sortWith(OSProcessComparators.CPU_LOAD_COMPARATOR)
-            MEMORY -> processes.sortWith(OSProcessComparators.MEMORY_COMPARATOR)
-            OLDEST -> processes.sortWith(OSProcessComparators.OLDEST_COMPARATOR)
-            NEWEST -> processes.sortWith(OSProcessComparators.NEWEST_COMPARATOR)
-            PID -> processes.sortWith(OSProcessComparators.PID_COMPARATOR)
-            PARENTPID -> processes.sortWith(OSProcessComparators.PARENT_PID_COMPARATOR)
-            NAME -> processes.sortWith(OSProcessComparators.NAME_COMPARATOR)
-        }
-        return if (limit <= 0) processes
-        else processes.take(limit)
+        val comparator = comparatorFor(sortBy)
+        return if (limit <= 0) processes.sortedWith(comparator)
+        else Ordering.from(comparator).leastOf(processes, limit)
     }
 
     override fun processesInfo(sortBy: ProcessSort, limit: Int): ProcessesInfo {
-        val tracedValue = measureTimeMillis { sortAndLimit(priorSnapshotMap.values.toMutableList(), sortBy, limit) }
+        val tracedValue = measureTimeMillis { sortAndLimit(priorSnapshotMap.values, sortBy, limit) }
         LOGGER.trace(
             "Took {} to sort and limit {} processes",
             "${tracedValue.first.toInt()}ms",
@@ -109,6 +113,7 @@ class DefaultProcessesMetrics(
     private fun updateCurrentLoad(processes: List<OSProcess>) {
         val cpuCount: Int = hal.processor.logicalProcessorCount
 
+        currentLoad.keys.retainAll(processes.mapTo(mutableSetOf()) { it.processID })
         for (process in processes) {
             currentLoad[process.processID] =
                 100.0 * process.getProcessCpuLoadBetweenTicks(priorSnapshotMap[process.processID]) / cpuCount
