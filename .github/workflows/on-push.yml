@@ -7,6 +7,26 @@ on:
     branches:
       - master
 jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm-community'
+          cache: 'gradle'
+          set-java-home: 'true'
+          native-image-job-reports: 'true'
+      - name: Run tests
+        run: ./gradlew test
+      - name: Store test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/reports/tests/test
   build-docker:
     name: Build nightly sys-API docker image
     runs-on: ubuntu-latest
