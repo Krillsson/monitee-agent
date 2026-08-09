@@ -103,7 +103,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
             container {
                 ports = ["8080", "8443", "2375"]
                 volumes = ["/config", "/data"]
-                jvmFlags = jvmArgs
+                jvmFlags = jvmArgs + ["-XX:NativeMemoryTracking=summary"]
                 environment = ["LD_PRELOAD": "libjemalloc.so.2"]
             }
             from {
