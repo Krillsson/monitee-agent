@@ -51,7 +51,7 @@ def jvmArgs = [
         "-XX:+UseSerialGC",
         "-XX:MinHeapFreeRatio=2",
         "-XX:MaxHeapFreeRatio=10",
-        "-XX:MaxMetaspaceSize=192m",
+        "-XX:MaxMetaspaceSize=256m",
         "-XX:ReservedCodeCacheSize=96m",
         "-Xmx512m",
         "-Xms128m",
