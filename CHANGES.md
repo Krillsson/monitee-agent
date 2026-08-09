@@ -1,6 +1,7 @@
 ### Unreleased
 
 - Fix: the docker image no longer declares a volume for `/var/run/docker.sock`
+- The agent no longer starts Spring auto-configuration it does not use, loading around 800 fewer classes
 
 ### 0.42.0
 
