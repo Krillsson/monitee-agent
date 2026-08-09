@@ -1,8 +1,11 @@
 ### Unreleased
 
-- Reduced memory footprint: the JVM now runs SerialGC with a capped Metaspace and code cache, and the docker image preloads jemalloc
+### 0.42.1
+
+- Reduced memory footprint: SerialGC with a capped Metaspace and code cache, jemalloc in the docker image and a short metrics cache bring resident memory under sustained query load down from around 550 MB to around 485 MB
+- Memory no longer creeps up the longer the agent runs. Under the same load it used to grow by about 75 MB and stay there, because memory the agent had already freed was held onto by the allocator rather than returned to the system
 - Fix: the docker image no longer declares a volume for `/var/run/docker.sock`
-- The agent no longer starts Spring auto-configuration it does not use, loading around 800 fewer classes
+- The agent no longer starts Spring auto-configuration it does not use, which loads around 800 fewer classes and takes about 3 MB off Metaspace
 
 ### 0.42.0
 
