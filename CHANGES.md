@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
+
 ### 0.42.1
 
 - Reduced memory footprint: SerialGC with a capped Metaspace and code cache, jemalloc in the docker image and a short metrics cache bring resident memory under sustained query load down from around 550 MB to around 485 MB
