@@ -35,6 +35,8 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
 import java.net.SocketException
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -46,7 +48,8 @@ open class DefaultNetworkMetrics(
     private val containerNetworkInterfaces: ContainerNetworkInterfaces
 ) : NetworkMetrics {
 
-    private val networkInterfaces: MutableList<NetworkIF> = hal.networkIFs
+    private val networkInterfaces = CopyOnWriteArrayList(hal.networkIFs)
+    private val speedSources = ConcurrentHashMap<String, NetworkSpeedSource>()
 
     private val networkInterfaceMetric = Sinks.many()
         .replay()
@@ -71,11 +74,9 @@ open class DefaultNetworkMetrics(
     }
 
     fun register() {
-        speedMeasurementManager.register(
-            networkInterfaces.map {
-                NetworkSpeedSource(it)
-            }
-        )
+        val sources = polledInterfaces().map { NetworkSpeedSource(it) }
+        sources.forEach { speedSources[it.name] = it }
+        speedMeasurementManager.register(sources)
     }
 
     @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS)
@@ -89,25 +90,15 @@ open class DefaultNetworkMetrics(
     }
 
     override fun networkInterfaces(): List<NetworkInterface> {
-        return containerNetworkInterfaces.visible(allNetworkInterfaces()) { it.name }
+        return polledInterfaces().map { it.asNetworkInterface(isLoopback(it)) }
     }
 
     override fun networkInterfaceLoads(): List<NetworkInterfaceLoad> {
-        return containerNetworkInterfaces.visible(allNetworkInterfaceLoads()) { it.name }
+        return polledInterfaces().map { it.asNetworkInterfaceLoad(isUp(it), speedForInterfaceWithName(it.name)) }
     }
 
     override fun allNetworkInterfaces(): List<NetworkInterface> {
-        return networkInterfaces
-            .map {
-                var isLoopback = false
-                try {
-                    isLoopback = it.queryNetworkInterface().isLoopback
-                } catch (e: SocketException) {
-                    //ignore
-                    LOGGER.warn("Socket exception while queering for loopback parameter ${it.name} ${e::class.java.simpleName}:${e.message}")
-                }
-                it.asNetworkInterface(isLoopback)
-            }.toList()
+        return networkInterfaces.map { it.asNetworkInterface(isLoopback(it)) }
     }
 
     override fun networkInterfaceById(id: String): Optional<NetworkInterface> {
@@ -117,28 +108,11 @@ open class DefaultNetworkMetrics(
                 ignoreCase = true
             )
         }
-            ?.let {
-                var isLoopback = false
-                try {
-                    isLoopback = it.queryNetworkInterface().isLoopback
-                } catch (e: SocketException) {
-                    //ignore
-                    LOGGER.warn("Socket exception while queering for loopback parameter ${it.name} ${e::class.java.simpleName}:${e.message}")
-                }
-                it.asNetworkInterface(isLoopback)
-            })
+            ?.let { it.asNetworkInterface(isLoopback(it)) })
     }
 
     override fun allNetworkInterfaceLoads(): List<NetworkInterfaceLoad> {
-        return networkInterfaces.map {
-            var up = false
-            try {
-                up = it.queryNetworkInterface().isUp
-            } catch (e: SocketException) {
-                LOGGER.warn("Error occurred while getting status for NIC ${it.name} ${e::class.java.simpleName}:${e.message}")
-            }
-            it.asNetworkInterfaceLoad(up, speedForInterfaceWithName(it.name))
-        }.toList()
+        return networkInterfaces.map { it.asNetworkInterfaceLoad(isUp(it), speedForInterfaceWithName(it.name)) }
     }
 
     override fun internetServiceAvailabilities(): List<InternetServicesCheckService.InternetServiceAvailability> {
@@ -167,15 +141,30 @@ open class DefaultNetworkMetrics(
                 ignoreCase = true
             )
         }
-            ?.let {
-                var up = false
-                try {
-                    up = it.queryNetworkInterface().isUp
-                } catch (e: SocketException) {
-                    LOGGER.warn("Error occurred while getting status for NIC ${it.name}", e)
-                }
-                it.asNetworkInterfaceLoad(up, speedForInterfaceWithName(it.name))
-            })
+            ?.let { it.asNetworkInterfaceLoad(isUp(it), speedForInterfaceWithName(it.name)) })
+    }
+
+    private fun polledInterfaces(): List<NetworkIF> =
+        containerNetworkInterfaces.visible(networkInterfaces) { it.name }
+
+    private fun isUp(networkIF: NetworkIF) = query(networkIF) { it.isUp } ?: false
+
+    private fun isLoopback(networkIF: NetworkIF) = query(networkIF) { it.isLoopback } ?: false
+
+    private fun <T> query(networkIF: NetworkIF, value: (java.net.NetworkInterface) -> T): T? {
+        return try {
+            value(networkIF.queryNetworkInterface())
+        } catch (e: SocketException) {
+            forget(networkIF, e)
+            null
+        }
+    }
+
+    private fun forget(networkIF: NetworkIF, e: SocketException) {
+        if (networkInterfaces.remove(networkIF)) {
+            LOGGER.info("Interface ${networkIF.name} is no longer present, dropping it: ${e.message}")
+            speedSources.remove(networkIF.name)?.let { speedMeasurementManager.unregister(it) }
+        }
     }
 
     protected open fun speedForInterfaceWithName(name: String): NetworkInterfaceSpeed {
