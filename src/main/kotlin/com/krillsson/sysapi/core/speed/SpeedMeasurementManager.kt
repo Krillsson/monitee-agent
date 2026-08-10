@@ -6,13 +6,15 @@ import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.Optional
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 abstract class SpeedMeasurementManager(
     private val clock: Clock
 ) {
-    private val speedMeasurementStore = mutableMapOf<String, SpeedMeasurement>()
-    private val currentSpeedStore = mutableMapOf<String, CurrentSpeed>()
-    private val speedSources = mutableListOf<SpeedSource>()
+    private val speedMeasurementStore = ConcurrentHashMap<String, SpeedMeasurement>()
+    private val currentSpeedStore = ConcurrentHashMap<String, CurrentSpeed>()
+    private val speedSources = CopyOnWriteArrayList<SpeedSource>()
 
     fun run() {
         onUpdateStarted()
@@ -67,6 +69,8 @@ abstract class SpeedMeasurementManager(
 
     fun unregister(speedSource: SpeedSource) {
         speedSources.remove(speedSource)
+        speedMeasurementStore.remove(speedSource.name)
+        currentSpeedStore.remove(speedSource.name)
     }
 
     fun getCurrentSpeedForName(name: String): Optional<CurrentSpeed> {
