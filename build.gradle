@@ -34,6 +34,7 @@ version = '0.42.1'
 def imageArch = findProperty("imageArch")?.toString()?.trim()
 def largestSupportedPageSize = 65536
 def nativeBaseImage = findProperty("nativeBaseImage")?.toString()?.trim() ?: 'krillsson/openjdk21-ubuntu-systemd:latest'
+def jvmBaseImage = findProperty("jvmBaseImage")?.toString()?.trim() ?: 'krillsson/openjdk25-ubuntu-systemd:latest'
 
 buildConfig {
     buildConfigField("String", "APP_VERSION", provider { "\"${project.version}\"" })
@@ -93,24 +94,26 @@ graalvmNative {
     }
 }
 
-task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
-    group = 'Docker'
-    description = 'Creates image with jvm build'
-    jibExtension = project.extensions.getByName('jib')
-    dependsOn 'jar'
-    doFirst {
-        jib {
-            container {
-                ports = ["8080", "8443", "2375"]
-                volumes = ["/config", "/data"]
-                jvmFlags = jvmArgs + ["-XX:NativeMemoryTracking=summary"]
-                environment = [
-                        "LD_PRELOAD": "libjemalloc.so.2",
-                        "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000"
-                ]
-            }
-            from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+def configureJvmImage = { String targetImage, List<String> targetTags ->
+    jib {
+        // An AOT cache cannot be recorded while the classpath holds a directory, which
+        // rules out jib's default exploded layout.
+        containerizingMode = 'packaged'
+        container {
+            ports = ["8080", "8443", "2375"]
+            volumes = ["/config", "/data"]
+            jvmFlags = jvmArgs + [
+                    "-XX:AOTCache=/app/app.aot",
+                    "-XX:NativeMemoryTracking=summary"
+            ]
+            environment = [
+                    "LD_PRELOAD": "libjemalloc.so.2",
+                    "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+            ]
+        }
+        from {
+            image = jvmBaseImage
+            if (!jvmBaseImage.startsWith('docker://')) {
                 platforms {
                     platform {
                         architecture = 'amd64'
@@ -122,18 +125,35 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                     }
                 }
             }
-            to {
-                def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
-                image = "krillsson/sys-api:$tag"
-                def semVerRegex = /^\d+\.\d+\.\d+$/
-                def semVerTag = findProperty("semVerTag")?.toString()?.trim()
-                if (semVerTag && semVerTag.matches(semVerRegex) && tag == "latest") {
-                    tags = [semVerTag]
-                } else {
-                    tags = []  // Explicitly set an empty list if no valid SemVer tag
-                }
-            }
         }
+        to {
+            image = targetImage
+            tags = targetTags
+        }
+    }
+}
+
+task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
+    group = 'Docker'
+    description = 'Creates image with jvm build'
+    jibExtension = project.extensions.getByName('jib')
+    dependsOn 'jar'
+    doFirst {
+        def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
+        def semVerRegex = /^\d+\.\d+\.\d+$/
+        def semVerTag = findProperty("semVerTag")?.toString()?.trim()
+        def semVerTags = semVerTag && semVerTag.matches(semVerRegex) && tag == "latest" ? [semVerTag] : []
+        configureJvmImage("krillsson/sys-api:$tag", semVerTags)
+    }
+}
+
+task jibJvmDockerBuild(type: com.google.cloud.tools.jib.gradle.BuildDockerTask) {
+    group = 'Docker'
+    description = 'Creates the jvm image in the local docker daemon, ready for the AOT cache stage'
+    jibExtension = project.extensions.getByName('jib')
+    dependsOn 'jar'
+    doFirst {
+        configureJvmImage(findProperty("jvmImage")?.toString()?.trim() ?: "krillsson/sys-api:aot-base", [])
     }
 }
 
