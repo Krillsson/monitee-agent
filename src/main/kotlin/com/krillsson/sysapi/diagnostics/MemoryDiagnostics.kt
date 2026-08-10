@@ -97,9 +97,11 @@ class MemoryDiagnostics(
         appendLine("jvm: ${runtime.vmName} ${runtime.vmVersion} (${System.getProperty("java.vendor")})")
         appendLine("processors: ${Runtime.getRuntime().availableProcessors()}")
         appendLine("jvm arguments: ${runtime.inputArguments.joinToString(" ")}")
-        listOf("LD_PRELOAD", "MALLOC_ARENA_MAX", "MALLOC_TRIM_THRESHOLD_", "JAVA_TOOL_OPTIONS").forEach {
-            appendLine("env $it: ${System.getenv(it) ?: "<unset>"}")
-        }
+        listOf("LD_PRELOAD", "MALLOC_CONF", "MALLOC_ARENA_MAX", "MALLOC_TRIM_THRESHOLD_", "JAVA_TOOL_OPTIONS")
+            .forEach { appendLine("env $it: ${System.getenv(it) ?: "<unset>"}") }
+        System.getenv()
+            .filterKeys { it.startsWith("MALLOC") || it.startsWith("LD_") || it.startsWith("JEMALLOC") }
+            .forEach { (key, value) -> appendLine("env (allocator) $key: $value") }
         appendLine("jemalloc mapped: ${mappedPaths("jemalloc").ifEmpty { listOf("no") }.joinToString(" ")}")
         appendLine("shared archives mapped: ${mappedPaths(".jsa").ifEmpty { listOf("none") }.joinToString(" ")}")
     }
@@ -202,6 +204,22 @@ class MemoryDiagnostics(
             .sortedByDescending { it.value }
             .take(15)
             .forEach { appendLine("${it.value}\t${it.key}") }
+        appendLine("native thread names (includes threads the jvm does not own):")
+        append(nativeThreadNames())
+    }
+
+    private fun nativeThreadNames(): String {
+        val tasks = File("/proc/self/task").listFiles()
+            ?: return "/proc/self/task unavailable\n"
+        return tasks.mapNotNull { task ->
+            File(task, "comm").takeIf { it.canRead() }?.runCatching { readText().trim() }?.getOrNull()
+        }
+            .groupingBy { threadIndex.replace(it, "") }
+            .eachCount()
+            .entries
+            .sortedByDescending { it.value }
+            .take(20)
+            .joinToString("\n") { "${it.value}\t${it.key}" } + "\n"
     }
 
     private fun nativeMemorySection(deep: Boolean, summary: String) = buildString {
