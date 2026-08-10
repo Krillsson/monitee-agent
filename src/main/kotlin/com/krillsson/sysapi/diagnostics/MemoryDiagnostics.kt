@@ -103,7 +103,7 @@ class MemoryDiagnostics(
             .filterKeys { it.startsWith("MALLOC") || it.startsWith("LD_") || it.startsWith("JEMALLOC") }
             .forEach { (key, value) -> appendLine("env (allocator) $key: $value") }
         appendLine("jemalloc mapped: ${mappedPaths("jemalloc").ifEmpty { listOf("no") }.joinToString(" ")}")
-        appendLine("shared archives mapped: ${mappedPaths(".jsa").ifEmpty { listOf("none") }.joinToString(" ")}")
+        appendLine("shared archives mapped: ${(mappedPaths(".jsa") + mappedPaths(".aot")).ifEmpty { listOf("none") }.joinToString(" ")}")
     }
 
     private fun processSection() = buildString {
