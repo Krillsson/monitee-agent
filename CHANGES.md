@@ -17,6 +17,7 @@
 - Feature: New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
 - Fix: a day with more than one outage counted only the last one towards its downtime
+- Fix: smartctl, upsc, systemctl and journalctl were treated as present on any host whose `/bin/sh` is dash, so the agent kept calling tools that were not installed
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
 
 ### 0.42.1

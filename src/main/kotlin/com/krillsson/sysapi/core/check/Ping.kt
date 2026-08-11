@@ -32,13 +32,11 @@ class Ping(val platform: Platform) {
 
     val supported = flavour != null
 
-    // Not Bash.checkIfCommandExists: it asks with `&> /dev/null`, which dash parses as a background
-    // job followed by a redirect, so under /bin/sh -> dash it answers 0 for a command that is not there.
     fun installed(): Boolean = when (flavour) {
-        null -> false
-        Flavour.WINDOWS -> Cmd.checkIfCommandExists(COMMAND).getOrNull() ?: false
-        else -> Bash.executeToExitStatus("command -v $COMMAND >/dev/null 2>&1").getOrNull() == 0
-    }
+        null -> Result.success(false)
+        Flavour.WINDOWS -> Cmd.checkIfCommandExists(COMMAND)
+        else -> Bash.checkIfCommandExists(COMMAND)
+    }.getOrNull() ?: false
 
     fun command(host: String, timeoutSeconds: Int): String? = when (flavour) {
         Flavour.IPUTILS -> "$COMMAND -n -c 1 -W $timeoutSeconds $host"
