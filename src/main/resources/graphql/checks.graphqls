@@ -10,6 +10,8 @@ extend type Mutation {
     updateTcpCheck(input: UpdateTcpCheckInput!): UpdateCheckOutput!
     createPingCheck(input: CreatePingCheckInput!): CreateCheckOutput!
     updatePingCheck(input: UpdatePingCheckInput!): UpdateCheckOutput!
+    createDnsCheck(input: CreateDnsCheckInput!): CreateCheckOutput!
+    updateDnsCheck(input: UpdateDnsCheckInput!): UpdateCheckOutput!
     deleteCheck(input: DeleteCheckInput!): DeleteCheckOutput!
     setCheckEnabled(input: SetCheckEnabledInput!): UpdateCheckOutput!
     # Runs a stored check right away and persists the result, regardless of when it was last due
@@ -18,12 +20,14 @@ extend type Mutation {
     runOneOffHttpCheck(input: OneOffHttpCheckInput!): CheckResult!
     runOneOffTcpCheck(input: OneOffTcpCheckInput!): CheckResult!
     runOneOffPingCheck(input: OneOffPingCheckInput!): CheckResult!
+    runOneOffDnsCheck(input: OneOffDnsCheckInput!): CheckResult!
 }
 
 enum CheckType {
     HTTP
     TCP
     PING
+    DNS
 }
 
 interface Check {
@@ -104,6 +108,38 @@ type PingCheck implements Check {
     icmpAvailable: Boolean!
 }
 
+type DnsCheck implements Check {
+    id: UUID!
+    name: String!
+    type: CheckType!
+    enabled: Boolean!
+    intervalSeconds: Int!
+    timeoutSeconds: Int!
+    status: CheckResult
+    uptimeMetrics(from: Instant, to: Instant): CheckUptime!
+    history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
+    results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
+    # The name being looked up
+    hostname: String!
+    # The server to ask, as an address with an optional port such as "192.168.1.2" or
+    # "192.168.1.2:5335". Null asks the resolver this machine uses
+    resolver: String
+    recordType: DnsRecordType!
+    # The check only passes when every one of these turns up in the answer, compared against
+    # the record data as dig prints it and without a trailing dot. Empty asserts nothing beyond
+    # the name resolving at all
+    expectedValues: [String!]!
+}
+
+enum DnsRecordType {
+    A
+    AAAA
+    CNAME
+    MX
+    TXT
+    NS
+}
+
 enum HttpMethod {
     GET
     HEAD
@@ -127,6 +163,8 @@ type CheckResult {
     responseCode: Int
     # HTTP only. The first 512 characters of the response body
     errorBody: String
+    # DNS only. The records the lookup answered with
+    resolvedValues: [String!]
 }
 
 enum CheckResolution {
@@ -260,6 +298,37 @@ input UpdatePingCheckInput {
 
 input OneOffPingCheckInput {
     host: String!
+    timeoutSeconds: Int
+}
+
+input CreateDnsCheckInput {
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    hostname: String!
+    resolver: String
+    recordType: DnsRecordType
+    expectedValues: [String!]
+}
+
+input UpdateDnsCheckInput {
+    id: UUID!
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    hostname: String!
+    resolver: String
+    recordType: DnsRecordType
+    expectedValues: [String!]
+}
+
+input OneOffDnsCheckInput {
+    hostname: String!
+    resolver: String
+    recordType: DnsRecordType
+    expectedValues: [String!]
     timeoutSeconds: Int
 }
 

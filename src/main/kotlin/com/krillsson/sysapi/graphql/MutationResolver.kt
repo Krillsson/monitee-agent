@@ -15,6 +15,8 @@ import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.check.CreateCheckResult
 import com.krillsson.sysapi.core.check.HttpCheckSpec
 import com.krillsson.sysapi.core.check.HttpHeader
+import com.krillsson.sysapi.core.check.DnsCheckSpec
+import com.krillsson.sysapi.core.check.DnsRecordType
 import com.krillsson.sysapi.core.check.HttpMethod
 import com.krillsson.sysapi.core.check.PingCheckSpec
 import com.krillsson.sysapi.core.check.RunCheckResult
@@ -279,6 +281,16 @@ class MutationResolver(
     }
 
     @MutationMapping
+    fun createDnsCheck(@Argument input: CreateDnsCheckInput): CreateCheckOutput {
+        return checkService.create(input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun updateDnsCheck(@Argument input: UpdateDnsCheckInput): UpdateCheckOutput {
+        return checkService.update(input.id, input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
     fun deleteCheck(@Argument input: DeleteCheckInput): DeleteCheckOutput {
         return DeleteCheckOutput(checkService.delete(input.id))
     }
@@ -308,6 +320,11 @@ class MutationResolver(
 
     @MutationMapping
     fun runOneOffPingCheck(@Argument input: OneOffPingCheckInput): CheckResult {
+        return checkService.runOneOff(input.asSpec())
+    }
+
+    @MutationMapping
+    fun runOneOffDnsCheck(@Argument input: OneOffDnsCheckInput): CheckResult {
         return checkService.runOneOff(input.asSpec())
     }
 
@@ -437,6 +454,39 @@ class MutationResolver(
         intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
         timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
         host = host
+    )
+
+    private fun CreateDnsCheckInput.asSpec() = DnsCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        hostname = hostname,
+        resolver = resolver,
+        recordType = recordType ?: DnsRecordType.A,
+        expectedValues = expectedValues.orEmpty()
+    )
+
+    private fun UpdateDnsCheckInput.asSpec() = DnsCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        hostname = hostname,
+        resolver = resolver,
+        recordType = recordType ?: DnsRecordType.A,
+        expectedValues = expectedValues.orEmpty()
+    )
+
+    private fun OneOffDnsCheckInput.asSpec() = DnsCheckSpec(
+        name = null,
+        enabled = true,
+        intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        hostname = hostname,
+        resolver = resolver,
+        recordType = recordType ?: DnsRecordType.A,
+        expectedValues = expectedValues.orEmpty()
     )
 
     private fun List<HttpHeaderInput>?.asDomain() = orEmpty().map { HttpHeader(it.name, it.value) }

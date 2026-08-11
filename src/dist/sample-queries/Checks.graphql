@@ -1,5 +1,5 @@
 # Checks: probes the agent runs against something on the network, on their own schedule.
-# HTTP, TCP and ping so far. Everything that is not specific to one of them is written
+# HTTP, TCP, ping and DNS so far. Everything that is not specific to one of them is written
 # against the Check interface, so a query keeps working when more types arrive.
 #
 # The old webServerChecks queries and their WebserverCheck types still answer, marked
@@ -48,6 +48,12 @@ query Checks {
         ... on PingCheck {
             host
             icmpAvailable
+        }
+        ... on DnsCheck {
+            hostname
+            resolver
+            recordType
+            expectedValues
         }
     }
 }
@@ -123,12 +129,45 @@ mutation CreatePingCheck($host: String!) {
     }
 }
 
+# A DNS check asks a resolver for a record and can assert on what comes back, which is how
+# you watch your own resolver rather than whatever this machine happens to use. Leave the
+# resolver out to ask the system one. expectedValues are compared against the record data as
+# dig prints it, so a TXT value keeps its quotes and a name loses its trailing dot.
+mutation CreateDnsCheck($hostname: String!, $resolver: String) {
+    createDnsCheck(
+        input: {
+            name: "Pi-hole"
+            hostname: $hostname
+            resolver: $resolver
+            recordType: A
+            expectedValues: ["192.168.1.10"]
+        }
+    ) {
+        __typename
+        ... on CreateCheckSuccess {
+            id
+        }
+        ... on CreateCheckFailed {
+            reason
+        }
+    }
+}
+
 # Every type has a one-off too, taking the same fields as its create input.
 mutation TestTcpCheck($host: String!, $port: Int!) {
     runOneOffTcpCheck(input: { host: $host, port: $port }) {
         successful
         latencyMs
         message
+    }
+}
+
+mutation TestDnsCheck($hostname: String!, $resolver: String) {
+    runOneOffDnsCheck(input: { hostname: $hostname, resolver: $resolver, recordType: A }) {
+        successful
+        latencyMs
+        message
+        resolvedValues
     }
 }
 

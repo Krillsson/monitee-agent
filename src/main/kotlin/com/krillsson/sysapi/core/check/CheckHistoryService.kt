@@ -227,5 +227,6 @@ fun CheckResultEntity.asDomain() = CheckResult(
     latencyMs = latencyMs,
     message = message,
     responseCode = responseCode,
-    errorBody = errorBody
+    errorBody = errorBody,
+    resolvedValues = resolvedValues
 )

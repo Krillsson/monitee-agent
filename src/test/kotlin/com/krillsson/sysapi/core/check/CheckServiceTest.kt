@@ -29,13 +29,14 @@ class CheckServiceTest {
     private val probe = mockk<HttpCheckProbe>()
     private val tcpProbe = mockk<TcpCheckProbe>()
     private val pingProbe = mockk<PingCheckProbe>()
+    private val dnsProbe = mockk<DnsCheckProbe>()
     private val monitorManager = mockk<MonitorManager>(relaxed = true)
 
     private lateinit var service: CheckService
 
     @BeforeEach
     fun setUp() {
-        service = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe)
+        service = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe, dnsProbe)
         service.setMonitorManager(monitorManager)
         every { probe.probe(any()) } returns probeResult(CheckType.HTTP)
         every { tcpProbe.probe(any()) } returns probeResult(CheckType.TCP)
@@ -51,7 +52,8 @@ class CheckServiceTest {
         latencyMs = 42,
         message = "OK",
         responseCode = if (type == CheckType.HTTP) 200 else null,
-        errorBody = null
+        errorBody = null,
+        resolvedValues = null
     )
 
     companion object {
@@ -67,7 +69,10 @@ class CheckServiceTest {
             Arguments.of(tcpCheckSpec(host = " "), "host name or address is required"),
             Arguments.of(tcpCheckSpec(intervalSeconds = 5), "Interval"),
             Arguments.of(pingCheckSpec(host = "https://router.lan"), "is a URL"),
-            Arguments.of(pingCheckSpec(host = "router lan"), "not a host name")
+            Arguments.of(pingCheckSpec(host = "router lan"), "not a host name"),
+            Arguments.of(dnsCheckSpec(hostname = " "), "host name or address is required"),
+            Arguments.of(dnsCheckSpec(resolver = ""), "resolver cannot be empty"),
+            Arguments.of(dnsCheckSpec(expectedValues = listOf("")), "Expected values")
         )
     }
 

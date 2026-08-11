@@ -26,7 +26,8 @@ class CheckService(
     private val bucketRepository: CheckResultBucketRepository,
     private val httpProbe: HttpCheckProbe,
     private val tcpProbe: TcpCheckProbe,
-    private val pingProbe: PingCheckProbe
+    private val pingProbe: PingCheckProbe,
+    private val dnsProbe: DnsCheckProbe
 ) {
     companion object {
         const val DEFAULT_INTERVAL_SECONDS = 60
@@ -137,6 +138,7 @@ class CheckService(
         is HttpCheckSpec -> httpProbe.probe(spec)
         is TcpCheckSpec -> tcpProbe.probe(spec)
         is PingCheckSpec -> pingProbe.probe(spec)
+        is DnsCheckSpec -> dnsProbe.probe(spec)
     }
 
     private fun store(check: Check, result: CheckResult): CheckResult {
@@ -151,7 +153,8 @@ class CheckService(
                 latencyMs = stored.latencyMs,
                 message = stored.message,
                 responseCode = stored.responseCode,
-                errorBody = stored.errorBody
+                errorBody = stored.errorBody,
+                resolvedValues = stored.resolvedValues
             )
         )
         return stored
@@ -172,6 +175,12 @@ class CheckService(
         }
 
         is PingCheckSpec -> validateHost(spec.host)
+
+        is DnsCheckSpec -> validateHost(spec.hostname) ?: when {
+            spec.resolver?.isBlank() == true -> "A resolver cannot be empty, leave it out to use the system one"
+            spec.expectedValues.any { it.isBlank() } -> "Expected values cannot be empty"
+            else -> null
+        }
     }
 
     private fun validateSchedule(spec: CheckSpec): String? = when {
@@ -235,6 +244,19 @@ class CheckService(
             timeoutSeconds = timeoutSeconds,
             host = host
         )
+
+        is DnsCheckSpec -> CheckEntity(
+            id = id,
+            type = type,
+            name = name?.takeIf { it.isNotBlank() },
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            dnsHostname = hostname,
+            dnsResolver = resolver,
+            dnsRecordType = recordType,
+            dnsExpectedValues = expectedValues.takeIf { it.isNotEmpty() }
+        )
     }
 
     private fun CheckEntity.copyWithEnabled(enabled: Boolean) = CheckEntity(
@@ -253,10 +275,14 @@ class CheckService(
         followRedirects = followRedirects,
         headers = headers,
         host = host,
-        port = port
+        port = port,
+        dnsHostname = dnsHostname,
+        dnsResolver = dnsResolver,
+        dnsRecordType = dnsRecordType,
+        dnsExpectedValues = dnsExpectedValues
     )
 
-    private fun CheckEntity.displayName() = name ?: url ?: host ?: id.toString()
+    private fun CheckEntity.displayName() = name ?: url ?: host ?: dnsHostname ?: id.toString()
 
     private fun CheckEntity.asDomain(): Check = when (type) {
         CheckType.HTTP -> HttpCheck(
@@ -293,6 +319,18 @@ class CheckService(
             timeoutSeconds = timeoutSeconds,
             host = host.orEmpty()
         )
+
+        CheckType.DNS -> DnsCheck(
+            id = id,
+            name = displayName(),
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            hostname = dnsHostname.orEmpty(),
+            resolver = dnsResolver,
+            recordType = dnsRecordType ?: DnsRecordType.A,
+            expectedValues = dnsExpectedValues.orEmpty()
+        )
     }
 }
 
@@ -327,5 +365,16 @@ fun Check.asSpec(): CheckSpec = when (this) {
         intervalSeconds = intervalSeconds,
         timeoutSeconds = timeoutSeconds,
         host = host
+    )
+
+    is DnsCheck -> DnsCheckSpec(
+        name = name,
+        enabled = enabled,
+        intervalSeconds = intervalSeconds,
+        timeoutSeconds = timeoutSeconds,
+        hostname = hostname,
+        resolver = resolver,
+        recordType = recordType,
+        expectedValues = expectedValues
     )
 }

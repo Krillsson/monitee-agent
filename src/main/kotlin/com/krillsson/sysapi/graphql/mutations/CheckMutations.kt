@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql.mutations
 
 import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.core.check.DnsRecordType
 import com.krillsson.sysapi.core.check.HttpMethod
 import java.util.*
 
@@ -96,6 +97,37 @@ data class UpdatePingCheckInput(
 
 data class OneOffPingCheckInput(
     val host: String,
+    val timeoutSeconds: Int?
+)
+
+data class CreateDnsCheckInput(
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val hostname: String,
+    val resolver: String?,
+    val recordType: DnsRecordType?,
+    val expectedValues: List<String>?
+)
+
+data class UpdateDnsCheckInput(
+    val id: UUID,
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val hostname: String,
+    val resolver: String?,
+    val recordType: DnsRecordType?,
+    val expectedValues: List<String>?
+)
+
+data class OneOffDnsCheckInput(
+    val hostname: String,
+    val resolver: String?,
+    val recordType: DnsRecordType?,
+    val expectedValues: List<String>?,
     val timeoutSeconds: Int?
 )
 

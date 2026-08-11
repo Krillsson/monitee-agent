@@ -29,7 +29,8 @@ fun checkResult(
     latencyMs = latencyMs,
     message = message,
     responseCode = if (successful) 200 else null,
-    errorBody = null
+    errorBody = null,
+    resolvedValues = null
 )
 
 fun bucket(
@@ -153,6 +154,49 @@ fun pingCheckEntity(
     intervalSeconds = intervalSeconds,
     timeoutSeconds = timeoutSeconds,
     host = host
+)
+
+fun dnsCheckEntity(
+    id: UUID = CHECK_ID,
+    name: String? = null,
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    dnsHostname: String = "nas.lan",
+    dnsResolver: String? = null,
+    dnsRecordType: DnsRecordType = DnsRecordType.A,
+    dnsExpectedValues: List<String>? = null
+) = CheckEntity(
+    id = id,
+    type = CheckType.DNS,
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    dnsHostname = dnsHostname,
+    dnsResolver = dnsResolver,
+    dnsRecordType = dnsRecordType,
+    dnsExpectedValues = dnsExpectedValues
+)
+
+fun dnsCheckSpec(
+    name: String? = "Pi-hole",
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    hostname: String = "nas.lan",
+    resolver: String? = null,
+    recordType: DnsRecordType = DnsRecordType.A,
+    expectedValues: List<String> = emptyList()
+) = DnsCheckSpec(
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    hostname = hostname,
+    resolver = resolver,
+    recordType = recordType,
+    expectedValues = expectedValues
 )
 
 fun tcpCheckSpec(
