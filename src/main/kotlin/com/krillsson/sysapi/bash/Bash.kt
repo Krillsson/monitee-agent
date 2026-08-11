@@ -55,7 +55,7 @@ object Bash {
     ): Result<Boolean> {
         val commandLine = CommandLine("/bin/sh")
         commandLine.addArguments("-c")
-        commandLine.addArguments("'command -v $command &> /dev/null'", false)
+        commandLine.addArguments("'command -v $command >/dev/null 2>&1'", false)
         return try {
             val resultHandler = executeWithWatchdog(timeoutAmountMillis, commandLine)
             Result.success(resultHandler.exitValue == 0)
