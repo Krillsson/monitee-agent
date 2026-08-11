@@ -101,11 +101,12 @@ type PingCheck implements Check {
     history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
     results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
     host: String!
-    # False when the agent cannot send ICMP echo requests, which needs either root or
-    # CAP_NET_RAW. It then falls back to connecting to TCP port 7, which most hosts refuse,
-    # so a ping check will report a host that is very much alive as down. Use a TCP check
-    # instead, or give the container the capability
-    icmpAvailable: Boolean!
+    # False when this agent has no working ping command: it is not installed, the platform
+    # is not one this agent knows how to run ping on, or the process may not send ICMP echo
+    # requests, which needs either root, CAP_NET_RAW or a permissive net.ipv4.ping_group_range.
+    # Creating or updating a ping check is refused while this is false, and an existing one
+    # reports every probe as down. Use a TCP check instead
+    pingAvailable: Boolean!
 }
 
 type DnsCheck implements Check {

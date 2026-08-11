@@ -175,7 +175,7 @@ class CheckService(
             else -> null
         }
 
-        is PingCheckSpec -> validateHost(spec.host)
+        is PingCheckSpec -> validateHost(spec.host) ?: pingProbe.unavailable?.let { "Ping checks cannot run here, $it" }
 
         is DnsCheckSpec -> validateHost(spec.hostname) ?: when {
             spec.resolver?.isBlank() == true -> "A resolver cannot be empty, leave it out to use the system one"
@@ -193,8 +193,8 @@ class CheckService(
 
     private fun validateHost(host: String): String? = when {
         host.isBlank() -> "A host name or address is required"
-        host.any { it.isWhitespace() } -> "\"$host\" is not a host name or address"
         host.contains("/") -> "\"$host\" is a URL, not a host name or address"
+        !CheckHost.isValid(host) -> "\"$host\" is not a host name or address"
         else -> null
     }
 

@@ -12,4 +12,5 @@ RUN apt-get update && apt-get -qq -y install -y --no-install-recommends \
     nut \
     smartmontools \
     pciutils \
+    iputils-ping \
  && rm -rf /var/lib/apt/lists/*

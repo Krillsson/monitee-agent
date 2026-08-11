@@ -41,6 +41,7 @@ class CheckServiceTest {
         every { probe.probe(any()) } returns probeResult(CheckType.HTTP)
         every { tcpProbe.probe(any()) } returns probeResult(CheckType.TCP)
         every { pingProbe.probe(any()) } returns probeResult(CheckType.PING)
+        every { pingProbe.unavailable } returns null
     }
 
     private fun probeResult(type: CheckType) = CheckResult(
@@ -87,6 +88,32 @@ class CheckServiceTest {
 
         // Then
         result.shouldBeInstanceOf<CreateCheckResult.Fail>().reason shouldContain expectedReason
+        verify(exactly = 0) { repository.save(any()) }
+    }
+
+    @Test
+    fun `refuses a ping check when this system has no ping to run`() {
+        // Given
+        every { pingProbe.unavailable } returns "the ping command was not found on this system"
+
+        // When
+        val result = service.create(pingCheckSpec(host = "router.lan"))
+
+        // Then
+        result.shouldBeInstanceOf<CreateCheckResult.Fail>().reason shouldContain "was not found on this system"
+        verify(exactly = 0) { repository.save(any()) }
+    }
+
+    @Test
+    fun `refuses a host that would be handed to a shell`() {
+        // Given
+        val spec = pingCheckSpec(host = "router.lan; rm -rf \$HOME")
+
+        // When
+        val result = service.create(spec)
+
+        // Then
+        result.shouldBeInstanceOf<CreateCheckResult.Fail>().reason shouldContain "not a host name or address"
         verify(exactly = 0) { repository.save(any()) }
     }
 

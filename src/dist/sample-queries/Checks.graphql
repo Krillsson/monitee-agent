@@ -47,7 +47,7 @@ query Checks {
         }
         ... on PingCheck {
             host
-            icmpAvailable
+            pingAvailable
         }
         ... on DnsCheck {
             hostname
@@ -113,10 +113,10 @@ mutation CreateTcpCheck($host: String!, $port: Int!) {
     }
 }
 
-# A ping check asks whether a host is reachable. The agent can only send a real ICMP echo
-# when it runs as root or with CAP_NET_RAW, and otherwise falls back to connecting to TCP
-# port 7, which most hosts refuse. Read PingCheck.icmpAvailable before trusting a down
-# result, and offer a TCP check instead when it is false.
+# A ping check asks whether a host is reachable by running the system ping command. It is
+# refused with a reason when this agent has no ping it can use, which happens when the
+# command is missing or the process may not send ICMP echo requests. Offer a TCP check
+# instead when that comes back.
 mutation CreatePingCheck($host: String!) {
     createPingCheck(input: { name: "Router", host: $host }) {
         __typename

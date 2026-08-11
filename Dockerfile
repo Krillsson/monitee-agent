@@ -10,4 +10,5 @@ RUN apt-get update && apt-get -qq -y install systemd -y --no-install-recommends 
     nut \
     smartmontools \
     pciutils \
+    iputils-ping \
     libjemalloc2
