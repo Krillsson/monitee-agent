@@ -85,6 +85,7 @@ enum DockerContainerUpdateStep {
     STARTING_CONTAINER,
     MOVING_MONITORS_AND_HISTORY,
     REMOVING_REPLACED_CONTAINER,
+    REMOVING_REPLACED_IMAGE,
     ROLLING_BACK
 }
 
@@ -101,9 +102,10 @@ interface DockerContainerUpdateEvent {
 # Steps arrive in the order of the DockerContainerUpdateStep enum and each is reported once, so
 # the previous one is done when the next arrives. Steps with nothing to do are skipped, not
 # reported as instant: an update with pullImage false never reports PULLING_IMAGE, a container
-# that was not running reports neither STOPPING_CONTAINER nor STARTING_CONTAINER, and one on no
-# network reports no network steps. Do not build the checklist from what arrives, build it from
-# the enum and tick items off
+# that was not running reports neither STOPPING_CONTAINER nor STARTING_CONTAINER, one on no
+# network reports no network steps, and REMOVING_REPLACED_IMAGE only arrives when the update
+# left the image behind untagged and unused. Do not build the checklist from what arrives, build
+# it from the enum and tick items off
 type DockerContainerUpdateStepChanged implements DockerContainerUpdateEvent {
     jobId: UUID!
     containerId: String!

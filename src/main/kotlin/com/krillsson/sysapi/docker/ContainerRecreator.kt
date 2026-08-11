@@ -25,6 +25,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
         private const val REPLACED_CONTAINER_SUFFIX = "-old"
         private const val SHORT_CONTAINER_ID_LENGTH = 12
         private const val DEFAULT_NETWORK_MODE = "default"
+        private const val UNTAGGED_IMAGE_REFERENCE = "<none>:<none>"
         private const val SHARED_NETWORK_NAMESPACE_MODE_PREFIX = "container:"
     }
 
@@ -35,7 +36,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
     )
 
     sealed interface Result {
-        data class Success(val containerId: String) : Result
+        data class Success(val containerId: String, val replacedImageId: String?) : Result
         data class Failed(
             val step: ContainerUpdateStep,
             val reason: String,
@@ -150,7 +151,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
                 client.startContainerCmd(replacement.id).exec()
             }
             LOGGER.info("Recreated container {} as {} running {}", name, replacement.id, image)
-            Result.Success(replacement.id)
+            Result.Success(replacement.id, inspection.imageId)
         } catch (e: RuntimeException) {
             LOGGER.error("Recreating container $name failed, restoring the original", e)
             listener.onStep(ContainerUpdateStep.ROLLING_BACK)
@@ -162,6 +163,26 @@ class ContainerRecreator(private val client: DockerJavaClient) {
     fun removeContainer(containerId: String): Boolean {
         return runCatching { client.removeContainerCmd(containerId).exec() }
             .onFailure { LOGGER.warn("Unable to remove container {}: {}", containerId, it.message) }
+            .isSuccess
+    }
+
+    fun isImageOrphaned(imageId: String): Boolean {
+        val tags = runCatching { client.inspectImageCmd(imageId).exec().repoTags }
+            .getOrElse { return false }
+            .orEmpty()
+            .filterNot { it == UNTAGGED_IMAGE_REFERENCE }
+        if (tags.isNotEmpty()) {
+            return false
+        }
+        return runCatching {
+            client.listContainersCmd().withShowAll(true).exec().none { it.imageId == imageId }
+        }.getOrDefault(false)
+    }
+
+    fun removeImage(imageId: String): Boolean {
+        return runCatching { client.removeImageCmd(imageId).exec() }
+            .onSuccess { LOGGER.info("Removed image {} the replaced container was running", imageId) }
+            .onFailure { LOGGER.warn("Unable to remove image {}: {}", imageId, it.message) }
             .isSuccess
     }
 

@@ -159,6 +159,14 @@ class DockerClient(
         return containerRecreator.removeContainer(containerId)
     }
 
+    fun isImageOrphaned(imageId: String): Boolean {
+        return containerRecreator.isImageOrphaned(imageId)
+    }
+
+    fun removeImage(imageId: String): Boolean {
+        return containerRecreator.removeImage(imageId)
+    }
+
     fun containerStatistics(containerId: String): ContainerMetrics? {
         val timedResult = measureTimeMillis {
             var statistics: Statistics?
