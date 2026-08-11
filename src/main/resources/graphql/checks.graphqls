@@ -6,16 +6,24 @@ extend type Query {
 extend type Mutation {
     createHttpCheck(input: CreateHttpCheckInput!): CreateCheckOutput!
     updateHttpCheck(input: UpdateHttpCheckInput!): UpdateCheckOutput!
+    createTcpCheck(input: CreateTcpCheckInput!): CreateCheckOutput!
+    updateTcpCheck(input: UpdateTcpCheckInput!): UpdateCheckOutput!
+    createPingCheck(input: CreatePingCheckInput!): CreateCheckOutput!
+    updatePingCheck(input: UpdatePingCheckInput!): UpdateCheckOutput!
     deleteCheck(input: DeleteCheckInput!): DeleteCheckOutput!
     setCheckEnabled(input: SetCheckEnabledInput!): UpdateCheckOutput!
     # Runs a stored check right away and persists the result, regardless of when it was last due
     runCheckNow(input: RunCheckNowInput!): RunCheckNowOutput!
     # Probes without storing anything, for trying a check out before saving it
     runOneOffHttpCheck(input: OneOffHttpCheckInput!): CheckResult!
+    runOneOffTcpCheck(input: OneOffTcpCheckInput!): CheckResult!
+    runOneOffPingCheck(input: OneOffPingCheckInput!): CheckResult!
 }
 
 enum CheckType {
     HTTP
+    TCP
+    PING
 }
 
 interface Check {
@@ -58,6 +66,42 @@ type HttpCheck implements Check {
     ignoreCertificateErrors: Boolean!
     followRedirects: Boolean!
     headers: [HttpHeader!]!
+}
+
+type TcpCheck implements Check {
+    id: UUID!
+    name: String!
+    type: CheckType!
+    enabled: Boolean!
+    intervalSeconds: Int!
+    timeoutSeconds: Int!
+    status: CheckResult
+    uptimeMetrics(from: Instant, to: Instant): CheckUptime!
+    history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
+    results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
+    # Host name or address to open a connection to. The check passes when the connection is
+    # accepted, and the latency is how long that took
+    host: String!
+    port: Int!
+}
+
+type PingCheck implements Check {
+    id: UUID!
+    name: String!
+    type: CheckType!
+    enabled: Boolean!
+    intervalSeconds: Int!
+    timeoutSeconds: Int!
+    status: CheckResult
+    uptimeMetrics(from: Instant, to: Instant): CheckUptime!
+    history(from: Instant!, to: Instant!, resolution: CheckResolution): CheckHistory!
+    results(from: Instant!, to: Instant!, limit: Int): [CheckResult!]!
+    host: String!
+    # False when the agent cannot send ICMP echo requests, which needs either root or
+    # CAP_NET_RAW. It then falls back to connecting to TCP port 7, which most hosts refuse,
+    # so a ping check will report a host that is very much alive as down. Use a TCP check
+    # instead, or give the container the capability
+    icmpAvailable: Boolean!
 }
 
 enum HttpMethod {
@@ -170,6 +214,53 @@ input OneOffHttpCheckInput {
     followRedirects: Boolean
     timeoutSeconds: Int
     headers: [HttpHeaderInput!]
+}
+
+input CreateTcpCheckInput {
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    host: String!
+    port: Int!
+}
+
+input UpdateTcpCheckInput {
+    id: UUID!
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    host: String!
+    port: Int!
+}
+
+input OneOffTcpCheckInput {
+    host: String!
+    port: Int!
+    timeoutSeconds: Int
+}
+
+input CreatePingCheckInput {
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    host: String!
+}
+
+input UpdatePingCheckInput {
+    id: UUID!
+    name: String
+    enabled: Boolean
+    intervalSeconds: Int
+    timeoutSeconds: Int
+    host: String!
+}
+
+input OneOffPingCheckInput {
+    host: String!
+    timeoutSeconds: Int
 }
 
 input HttpHeaderInput {

@@ -1,6 +1,6 @@
 # Checks: probes the agent runs against something on the network, on their own schedule.
-# HTTP is the only type so far, but everything below is written against the Check interface
-# so it keeps working when more arrive.
+# HTTP, TCP and ping so far. Everything that is not specific to one of them is written
+# against the Check interface, so a query keeps working when more types arrive.
 #
 # The old webServerChecks queries and their WebserverCheck types still answer, marked
 # deprecated. They see HTTP checks only.
@@ -40,6 +40,14 @@ query Checks {
                 name
                 value
             }
+        }
+        ... on TcpCheck {
+            host
+            port
+        }
+        ... on PingCheck {
+            host
+            icmpAvailable
         }
     }
 }
@@ -82,6 +90,45 @@ mutation CreateHttpCheck($url: String!) {
         ... on CreateCheckFailed {
             reason
         }
+    }
+}
+
+# A TCP check opens a connection to a host and port and times how long that took. It is the
+# one to reach for when something does not speak HTTP, and unlike ping it always works.
+mutation CreateTcpCheck($host: String!, $port: Int!) {
+    createTcpCheck(input: { name: "NAS", host: $host, port: $port, intervalSeconds: 60 }) {
+        __typename
+        ... on CreateCheckSuccess {
+            id
+        }
+        ... on CreateCheckFailed {
+            reason
+        }
+    }
+}
+
+# A ping check asks whether a host is reachable. The agent can only send a real ICMP echo
+# when it runs as root or with CAP_NET_RAW, and otherwise falls back to connecting to TCP
+# port 7, which most hosts refuse. Read PingCheck.icmpAvailable before trusting a down
+# result, and offer a TCP check instead when it is false.
+mutation CreatePingCheck($host: String!) {
+    createPingCheck(input: { name: "Router", host: $host }) {
+        __typename
+        ... on CreateCheckSuccess {
+            id
+        }
+        ... on CreateCheckFailed {
+            reason
+        }
+    }
+}
+
+# Every type has a one-off too, taking the same fields as its create input.
+mutation TestTcpCheck($host: String!, $port: Int!) {
+    runOneOffTcpCheck(input: { host: $host, port: $port }) {
+        successful
+        latencyMs
+        message
     }
 }
 

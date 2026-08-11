@@ -52,6 +52,53 @@ data class OneOffHttpCheckInput(
     val headers: List<HttpHeaderInput>?
 )
 
+data class CreateTcpCheckInput(
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val host: String,
+    val port: Int
+)
+
+data class UpdateTcpCheckInput(
+    val id: UUID,
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val host: String,
+    val port: Int
+)
+
+data class OneOffTcpCheckInput(
+    val host: String,
+    val port: Int,
+    val timeoutSeconds: Int?
+)
+
+data class CreatePingCheckInput(
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val host: String
+)
+
+data class UpdatePingCheckInput(
+    val id: UUID,
+    val name: String?,
+    val enabled: Boolean?,
+    val intervalSeconds: Int?,
+    val timeoutSeconds: Int?,
+    val host: String
+)
+
+data class OneOffPingCheckInput(
+    val host: String,
+    val timeoutSeconds: Int?
+)
+
 data class DeleteCheckInput(val id: UUID)
 
 data class SetCheckEnabledInput(val id: UUID, val enabled: Boolean)

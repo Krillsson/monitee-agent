@@ -16,7 +16,9 @@ import com.krillsson.sysapi.core.check.CreateCheckResult
 import com.krillsson.sysapi.core.check.HttpCheckSpec
 import com.krillsson.sysapi.core.check.HttpHeader
 import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.PingCheckSpec
 import com.krillsson.sysapi.core.check.RunCheckResult
+import com.krillsson.sysapi.core.check.TcpCheckSpec
 import com.krillsson.sysapi.core.check.UpdateCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
@@ -248,12 +250,32 @@ class MutationResolver(
 
     @MutationMapping
     fun createHttpCheck(@Argument input: CreateHttpCheckInput): CreateCheckOutput {
-        return checkService.createHttpCheck(input.asSpec()).asOutput()
+        return checkService.create(input.asSpec()).asOutput()
     }
 
     @MutationMapping
     fun updateHttpCheck(@Argument input: UpdateHttpCheckInput): UpdateCheckOutput {
-        return checkService.updateHttpCheck(input.id, input.asSpec()).asOutput()
+        return checkService.update(input.id, input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun createTcpCheck(@Argument input: CreateTcpCheckInput): CreateCheckOutput {
+        return checkService.create(input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun updateTcpCheck(@Argument input: UpdateTcpCheckInput): UpdateCheckOutput {
+        return checkService.update(input.id, input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun createPingCheck(@Argument input: CreatePingCheckInput): CreateCheckOutput {
+        return checkService.create(input.asSpec()).asOutput()
+    }
+
+    @MutationMapping
+    fun updatePingCheck(@Argument input: UpdatePingCheckInput): UpdateCheckOutput {
+        return checkService.update(input.id, input.asSpec()).asOutput()
     }
 
     @MutationMapping
@@ -280,6 +302,16 @@ class MutationResolver(
     }
 
     @MutationMapping
+    fun runOneOffTcpCheck(@Argument input: OneOffTcpCheckInput): CheckResult {
+        return checkService.runOneOff(input.asSpec())
+    }
+
+    @MutationMapping
+    fun runOneOffPingCheck(@Argument input: OneOffPingCheckInput): CheckResult {
+        return checkService.runOneOff(input.asSpec())
+    }
+
+    @MutationMapping
     fun addWebServerCheck(@Argument input: AddWebServerCheckInput): AddWebServerCheckOutput {
         val spec = CreateHttpCheckInput(
             name = null,
@@ -295,7 +327,7 @@ class MutationResolver(
             followRedirects = null,
             headers = null
         ).asSpec()
-        return when (val result = checkService.createHttpCheck(spec)) {
+        return when (val result = checkService.create(spec)) {
             is CreateCheckResult.Success -> AddWebServerCheckOutputSuccess(result.id)
             is CreateCheckResult.Fail -> AddWebServerCheckOutputFailed(result.reason)
         }
@@ -354,6 +386,57 @@ class MutationResolver(
         ignoreCertificateErrors = ignoreCertificateErrors ?: false,
         followRedirects = followRedirects ?: true,
         headers = headers.asDomain()
+    )
+
+    private fun CreateTcpCheckInput.asSpec() = TcpCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host,
+        port = port
+    )
+
+    private fun UpdateTcpCheckInput.asSpec() = TcpCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host,
+        port = port
+    )
+
+    private fun OneOffTcpCheckInput.asSpec() = TcpCheckSpec(
+        name = null,
+        enabled = true,
+        intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host,
+        port = port
+    )
+
+    private fun CreatePingCheckInput.asSpec() = PingCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host
+    )
+
+    private fun UpdatePingCheckInput.asSpec() = PingCheckSpec(
+        name = name,
+        enabled = enabled ?: true,
+        intervalSeconds = intervalSeconds ?: CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host
+    )
+
+    private fun OneOffPingCheckInput.asSpec() = PingCheckSpec(
+        name = null,
+        enabled = true,
+        intervalSeconds = CheckService.DEFAULT_INTERVAL_SECONDS,
+        timeoutSeconds = timeoutSeconds ?: CheckService.DEFAULT_TIMEOUT_SECONDS,
+        host = host
     )
 
     private fun List<HttpHeaderInput>?.asDomain() = orEmpty().map { HttpHeader(it.name, it.value) }

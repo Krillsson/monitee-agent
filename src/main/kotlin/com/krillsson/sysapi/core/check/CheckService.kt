@@ -24,7 +24,9 @@ class CheckService(
     private val repository: CheckRepository,
     private val resultRepository: CheckResultRepository,
     private val bucketRepository: CheckResultBucketRepository,
-    private val httpProbe: HttpCheckProbe
+    private val httpProbe: HttpCheckProbe,
+    private val tcpProbe: TcpCheckProbe,
+    private val pingProbe: PingCheckProbe
 ) {
     companion object {
         const val DEFAULT_INTERVAL_SECONDS = 60
@@ -73,18 +75,18 @@ class CheckService(
     fun latestResult(id: UUID): CheckResult? =
         resultRepository.findFirstByCheckIdOrderByTimestampDesc(id).getOrNull()?.asDomain()
 
-    fun createHttpCheck(spec: HttpCheckSpec): CreateCheckResult {
+    fun create(spec: CheckSpec): CreateCheckResult {
         validate(spec)?.let { return CreateCheckResult.Fail(it) }
         val id = UUID.randomUUID()
-        repository.save(spec.asEntity(id))
-        logger.debug("Added HTTP check for {}", spec.url)
+        val entity = repository.save(spec.asEntity(id))
+        logger.debug("Added {} check for {}", spec.type, entity.displayName())
         return CreateCheckResult.Success(id)
     }
 
-    fun updateHttpCheck(id: UUID, spec: HttpCheckSpec): UpdateCheckResult {
+    fun update(id: UUID, spec: CheckSpec): UpdateCheckResult {
         val existing = repository.findById(id).getOrNull()
             ?: return UpdateCheckResult.Fail("No check with id $id was found")
-        if (existing.type != CheckType.HTTP) {
+        if (existing.type != spec.type) {
             return UpdateCheckResult.Fail("Check $id is a ${existing.type} check")
         }
         validate(spec)?.let { return UpdateCheckResult.Fail(it) }
@@ -121,7 +123,7 @@ class CheckService(
         return RunCheckResult.Success(store(check, probe(check)))
     }
 
-    fun runOneOff(spec: HttpCheckSpec): CheckResult = httpProbe.probe(spec)
+    fun runOneOff(spec: CheckSpec): CheckResult = probe(spec)
 
     private fun dueChecks(now: Instant): List<Check> = getAll().filter { check ->
         check.enabled && lastRunAt[check.id]?.let {
@@ -129,8 +131,12 @@ class CheckService(
         } ?: true
     }
 
-    private fun probe(check: Check): CheckResult = when (check) {
-        is HttpCheck -> httpProbe.probe(check.asSpec())
+    private fun probe(check: Check): CheckResult = probe(check.asSpec())
+
+    private fun probe(spec: CheckSpec): CheckResult = when (spec) {
+        is HttpCheckSpec -> httpProbe.probe(spec)
+        is TcpCheckSpec -> tcpProbe.probe(spec)
+        is PingCheckSpec -> pingProbe.probe(spec)
     }
 
     private fun store(check: Check, result: CheckResult): CheckResult {
@@ -151,14 +157,34 @@ class CheckService(
         return stored
     }
 
-    private fun validate(spec: HttpCheckSpec): String? = validateUrl(spec.url) ?: when {
+    private fun validate(spec: CheckSpec): String? = validateSchedule(spec) ?: when (spec) {
+        is HttpCheckSpec -> validateUrl(spec.url) ?: when {
+            StatusCodeRanges.parse(spec.expectedStatusCodes) == null ->
+                "\"${spec.expectedStatusCodes}\" is not a list of status codes or ranges such as 200-299,301"
+
+            spec.headers.any { it.name.isBlank() } -> "Header names cannot be empty"
+            else -> null
+        }
+
+        is TcpCheckSpec -> validateHost(spec.host) ?: when {
+            spec.port !in 1..65535 -> "Port must be between 1 and 65535"
+            else -> null
+        }
+
+        is PingCheckSpec -> validateHost(spec.host)
+    }
+
+    private fun validateSchedule(spec: CheckSpec): String? = when {
         spec.intervalSeconds < MIN_INTERVAL_SECONDS -> "Interval must be at least $MIN_INTERVAL_SECONDS seconds"
         spec.timeoutSeconds !in 1..MAX_TIMEOUT_SECONDS -> "Timeout must be between 1 and $MAX_TIMEOUT_SECONDS seconds"
         spec.timeoutSeconds > spec.intervalSeconds -> "Timeout cannot be longer than the interval"
-        StatusCodeRanges.parse(spec.expectedStatusCodes) == null ->
-            "\"${spec.expectedStatusCodes}\" is not a list of status codes or ranges such as 200-299,301"
+        else -> null
+    }
 
-        spec.headers.any { it.name.isBlank() } -> "Header names cannot be empty"
+    private fun validateHost(host: String): String? = when {
+        host.isBlank() -> "A host name or address is required"
+        host.any { it.isWhitespace() } -> "\"$host\" is not a host name or address"
+        host.contains("/") -> "\"$host\" is a URL, not a host name or address"
         else -> null
     }
 
@@ -171,22 +197,45 @@ class CheckService(
         e.message ?: e::class.java.simpleName
     }
 
-    private fun HttpCheckSpec.asEntity(id: UUID) = CheckEntity(
-        id = id,
-        type = CheckType.HTTP,
-        name = name?.takeIf { it.isNotBlank() },
-        enabled = enabled,
-        intervalSeconds = intervalSeconds,
-        timeoutSeconds = timeoutSeconds,
-        url = url,
-        method = method,
-        expectedStatusCodes = expectedStatusCodes,
-        keyword = keyword?.takeIf { it.isNotEmpty() },
-        keywordInverted = keywordInverted,
-        ignoreCertificateErrors = ignoreCertificateErrors,
-        followRedirects = followRedirects,
-        headers = headers.takeIf { it.isNotEmpty() }
-    )
+    private fun CheckSpec.asEntity(id: UUID): CheckEntity = when (this) {
+        is HttpCheckSpec -> CheckEntity(
+            id = id,
+            type = type,
+            name = name?.takeIf { it.isNotBlank() },
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            url = url,
+            method = method,
+            expectedStatusCodes = expectedStatusCodes,
+            keyword = keyword?.takeIf { it.isNotEmpty() },
+            keywordInverted = keywordInverted,
+            ignoreCertificateErrors = ignoreCertificateErrors,
+            followRedirects = followRedirects,
+            headers = headers.takeIf { it.isNotEmpty() }
+        )
+
+        is TcpCheckSpec -> CheckEntity(
+            id = id,
+            type = type,
+            name = name?.takeIf { it.isNotBlank() },
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            host = host,
+            port = port
+        )
+
+        is PingCheckSpec -> CheckEntity(
+            id = id,
+            type = type,
+            name = name?.takeIf { it.isNotBlank() },
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            host = host
+        )
+    }
 
     private fun CheckEntity.copyWithEnabled(enabled: Boolean) = CheckEntity(
         id = id,
@@ -202,10 +251,12 @@ class CheckService(
         keywordInverted = keywordInverted,
         ignoreCertificateErrors = ignoreCertificateErrors,
         followRedirects = followRedirects,
-        headers = headers
+        headers = headers,
+        host = host,
+        port = port
     )
 
-    private fun CheckEntity.displayName() = name ?: url ?: id.toString()
+    private fun CheckEntity.displayName() = name ?: url ?: host ?: id.toString()
 
     private fun CheckEntity.asDomain(): Check = when (type) {
         CheckType.HTTP -> HttpCheck(
@@ -223,20 +274,58 @@ class CheckService(
             followRedirects = followRedirects,
             headers = headers.orEmpty()
         )
+
+        CheckType.TCP -> TcpCheck(
+            id = id,
+            name = displayName(),
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            host = host.orEmpty(),
+            port = port ?: 0
+        )
+
+        CheckType.PING -> PingCheck(
+            id = id,
+            name = displayName(),
+            enabled = enabled,
+            intervalSeconds = intervalSeconds,
+            timeoutSeconds = timeoutSeconds,
+            host = host.orEmpty()
+        )
     }
 }
 
-fun HttpCheck.asSpec() = HttpCheckSpec(
-    name = name,
-    enabled = enabled,
-    intervalSeconds = intervalSeconds,
-    timeoutSeconds = timeoutSeconds,
-    url = url,
-    method = method,
-    expectedStatusCodes = expectedStatusCodes,
-    keyword = keyword,
-    keywordInverted = keywordInverted,
-    ignoreCertificateErrors = ignoreCertificateErrors,
-    followRedirects = followRedirects,
-    headers = headers
-)
+fun Check.asSpec(): CheckSpec = when (this) {
+    is HttpCheck -> HttpCheckSpec(
+        name = name,
+        enabled = enabled,
+        intervalSeconds = intervalSeconds,
+        timeoutSeconds = timeoutSeconds,
+        url = url,
+        method = method,
+        expectedStatusCodes = expectedStatusCodes,
+        keyword = keyword,
+        keywordInverted = keywordInverted,
+        ignoreCertificateErrors = ignoreCertificateErrors,
+        followRedirects = followRedirects,
+        headers = headers
+    )
+
+    is TcpCheck -> TcpCheckSpec(
+        name = name,
+        enabled = enabled,
+        intervalSeconds = intervalSeconds,
+        timeoutSeconds = timeoutSeconds,
+        host = host,
+        port = port
+    )
+
+    is PingCheck -> PingCheckSpec(
+        name = name,
+        enabled = enabled,
+        intervalSeconds = intervalSeconds,
+        timeoutSeconds = timeoutSeconds,
+        host = host
+    )
+}

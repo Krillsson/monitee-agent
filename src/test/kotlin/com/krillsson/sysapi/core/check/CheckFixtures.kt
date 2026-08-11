@@ -10,6 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 val CHECK_ID: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
+val OTHER_CHECK_ID: UUID = UUID.fromString("66666666-7777-8888-9999-000000000000")
 
 fun at(timestamp: String): Instant = Instant.parse(timestamp)
 
@@ -116,6 +117,72 @@ fun httpCheckSpec(
     ignoreCertificateErrors = ignoreCertificateErrors,
     followRedirects = followRedirects,
     headers = headers
+)
+
+fun tcpCheckEntity(
+    id: UUID = CHECK_ID,
+    name: String? = null,
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    host: String = "nas.lan",
+    port: Int = 445
+) = CheckEntity(
+    id = id,
+    type = CheckType.TCP,
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    host = host,
+    port = port
+)
+
+fun pingCheckEntity(
+    id: UUID = CHECK_ID,
+    name: String? = null,
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    host: String = "router.lan"
+) = CheckEntity(
+    id = id,
+    type = CheckType.PING,
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    host = host
+)
+
+fun tcpCheckSpec(
+    name: String? = "NAS",
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    host: String = "nas.lan",
+    port: Int = 445
+) = TcpCheckSpec(
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    host = host,
+    port = port
+)
+
+fun pingCheckSpec(
+    name: String? = "Router",
+    enabled: Boolean = true,
+    intervalSeconds: Int = 60,
+    timeoutSeconds: Int = 20,
+    host: String = "router.lan"
+) = PingCheckSpec(
+    name = name,
+    enabled = enabled,
+    intervalSeconds = intervalSeconds,
+    timeoutSeconds = timeoutSeconds,
+    host = host
 )
 
 fun configWithCheckRetention(checks: CheckHistoryConfiguration = CheckHistoryConfiguration()): YAMLConfigFile {
