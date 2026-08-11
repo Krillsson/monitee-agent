@@ -79,5 +79,5 @@ class PingCheckResolver(
 ) : CheckFieldResolver(checkService, historyService) {
 
     @SchemaMapping
-    fun icmpAvailable(check: PingCheck): Boolean = pingProbe.icmpAvailable
+    fun pingAvailable(check: PingCheck): Boolean = pingProbe.available
 }

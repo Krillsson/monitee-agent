@@ -2,53 +2,70 @@ package com.krillsson.sysapi.core.check
 
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Component
-import java.net.InetAddress
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.roundToLong
 
 @Component
-class PingCheckProbe {
+class PingCheckProbe(private val ping: Ping) {
 
     companion object {
-        private const val LOOPBACK_TIMEOUT_MS = 1000
+        private const val LOOPBACK_ADDRESS = "127.0.0.1"
+        private const val LOOPBACK_TIMEOUT_SECONDS = 1
     }
 
     private val logger by logger()
 
-    // The JDK will not say whether it can send an ICMP echo. When it cannot it quietly connects to
-    // TCP port 7 instead, which the loopback address refuses, so a reachable loopback means echo works.
-    val icmpAvailable: Boolean by lazy {
-        val available = try {
-            InetAddress.getLoopbackAddress().isReachable(LOOPBACK_TIMEOUT_MS)
-        } catch (e: Exception) {
-            logger.debug("Unable to determine whether ICMP echo is available", e)
-            false
+    val unavailable: String? by lazy {
+        whyUnavailable().also { reason ->
+            if (reason != null) {
+                logger.info("Ping checks are unavailable: {}", reason)
+            }
         }
-        if (!available) {
-            logger.info("Ping checks will connect to TCP port 7 because this process cannot send ICMP echo requests")
-        }
-        available
     }
+
+    val available: Boolean
+        get() = unavailable == null
 
     fun probe(spec: PingCheckSpec): CheckResult {
         val start = Instant.now()
-        return try {
-            val address = InetAddress.getByName(spec.host)
-            val reachable = address.isReachable(spec.timeoutSeconds * 1000)
-            result(spec, start, reachable, if (reachable) "${address.hostAddress} answered" else noAnswer(spec))
-        } catch (e: Exception) {
-            result(spec, start, false, e.message ?: e::class.java.simpleName)
+        unavailable?.let { return result(spec, start, false, it, null) }
+        val output = ping.run(spec.host, spec.timeoutSeconds)
+            .getOrElse { return result(spec, start, false, it.message ?: it::class.java.simpleName, null) }
+        val roundTripMs = Ping.roundTripMillis(output)?.roundToLong()
+        return if (roundTripMs == null) {
+            result(spec, start, false, noAnswer(spec, output), null)
+        } else {
+            result(spec, start, true, "${spec.host} answered", roundTripMs)
         }
     }
 
-    private fun noAnswer(spec: PingCheckSpec) = if (icmpAvailable) {
-        "${spec.host} did not answer within ${spec.timeoutSeconds}s"
-    } else {
-        "${spec.host} refused a connection on TCP port 7, which is what this agent falls back to without ICMP"
+    private fun whyUnavailable(): String? = when {
+        !ping.supported -> "this agent has no ${Ping.COMMAND} command for ${ping.platform}"
+        !ping.installed() -> "the ${Ping.COMMAND} command was not found on this system"
+        !loopbackAnswers() -> "the ${Ping.COMMAND} command cannot send ICMP echo requests, " +
+                "which needs either root, CAP_NET_RAW or a net.ipv4.ping_group_range covering this process"
+
+        else -> null
     }
 
-    private fun result(spec: PingCheckSpec, start: Instant, successful: Boolean, message: String): CheckResult {
-        val latencyMs = Duration.between(start, Instant.now()).toMillis()
+    private fun loopbackAnswers(): Boolean {
+        val output = ping.run(LOOPBACK_ADDRESS, LOOPBACK_TIMEOUT_SECONDS).getOrNull() ?: return false
+        return Ping.roundTripMillis(output) != null
+    }
+
+    private fun noAnswer(spec: PingCheckSpec, output: String) =
+        output.lineSequence().map { it.trim() }.lastOrNull { it.isNotEmpty() }
+            ?: "${spec.host} did not answer within ${spec.timeoutSeconds}s"
+
+    private fun result(
+        spec: PingCheckSpec,
+        start: Instant,
+        successful: Boolean,
+        message: String,
+        roundTripMs: Long?
+    ): CheckResult {
+        val latencyMs = roundTripMs ?: Duration.between(start, Instant.now()).toMillis()
         logger.debug("Check {} {}: {} ({}ms)", spec.host, if (successful) "SUCCESS" else "FAIL", message, latencyMs)
         return CheckResult(
             id = null,
