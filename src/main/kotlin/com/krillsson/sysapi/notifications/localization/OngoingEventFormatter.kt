@@ -35,7 +35,7 @@ class OngoingEventFormatter(
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage too high on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process stopped on $serverName"
                 Monitor.Type.CONNECTIVITY -> "Connection is down on $serverName"
-                Monitor.Type.WEBSERVER_UP -> "Webserver is down on $serverName"
+                Monitor.Type.WEBSERVER_UP -> "Check is failing on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load too high on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"

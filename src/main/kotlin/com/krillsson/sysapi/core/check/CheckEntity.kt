@@ -18,16 +18,18 @@ class CheckEntity(
     val enabled: Boolean,
     val intervalSeconds: Int,
     val timeoutSeconds: Int,
-    val url: String?,
+    val url: String? = null,
     @Enumerated(EnumType.STRING)
-    val method: HttpMethod?,
-    val expectedStatusCodes: String?,
-    val keyword: String?,
-    val keywordInverted: Boolean,
-    val ignoreCertificateErrors: Boolean,
-    val followRedirects: Boolean,
+    val method: HttpMethod? = null,
+    val expectedStatusCodes: String? = null,
+    val keyword: String? = null,
+    val keywordInverted: Boolean = false,
+    val ignoreCertificateErrors: Boolean = false,
+    val followRedirects: Boolean = false,
     @Convert(converter = HttpHeaderListJsonConverter::class)
-    val headers: List<HttpHeader>?
+    val headers: List<HttpHeader>? = null,
+    val host: String? = null,
+    val port: Int? = null
 )
 
 @Entity

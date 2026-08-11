@@ -37,7 +37,7 @@ class ResolvedEventFormatter(
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage back to normal on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process running again on $serverName"
                 Monitor.Type.CONNECTIVITY -> "Connection is back on $serverName"
-                Monitor.Type.WEBSERVER_UP -> "Webserver is back up on $serverName"
+                Monitor.Type.WEBSERVER_UP -> "Check is passing again on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP back to normal on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load back to normal on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS operating normally again on $serverName"

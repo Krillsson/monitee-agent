@@ -1,0 +1,5 @@
+ALTER TABLE CheckEntity
+    ADD COLUMN host VARCHAR(255) NULL;
+
+ALTER TABLE CheckEntity
+    ADD COLUMN port INT NULL;

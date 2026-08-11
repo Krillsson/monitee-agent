@@ -13,6 +13,8 @@ import com.krillsson.sysapi.core.check.CheckUptime
 import com.krillsson.sysapi.core.check.HttpCheck
 import com.krillsson.sysapi.core.check.HttpHeader
 import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.PingCheck
+import com.krillsson.sysapi.core.check.TcpCheck
 import com.krillsson.sysapi.core.check.UptimeDay
 import com.krillsson.sysapi.core.check.UptimeMetrics
 import com.krillsson.sysapi.core.check.UptimePeriod
@@ -30,10 +32,14 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.graphql.mutations.CreateCheckFailed
 import com.krillsson.sysapi.graphql.mutations.CreateCheckSuccess
 import com.krillsson.sysapi.graphql.mutations.CreateHttpCheckInput
+import com.krillsson.sysapi.graphql.mutations.CreatePingCheckInput
+import com.krillsson.sysapi.graphql.mutations.CreateTcpCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckOutput
 import com.krillsson.sysapi.graphql.mutations.HttpHeaderInput
 import com.krillsson.sysapi.graphql.mutations.OneOffHttpCheckInput
+import com.krillsson.sysapi.graphql.mutations.OneOffPingCheckInput
+import com.krillsson.sysapi.graphql.mutations.OneOffTcpCheckInput
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowFailed
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowInput
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowSuccess
@@ -44,6 +50,8 @@ import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
 import com.krillsson.sysapi.graphql.mutations.UpdateHttpCheckInput
+import com.krillsson.sysapi.graphql.mutations.UpdatePingCheckInput
+import com.krillsson.sysapi.graphql.mutations.UpdateTcpCheckInput
 import com.krillsson.sysapi.mqtt.MqttEventPayload
 import com.krillsson.sysapi.notifications.MqttInfo
 import com.krillsson.sysapi.notifications.Notification
@@ -173,6 +181,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     HttpMethod::class,
     HttpHeader::class,
     HttpCheck::class,
+    TcpCheck::class,
+    PingCheck::class,
     CheckResult::class,
     CheckResolution::class,
     CheckHistory::class,
@@ -184,6 +194,12 @@ import org.springframework.context.annotation.ImportRuntimeHints
     CreateHttpCheckInput::class,
     UpdateHttpCheckInput::class,
     OneOffHttpCheckInput::class,
+    CreateTcpCheckInput::class,
+    UpdateTcpCheckInput::class,
+    OneOffTcpCheckInput::class,
+    CreatePingCheckInput::class,
+    UpdatePingCheckInput::class,
+    OneOffPingCheckInput::class,
     HttpHeaderInput::class,
     DeleteCheckInput::class,
     SetCheckEnabledInput::class,

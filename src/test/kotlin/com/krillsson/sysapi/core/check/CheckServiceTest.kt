@@ -27,26 +27,32 @@ class CheckServiceTest {
     private val resultRepository = mockk<CheckResultRepository>(relaxed = true)
     private val bucketRepository = mockk<CheckResultBucketRepository>(relaxed = true)
     private val probe = mockk<HttpCheckProbe>()
+    private val tcpProbe = mockk<TcpCheckProbe>()
+    private val pingProbe = mockk<PingCheckProbe>()
     private val monitorManager = mockk<MonitorManager>(relaxed = true)
 
     private lateinit var service: CheckService
 
     @BeforeEach
     fun setUp() {
-        service = CheckService(repository, resultRepository, bucketRepository, probe)
+        service = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe)
         service.setMonitorManager(monitorManager)
-        every { probe.probe(any()) } returns CheckResult(
-            id = null,
-            checkId = null,
-            checkType = CheckType.HTTP,
-            timestamp = Instant.parse("2026-08-01T10:00:00Z"),
-            successful = true,
-            latencyMs = 42,
-            message = "OK",
-            responseCode = 200,
-            errorBody = null
-        )
+        every { probe.probe(any()) } returns probeResult(CheckType.HTTP)
+        every { tcpProbe.probe(any()) } returns probeResult(CheckType.TCP)
+        every { pingProbe.probe(any()) } returns probeResult(CheckType.PING)
     }
+
+    private fun probeResult(type: CheckType) = CheckResult(
+        id = null,
+        checkId = null,
+        checkType = type,
+        timestamp = Instant.parse("2026-08-01T10:00:00Z"),
+        successful = true,
+        latencyMs = 42,
+        message = "OK",
+        responseCode = if (type == CheckType.HTTP) 200 else null,
+        errorBody = null
+    )
 
     companion object {
         @JvmStatic
@@ -55,18 +61,24 @@ class CheckServiceTest {
             Arguments.of(httpCheckSpec(intervalSeconds = 5), "Interval"),
             Arguments.of(httpCheckSpec(intervalSeconds = 30, timeoutSeconds = 60), "longer than the interval"),
             Arguments.of(httpCheckSpec(expectedStatusCodes = "nope"), "status codes"),
-            Arguments.of(httpCheckSpec(headers = listOf(HttpHeader(" ", "value"))), "Header names")
+            Arguments.of(httpCheckSpec(headers = listOf(HttpHeader(" ", "value"))), "Header names"),
+            Arguments.of(tcpCheckSpec(port = 0), "Port"),
+            Arguments.of(tcpCheckSpec(port = 70000), "Port"),
+            Arguments.of(tcpCheckSpec(host = " "), "host name or address is required"),
+            Arguments.of(tcpCheckSpec(intervalSeconds = 5), "Interval"),
+            Arguments.of(pingCheckSpec(host = "https://router.lan"), "is a URL"),
+            Arguments.of(pingCheckSpec(host = "router lan"), "not a host name")
         )
     }
 
     @ParameterizedTest
     @MethodSource("invalidSpecs")
-    fun `refuses to create a check that would not work`(spec: HttpCheckSpec, expectedReason: String) {
+    fun `refuses to create a check that would not work`(spec: CheckSpec, expectedReason: String) {
         // Given
         val given = spec
 
         // When
-        val result = service.createHttpCheck(given)
+        val result = service.create(given)
 
         // Then
         result.shouldBeInstanceOf<CreateCheckResult.Fail>().reason shouldContain expectedReason
@@ -81,7 +93,7 @@ class CheckServiceTest {
         every { repository.save(capture(saved)) } answers { saved.captured }
 
         // When
-        val result = service.createHttpCheck(spec)
+        val result = service.create(spec)
 
         // Then
         val success = result.shouldBeInstanceOf<CreateCheckResult.Success>()
@@ -89,6 +101,62 @@ class CheckServiceTest {
         saved.captured.type shouldBe CheckType.HTTP
         saved.captured.url shouldBe "https://router.lan"
         saved.captured.keyword shouldBe "Login"
+    }
+
+    @Test
+    fun `refuses to turn a check into another type`() {
+        // Given
+        every { repository.findById(CHECK_ID) } returns Optional.of(httpCheckEntity())
+
+        // When
+        val result = service.update(CHECK_ID, tcpCheckSpec())
+
+        // Then
+        result.shouldBeInstanceOf<UpdateCheckResult.Fail>().reason shouldContain "is a HTTP check"
+        verify(exactly = 0) { repository.save(any()) }
+    }
+
+    @Test
+    fun `stores what each check type needs and nothing else`() {
+        // Given
+        val saved = slot<CheckEntity>()
+        every { repository.save(capture(saved)) } answers { saved.captured }
+
+        // When
+        service.create(tcpCheckSpec(host = "nas.lan", port = 445))
+
+        // Then
+        saved.captured.type shouldBe CheckType.TCP
+        saved.captured.host shouldBe "nas.lan"
+        saved.captured.port shouldBe 445
+        saved.captured.url shouldBe null
+        saved.captured.expectedStatusCodes shouldBe null
+    }
+
+    @Test
+    fun `probes a check with the probe for its type`() {
+        // Given
+        every { repository.findAll() } returns listOf(tcpCheckEntity(), pingCheckEntity(id = OTHER_CHECK_ID))
+
+        // When
+        service.runDueChecks()
+
+        // Then
+        verify(timeout = 2000, exactly = 1) { tcpProbe.probe(match { it.host == "nas.lan" && it.port == 445 }) }
+        verify(timeout = 2000, exactly = 1) { pingProbe.probe(match { it.host == "router.lan" }) }
+        verify(exactly = 0) { probe.probe(any()) }
+    }
+
+    @Test
+    fun `falls back to the host when a check has no name`() {
+        // Given
+        every { repository.findById(CHECK_ID) } returns Optional.of(tcpCheckEntity(name = null))
+
+        // When
+        val check = service.getById(CHECK_ID)
+
+        // Then
+        check?.name shouldBe "nas.lan"
     }
 
     @Test

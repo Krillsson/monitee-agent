@@ -4,7 +4,7 @@ import java.time.Instant
 import java.util.*
 
 enum class CheckType {
-    HTTP
+    HTTP, TCP, PING
 }
 
 enum class HttpMethod {
@@ -43,11 +43,42 @@ data class HttpCheck(
     override val type = CheckType.HTTP
 }
 
+data class TcpCheck(
+    override val id: UUID,
+    override val name: String,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val host: String,
+    val port: Int
+) : Check {
+    override val type = CheckType.TCP
+}
+
+data class PingCheck(
+    override val id: UUID,
+    override val name: String,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val host: String
+) : Check {
+    override val type = CheckType.PING
+}
+
+sealed interface CheckSpec {
+    val type: CheckType
+    val name: String?
+    val enabled: Boolean
+    val intervalSeconds: Int
+    val timeoutSeconds: Int
+}
+
 data class HttpCheckSpec(
-    val name: String?,
-    val enabled: Boolean,
-    val intervalSeconds: Int,
-    val timeoutSeconds: Int,
+    override val name: String?,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
     val url: String,
     val method: HttpMethod,
     val expectedStatusCodes: String,
@@ -56,7 +87,30 @@ data class HttpCheckSpec(
     val ignoreCertificateErrors: Boolean,
     val followRedirects: Boolean,
     val headers: List<HttpHeader>
-)
+) : CheckSpec {
+    override val type = CheckType.HTTP
+}
+
+data class TcpCheckSpec(
+    override val name: String?,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val host: String,
+    val port: Int
+) : CheckSpec {
+    override val type = CheckType.TCP
+}
+
+data class PingCheckSpec(
+    override val name: String?,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val host: String
+) : CheckSpec {
+    override val type = CheckType.PING
+}
 
 data class CheckResult(
     val id: UUID?,
