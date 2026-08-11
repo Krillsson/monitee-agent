@@ -14,13 +14,15 @@ import reactor.core.publisher.Flux
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.time.Duration
 import java.util.*
 
 
 @Service
-class LogFileService(private val logLineParser: LogLineParser) {
+class LogFileService(
+    private val logLineParser: LogLineParser,
+    private val authorizer: LogFileAccessAuthorizer
+) {
 
     val logger by logger()
 
@@ -32,7 +34,8 @@ class LogFileService(private val logLineParser: LogLineParser) {
         last: Int?,
         reverse: Boolean?,
     ): LogMessageConnection {
-        val allLogs = Files.readAllLines(Paths.get(logFilePath)).let { if (reverse == true) it.reversed() else it }
+        val logFile = authorizer.authorize(logFilePath)
+        val allLogs = Files.readAllLines(logFile.toPath()).let { if (reverse == true) it.reversed() else it }
 
         val afterLine = after?.decodeAsIntCursor() ?: -1
         val beforeLine = before?.decodeAsIntCursor() ?: allLogs.size
@@ -68,8 +71,8 @@ class LogFileService(private val logLineParser: LogLineParser) {
     }
 
     fun tailLogFile(path: String, startPosition: String?, reverse: Boolean?): Flux<LogMessage> {
+        val logFile = authorizer.authorize(path)
         return Flux.create { emitter ->
-            val logFile = Paths.get(path).toFile()
             val lastIndex = (logFile.lineCount() - 1).coerceAtLeast(0)
 
             val decodedStartPosition = startPosition?.decodeAsIntCursor()?.toLong()
@@ -105,7 +108,7 @@ class LogFileService(private val logLineParser: LogLineParser) {
 
             val tailer = Tailer
                 .builder()
-                .setPath(path)
+                .setFile(logFile)
                 .setCharset(StandardCharsets.UTF_8)
                 .setDelayDuration(Duration.ofMillis(500))
                 .setTailerListener(listener)
