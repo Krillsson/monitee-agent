@@ -2,6 +2,7 @@
 
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
+- Fix: `openLogFileConnection` and the `tailLogFile` subscription now only read files the `logReader` configuration exposes, instead of any path they are given
 
 ### 0.42.1
 

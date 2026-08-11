@@ -4,6 +4,7 @@ extend type Query {
 
 extend type Subscription {
     # Tail a log file at the given path
+    # The path must be one of the files returned by logFiles.files, anything else is rejected
     # Use the after parameter to pass the cursor from openLogFileConnection
     # Read the log file using openLogFileConnection, up until hasNextPage is false
     # Then pass the endCursor into after here, this ensures no lines are skipped between read + tail
@@ -12,8 +13,10 @@ extend type Subscription {
 }
 
 type LogFilesAccess {
+    # The log files the logReader configuration exposes, the only paths the fields below accept
     files: [LogFile!]!
     openLogFile(path: String): [String!]!
+    # The path must be one of the files above, anything else is rejected
     openLogFileConnection(path: String! after: String, before: String, first: Int, last: Int, reversed: Boolean): LogMessageConnection!
 }
 
