@@ -15,6 +15,7 @@
   - Creating or updating a ping check is refused with a reason when this system has no ping the agent can use, which `PingCheck.pingAvailable` also reports
 - Feature: A check can be a DNS lookup against a resolver of your choosing, asserting on the records that come back
 - Feature: New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
+- Updating a container now removes the image it was running as a last step, when the update left it untagged and unused
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
 - Fix: a day with more than one outage counted only the last one towards its downtime
 - Fix: smartctl, upsc, systemctl and journalctl were treated as present on any host whose `/bin/sh` is dash, so the agent kept calling tools that were not installed

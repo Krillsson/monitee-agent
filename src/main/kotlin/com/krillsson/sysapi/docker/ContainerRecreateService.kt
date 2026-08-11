@@ -106,6 +106,7 @@ class ContainerRecreateService(
 
             is ContainerRecreator.Result.Success -> {
                 followContainer(prepared.containerId, result.containerId, listener)
+                removeReplacedImage(result.replacedImageId, listener)
                 RecreateContainerResult.Success(result.containerId, prepared.composeProject)
             }
         }
@@ -128,6 +129,14 @@ class ContainerRecreateService(
         listener.onStep(ContainerUpdateStep.REMOVING_REPLACED_CONTAINER)
         dockerClient.removeContainer(oldContainerId)
         containerService.invalidateContainersCache()
+    }
+
+    private fun removeReplacedImage(imageId: String?, listener: ContainerRecreator.Listener) {
+        if (imageId == null || !dockerClient.isImageOrphaned(imageId)) {
+            return
+        }
+        listener.onStep(ContainerUpdateStep.REMOVING_REPLACED_IMAGE)
+        dockerClient.removeImage(imageId)
     }
 
     private fun ImageReference.asImagePull(): ContainerRecreator.ImagePull {
