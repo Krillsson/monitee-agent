@@ -1,0 +1,75 @@
+query FileBrowserRoots {
+    fileBrowser {
+        enabled
+        access
+        roots {
+            name
+            path
+        }
+    }
+}
+
+query ListDirectory {
+    fileBrowser {
+        listDirectory(path: "/storage") {
+            truncated
+            entries {
+                name
+                path
+                type
+                sizeBytes
+                updatedAt
+                mimeType
+                iconId
+                editable
+                openableAsLog
+            }
+        }
+    }
+}
+
+query OpenTextFile {
+    fileBrowser {
+        openTextFile(path: "/storage/notes.txt") {
+            contents
+        }
+    }
+}
+
+mutation SaveTextFile {
+    saveTextFile(input: { path: "/storage/notes.txt", contents: "the new contents" }) {
+        success
+        reason
+    }
+}
+
+mutation MoveFile {
+    moveFile(input: { source: "/storage/notes.txt", destination: "/storage/archive/notes.txt" }) {
+        success
+        reason
+    }
+}
+
+mutation DeleteFile {
+    deleteFile(input: { path: "/storage/archive", recursive: true }) {
+        success
+        reason
+    }
+}
+
+mutation CreateDirectory {
+    createDirectory(input: { path: "/storage/archive" }) {
+        success
+        reason
+        entry {
+            path
+        }
+    }
+}
+
+# Downloading and uploading are HTTP, with the same credentials as the GraphQL API:
+#
+#   GET  /files/download?path=/storage/media/movie.mkv
+#   POST /files/upload?directory=/storage/media&name=photo.jpg&overwrite=false
+#        Content-Type: application/octet-stream, the file itself as the body
+#   GET  /files/icons/{iconId}.svg

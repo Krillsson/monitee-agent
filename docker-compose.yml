@@ -34,6 +34,9 @@ services:
       - /dev:/dev:ro
       # show correct os info in about server screen
       - /etc/os-release:/etc/os-release
+      # to browse files. List the container path under fileBrowser.roots in configuration.yml.
+      # Drop the :ro when you want fileBrowser.access: READ_WRITE
+      #- /mnt/user:/storage:ro
     # temperature monitoring of disks
     #devices:
     #  - "/dev/sda:/dev/sda"

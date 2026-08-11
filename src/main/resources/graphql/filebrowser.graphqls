@@ -1,0 +1,138 @@
+extend type Query {
+    fileBrowser: FileBrowser!
+}
+
+extend type Mutation {
+    # Replace the contents of a text file. Requires READ_WRITE
+    saveTextFile(input: SaveTextFileInput!): SaveTextFileOutput!
+    # Copy a file, or a directory with everything in it. Requires READ_WRITE
+    copyFile(input: CopyFileInput!): CopyFileOutput!
+    # Move a file or a directory. Renaming is a move within the same directory. Requires READ_WRITE
+    moveFile(input: MoveFileInput!): MoveFileOutput!
+    # Delete a file or a directory. Requires READ_WRITE
+    deleteFile(input: DeleteFileInput!): DeleteFileOutput!
+    # Create a directory. Its parent has to exist already. Requires READ_WRITE
+    createDirectory(input: CreateDirectoryInput!): CreateDirectoryOutput!
+}
+
+# Browsing of the directories listed under fileBrowser.roots in configuration.yml.
+# Nothing outside of those directories can be reached, and symbolic links are listed
+# but never followed
+type FileBrowser {
+    # False when the browser is switched off or none of its configured roots could be used.
+    # While this is false roots is empty and every other field below answers with an error
+    enabled: Boolean!
+    # READ exposes browsing, reading and downloading. READ_WRITE also allows the mutations
+    # above and uploading
+    access: FileBrowserAccess!
+    # The configured roots, as the paths every other field expects. Start browsing here
+    roots: [FileEntry!]!
+    listDirectory(path: String!): DirectoryListing!
+    # Reads a text file into the response. Refused for anything that is not valid UTF-8
+    # or is larger than fileBrowser.maxEditableBytes
+    openTextFile(path: String!): TextFileContent!
+}
+
+enum FileBrowserAccess {
+    READ,
+    READ_WRITE
+}
+
+enum FileEntryType {
+    FILE,
+    DIRECTORY,
+    # Listed so it can be shown, but never followed. Reading, downloading or changing one
+    # is refused
+    SYMLINK,
+    OTHER
+}
+
+type FileEntry {
+    name: String!
+    # Absolute path, and the value to pass back into listDirectory, openTextFile,
+    # the mutations and the download endpoint
+    path: String!
+    type: FileEntryType!
+    # 0 for anything that is not a regular file. Directories are not sized recursively
+    sizeBytes: Long!
+    createdAt: Instant
+    updatedAt: Instant
+    # Null for anything that is not a regular file
+    mimeType: String
+    # Fetch the icon for this entry at GET /files/icons/{iconId}.svg
+    iconId: String!
+    # True when this is a text file small enough for openTextFile and saveTextFile
+    editable: Boolean!
+    # True when this file can be passed to logFiles.openLogFileConnection and the
+    # tailLogFile subscription
+    openableAsLog: Boolean!
+}
+
+type DirectoryListing {
+    # The directory that was listed
+    entry: FileEntry!
+    # Directories first, then files, both by name
+    entries: [FileEntry!]!
+    # True when the directory holds more entries than the browser is willing to return
+    truncated: Boolean!
+}
+
+type TextFileContent {
+    entry: FileEntry!
+    contents: String!
+}
+
+input SaveTextFileInput {
+    path: String!
+    contents: String!
+}
+
+input CopyFileInput {
+    source: String!
+    # Full path of the copy, including its name. Has to not exist yet
+    destination: String!
+}
+
+input MoveFileInput {
+    source: String!
+    # Full path to move to, including the name. Has to not exist yet
+    destination: String!
+}
+
+input DeleteFileInput {
+    path: String!
+    # Deleting a directory that is not empty is refused unless this is true
+    recursive: Boolean = false
+}
+
+input CreateDirectoryInput {
+    path: String!
+}
+
+type SaveTextFileOutput {
+    success: Boolean!
+    # What went wrong, when success is false
+    reason: String
+}
+
+type CopyFileOutput {
+    success: Boolean!
+    reason: String
+}
+
+type MoveFileOutput {
+    success: Boolean!
+    reason: String
+}
+
+type DeleteFileOutput {
+    success: Boolean!
+    reason: String
+}
+
+type CreateDirectoryOutput {
+    success: Boolean!
+    reason: String
+    # The directory that was created, when success is true
+    entry: FileEntry
+}

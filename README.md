@@ -25,6 +25,7 @@ Query for:
 - Manage systemd services
 - Manage windows services
 - Read logs from files, systemd journal and Windows events 
+- Browse and manage files in configured directories
 
 ### Monitoring
 
