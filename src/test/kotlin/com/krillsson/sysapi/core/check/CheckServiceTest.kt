@@ -206,6 +206,7 @@ class CheckServiceTest {
         // Then
         removed shouldBe true
         verify { monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.WEBSERVER_UP, CHECK_ID.toString()) }
+        verify { monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_LATENCY, CHECK_ID.toString()) }
         verify { resultRepository.deleteAllByCheckId(CHECK_ID) }
         verify { bucketRepository.deleteAllByCheckId(CHECK_ID) }
     }

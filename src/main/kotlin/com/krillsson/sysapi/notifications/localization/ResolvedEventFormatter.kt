@@ -38,6 +38,7 @@ class ResolvedEventFormatter(
                 Monitor.Type.PROCESS_EXISTS -> "Process running again on $serverName"
                 Monitor.Type.CONNECTIVITY -> "Connection is back on $serverName"
                 Monitor.Type.WEBSERVER_UP -> "Check is passing again on $serverName"
+                Monitor.Type.CHECK_LATENCY -> "Check is quick again on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP back to normal on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load back to normal on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS operating normally again on $serverName"
@@ -102,6 +103,7 @@ class ResolvedEventFormatter(
                 } CPU usage is back below $formattedThreshold at $formattedValue after $formattedDuration"
 
                 Monitor.Type.WEBSERVER_UP -> "$monitoredItemId is passing its check again after $formattedDuration"
+                Monitor.Type.CHECK_LATENCY -> "$monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is operating normally again after $formattedDuration"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load is back below $formattedThreshold at $formattedValue after $formattedDuration"

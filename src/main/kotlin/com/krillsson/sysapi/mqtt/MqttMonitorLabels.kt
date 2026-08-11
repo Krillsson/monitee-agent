@@ -38,6 +38,7 @@ object MqttMonitorLabels {
         Monitor.Type.PROCESS_EXISTS -> "Process"
         Monitor.Type.CONNECTIVITY -> "Connectivity"
         Monitor.Type.WEBSERVER_UP -> "Check"
+        Monitor.Type.CHECK_LATENCY -> "Check latency"
         Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP"
         Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS"
         Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS load"

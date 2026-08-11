@@ -53,6 +53,17 @@ class MonitorResolver(
                 }
             }
 
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CHECK_LATENCY -> {
+                checkHistoryService.resultsBetween(
+                    UUID.fromString(monitor.monitoredItemId),
+                    longTimeAgo,
+                    Instant.now(),
+                    null
+                ).filter { it.successful }.map {
+                    MonitoredValueHistoryEntry(it.timestamp, it.latencyMs.toNumericalValue().asMonitoredValue())
+                }
+            }
+
             com.krillsson.sysapi.core.monitoring.Monitor.Type.CONTAINER_RUNNING -> {
                 containersHistoryRepository.getHistoryLimitedToDates(
                     requireNotNull(monitor.monitoredItemId),
@@ -153,6 +164,17 @@ class MonitorResolver(
                     null
                 ).map {
                     MonitoredValueHistoryEntry(it.timestamp, it.successful.toConditionalValue().asMonitoredValue())
+                }
+            }
+
+            com.krillsson.sysapi.core.monitoring.Monitor.Type.CHECK_LATENCY -> {
+                checkHistoryService.resultsBetween(
+                    UUID.fromString(monitor.monitoredItemId),
+                    from,
+                    to,
+                    null
+                ).filter { it.successful }.map {
+                    MonitoredValueHistoryEntry(it.timestamp, it.latencyMs.toNumericalValue().asMonitoredValue())
                 }
             }
 

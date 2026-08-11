@@ -84,7 +84,8 @@ class MonitorInputCreator(
     )
 
     private val checkTypes = listOf<Monitor.Type>(
-        Monitor.Type.WEBSERVER_UP
+        Monitor.Type.WEBSERVER_UP,
+        Monitor.Type.CHECK_LATENCY
     )
 
     private val containerStatisticsTypes = listOf<Monitor.Type>(
@@ -107,6 +108,7 @@ class MonitorInputCreator(
             networkInterfaces = metrics.networkMetrics().allNetworkInterfaces(),
             upsDevices = upsService.upsDevices(),
             gpus = metrics.gpuMetrics().gpus(),
+            checks = checkService.getAll(),
         )
     }
 
@@ -276,6 +278,12 @@ class MonitorInputCreator(
                     val check =
                         requireNotNull(checkService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
                     createCheckUpMonitorableItem(check)
+                }
+
+                Monitor.Type.CHECK_LATENCY -> {
+                    val check =
+                        requireNotNull(checkService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
+                    createCheckLatencyMonitorableItem(check)
                 }
 
                 Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
@@ -527,6 +535,12 @@ class MonitorInputCreator(
                 }
             }
 
+            Monitor.Type.CHECK_LATENCY -> {
+                checkService.getAll().map {
+                    createCheckLatencyMonitorableItem(it)
+                }
+            }
+
             Monitor.Type.DISK_TEMPERATURE -> {
                 val diskLoads =
                     metrics.diskMetrics().diskLoads().filter { it.temperature != null }.associateBy { it.name }
@@ -687,6 +701,15 @@ class MonitorInputCreator(
         maxValue = true.toConditionalValue(),
         currentValue = (checkService.latestResult(it.id)?.successful == true).toConditionalValue(),
         type = Monitor.Type.WEBSERVER_UP
+    )
+
+    private fun createCheckLatencyMonitorableItem(it: Check) = MonitorableItem(
+        id = it.id.toString(),
+        name = it.name,
+        description = "Answers within its timeout",
+        maxValue = (it.timeoutSeconds * 1000L).toNumericalValue(),
+        currentValue = (checkService.latestResult(it.id)?.latencyMs ?: 0L).toNumericalValue(),
+        type = Monitor.Type.CHECK_LATENCY
     )
 
     private fun createExternalIpChangeMonitorableItem(connectivity: Connectivity) = MonitorableItem(
