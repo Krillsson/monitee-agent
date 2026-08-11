@@ -55,6 +55,7 @@ class MonitoredValueFormatter(
             )
 
             Monitor.Type.WEBSERVER_UP -> if ((value as MonitoredValue.ConditionalValue).value) "up" else "down"
+            Monitor.Type.CHECK_LATENCY -> "${(value as MonitoredValue.NumericalValue).value}ms"
             Monitor.Type.DISK_TEMPERATURE -> temperatureFormatter.format((value as MonitoredValue.NumericalValue).value.toInt())
             Monitor.Type.UPS_OPERATING_NORMALLY -> if ((value as MonitoredValue.ConditionalValue).value) "operating normally" else "not operating normally"
             Monitor.Type.UPS_LOAD_PERCENTAGE -> formatPercent(

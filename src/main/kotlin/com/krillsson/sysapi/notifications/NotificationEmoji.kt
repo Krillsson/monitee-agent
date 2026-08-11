@@ -75,6 +75,8 @@ object NotificationEmoji {
 
         Monitor.Type.WEBSERVER_UP -> Emoji("🌍", "earth_africa")
 
+        Monitor.Type.CHECK_LATENCY -> Emoji("🐌", "snail")
+
         Monitor.Type.EXTERNAL_IP_CHANGED -> Emoji("📍", "round_pushpin")
 
         Monitor.Type.UPS_OPERATING_NORMALLY,

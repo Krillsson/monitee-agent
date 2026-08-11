@@ -111,6 +111,7 @@ class CheckService(
         }
         logger.debug("Deleting check: {}", entity.displayName())
         monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.WEBSERVER_UP, id.toString())
+        monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_LATENCY, id.toString())
         repository.delete(entity)
         resultRepository.deleteAllByCheckId(id)
         bucketRepository.deleteAllByCheckId(id)

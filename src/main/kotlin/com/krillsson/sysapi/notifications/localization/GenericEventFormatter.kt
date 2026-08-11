@@ -85,6 +85,7 @@ class GenericEventFormatter {
             Monitor.Type.CONTAINER_MEMORY_SPACE -> "Container — Memory usage"
             Monitor.Type.CONTAINER_CPU_LOAD -> "Container — CPU usage"
             Monitor.Type.WEBSERVER_UP -> "Check — Passing"
+            Monitor.Type.CHECK_LATENCY -> "Check — Latency"
             Monitor.Type.DISK_TEMPERATURE -> "Drive — Temperature"
             Monitor.Type.DISK_SMART_HEALTH -> "Drive — S.M.A.R.T health"
             Monitor.Type.MEMORY_USED -> "Memory — Usage"

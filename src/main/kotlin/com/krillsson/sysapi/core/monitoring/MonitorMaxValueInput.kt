@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.monitoring
 
+import com.krillsson.sysapi.core.check.Check
 import com.krillsson.sysapi.core.domain.cpu.CpuInfo
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.gpu.Gpu
@@ -14,5 +15,6 @@ data class MonitorMaxValueInput(
     val networkInterfaces: List<NetworkInterface>,
     val upsDevices: List<UpsDevice>,
     val gpus: List<Gpu>,
+    val checks: List<Check>,
 )
 

@@ -105,6 +105,11 @@ class MonitorFactory {
                 config as MonitorConfig<MonitoredValue.ConditionalValue>
             )
 
+            Monitor.Type.CHECK_LATENCY -> CheckLatencyMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
             Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>

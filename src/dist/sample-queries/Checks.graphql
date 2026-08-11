@@ -274,3 +274,13 @@ mutation MonitorCheck($id: String!) {
         monitorId
     }
 }
+
+# Alert when a check gets slow instead of only when it dies. The threshold is milliseconds,
+# and a failed probe is left out of it, since its latency only says how long the failure took.
+mutation MonitorCheckLatency($id: String!) {
+    createNumericalValueMonitor(
+        input: { inertiaInSeconds: 300, type: CHECK_LATENCY, threshold: 2000, monitoredItemId: $id }
+    ) {
+        monitorId
+    }
+}
