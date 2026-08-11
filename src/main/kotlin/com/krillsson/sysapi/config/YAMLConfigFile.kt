@@ -37,6 +37,7 @@ data class YAMLConfigFile(
     val forwardHttpToHttps: Boolean,
     val graphQl: GraphQlConfiguration = GraphQlConfiguration(),
     val logReader: LogReaderConfiguration = LogReaderConfiguration(),
+    val fileBrowser: FileBrowserConfiguration = FileBrowserConfiguration(),
     val selfSignedCertificates: SelfSignedCertificateConfiguration,
     val mDNS: MdnsConfiguration = MdnsConfiguration(false),
     val formatting: FormattingConfiguration = FormattingConfiguration(),

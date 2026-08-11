@@ -54,6 +54,22 @@ logReader:
   directories:
   # - data # sys-API data directory. You can enable log to file in application.properties
   # - /var/log # Linux log directory
+# browse, read and manage files in the directories listed under roots
+fileBrowser:
+  enabled: false
+  # READ or READ_WRITE. READ_WRITE enables editing, upload, copy, move and delete
+  access: READ
+  # the directories the browser is allowed inside. Nothing outside of them can be reached.
+  # In docker, bind mount a host directory (for example - /mnt/user:/storage) and list the
+  # container path here
+  roots: [ ]
+  # - /storage
+  # largest file the text editor will open and save
+  maxEditableBytes: 1048576
+  # largest accepted upload. 0 means no limit
+  maxUploadBytes: 0
+  # largest browsed file that can be opened in the log viewer
+  maxLogViewBytes: 33554432
 # docker management and metrics support
 ups:
   enabled: false

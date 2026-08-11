@@ -38,6 +38,7 @@ class RuntimeHint : RuntimeHintsRegistrar {
                 MemberCategory.INVOKE_PUBLIC_METHODS,
                 MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS
             )
+        hints.resources().registerPattern("file-icons/*.svg")
         registerNvmlHints(hints)
         registerDockerJsonHints(hints, classLoader)
         registerPahoHints(hints)

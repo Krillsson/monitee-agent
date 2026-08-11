@@ -191,6 +191,9 @@ class SysApiConfiguration : AsyncConfigurer {
     fun platform() = PlatformEnum.getCurrentPlatform().asPlatform()
 
     @Bean
+    fun fileBrowserConfiguration(yamlConfigFile: YAMLConfigFile) = yamlConfigFile.fileBrowser
+
+    @Bean
     fun githubApi(yamlConfigFile: YAMLConfigFile, mapper: ObjectMapper): GithubApiService {
         return Retrofit.Builder()
             .baseUrl(yamlConfigFile.updateCheck.address)

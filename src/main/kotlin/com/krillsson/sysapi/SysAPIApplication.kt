@@ -28,19 +28,32 @@ import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.filebrowser.DirectoryListing
+import com.krillsson.sysapi.filebrowser.FileBrowserError
+import com.krillsson.sysapi.filebrowser.FileEntry
+import com.krillsson.sysapi.filebrowser.FileEntryType
+import com.krillsson.sysapi.filebrowser.TextFileContent
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
+import com.krillsson.sysapi.graphql.mutations.CopyFileInput
+import com.krillsson.sysapi.graphql.mutations.CopyFileOutput
 import com.krillsson.sysapi.graphql.mutations.CreateCheckFailed
 import com.krillsson.sysapi.graphql.mutations.CreateCheckSuccess
+import com.krillsson.sysapi.graphql.mutations.CreateDirectoryInput
+import com.krillsson.sysapi.graphql.mutations.CreateDirectoryOutput
 import com.krillsson.sysapi.graphql.mutations.CreateHttpCheckInput
 import com.krillsson.sysapi.graphql.mutations.CreateDnsCheckInput
 import com.krillsson.sysapi.graphql.mutations.CreatePingCheckInput
 import com.krillsson.sysapi.graphql.mutations.CreateTcpCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckOutput
+import com.krillsson.sysapi.graphql.mutations.DeleteFileInput
+import com.krillsson.sysapi.graphql.mutations.DeleteFileOutput
 import com.krillsson.sysapi.graphql.mutations.HttpHeaderInput
+import com.krillsson.sysapi.graphql.mutations.MoveFileInput
+import com.krillsson.sysapi.graphql.mutations.MoveFileOutput
 import com.krillsson.sysapi.graphql.mutations.OneOffHttpCheckInput
 import com.krillsson.sysapi.graphql.mutations.OneOffDnsCheckInput
 import com.krillsson.sysapi.graphql.mutations.OneOffPingCheckInput
@@ -48,6 +61,8 @@ import com.krillsson.sysapi.graphql.mutations.OneOffTcpCheckInput
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowFailed
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowInput
 import com.krillsson.sysapi.graphql.mutations.RunCheckNowSuccess
+import com.krillsson.sysapi.graphql.mutations.SaveTextFileInput
+import com.krillsson.sysapi.graphql.mutations.SaveTextFileOutput
 import com.krillsson.sysapi.graphql.mutations.SetCheckEnabledInput
 import com.krillsson.sysapi.graphql.mutations.UpdateCheckFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateCheckSuccess
@@ -223,6 +238,23 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DeleteCheckOutput::class,
     RunCheckNowSuccess::class,
     RunCheckNowFailed::class,
+    FileBrowserConfiguration::class,
+    FileBrowserAccess::class,
+    FileEntry::class,
+    FileEntryType::class,
+    DirectoryListing::class,
+    TextFileContent::class,
+    FileBrowserError::class,
+    SaveTextFileInput::class,
+    SaveTextFileOutput::class,
+    CopyFileInput::class,
+    CopyFileOutput::class,
+    MoveFileInput::class,
+    MoveFileOutput::class,
+    DeleteFileInput::class,
+    DeleteFileOutput::class,
+    CreateDirectoryInput::class,
+    CreateDirectoryOutput::class,
 )
 // https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/JNI/
 // Failed to parse docker config.json

@@ -233,6 +233,9 @@ class QueryResolver(
     fun logFiles() = LogFileAccess
 
     @QueryMapping
+    fun fileBrowser() = FileBrowser
+
+    @QueryMapping
     fun windowsManagement(): WindowsManagementAccess {
         return if (windowsEventLogManager.supportedBySystem()) {
             windowsEventLogManager

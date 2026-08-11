@@ -57,6 +57,36 @@ Want to monitor a nvidia GPU? Also add this to the command:
 
 or substitute all with the specific gpu index (e.g “0”)
 
+### Browsing files
+
+The file browser is off by default. It can only reach the directories listed under `roots` in
+`configuration.yml`, so a container needs the host directory bind mounted first. Add the mount to
+the command above:
+
+```bash
+    -v /mnt/user:/storage \
+```
+
+and then list the path **inside the container** in `configuration.yml`:
+
+```yaml
+fileBrowser:
+  enabled: true
+  access: READ
+  roots:
+    - /storage
+```
+
+`access: READ` gives browsing, reading and downloading. `access: READ_WRITE` also allows editing,
+uploading, copying, moving and deleting. A few things worth knowing before turning that on:
+
+- The container runs as root, so `READ_WRITE` means the agent password is write access to
+  everything you mount. Mount the directories you actually want to reach, never `/`.
+- Mount the volume `:ro` while you are on `access: READ`, and the kernel enforces the read only
+  part for you.
+- Keep `/config` and `/data` out of the roots. If they are reachable, `READ_WRITE` lets a caller
+  edit the agent's own configuration and database, and the agent says so in the log at startup.
+
 Let’s verify the server started correctly
 
 ```bash

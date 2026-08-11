@@ -8,6 +8,8 @@ import com.krillsson.sysapi.windows.eventlog.WindowsEventLogRecord
 
 object LogFileAccess
 
+object FileBrowser
+
 data class LogMessageEdge(
     val cursor: String,
     val node: LogMessage
