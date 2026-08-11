@@ -20,6 +20,7 @@
 - Fix: smartctl, upsc, systemctl and journalctl were treated as present on any host whose `/bin/sh` is dash, so the agent kept calling tools that were not installed
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
 - Fix: `openLogFileConnection` and the `tailLogFile` subscription now only read files the `logReader` configuration exposes, instead of any path they are given
+- Fix: the fat jar, the dist zip, the deb and the Windows installer no longer fail to start on the first hostname lookup
 
 ### 0.42.1
 

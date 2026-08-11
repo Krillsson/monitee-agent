@@ -185,6 +185,10 @@ task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
 
 shadowJar {
     mergeServiceFiles()
+    // dnsjava declares this provider from a class it only ships under META-INF/versions/18, which
+    // a jar without Multi-Release cannot load, so the first hostname lookup dies. The provider
+    // hands back the JDK's built-in resolver unless org.dnsjava.spi.enable is set, so it is no loss.
+    exclude 'META-INF/services/java.net.spi.InetAddressResolverProvider'
     exclude 'META-INF/*.DSA'
     exclude 'META-INF/*.RSA'
     append 'META-INF/spring.tooling'
