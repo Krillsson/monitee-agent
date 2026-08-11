@@ -4,11 +4,15 @@ import java.time.Instant
 import java.util.*
 
 enum class CheckType {
-    HTTP, TCP, PING
+    HTTP, TCP, PING, DNS
 }
 
 enum class HttpMethod {
     GET, HEAD, POST
+}
+
+enum class DnsRecordType {
+    A, AAAA, CNAME, MX, TXT, NS
 }
 
 data class HttpHeader(
@@ -66,6 +70,20 @@ data class PingCheck(
     override val type = CheckType.PING
 }
 
+data class DnsCheck(
+    override val id: UUID,
+    override val name: String,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val hostname: String,
+    val resolver: String?,
+    val recordType: DnsRecordType,
+    val expectedValues: List<String>
+) : Check {
+    override val type = CheckType.DNS
+}
+
 sealed interface CheckSpec {
     val type: CheckType
     val name: String?
@@ -112,6 +130,19 @@ data class PingCheckSpec(
     override val type = CheckType.PING
 }
 
+data class DnsCheckSpec(
+    override val name: String?,
+    override val enabled: Boolean,
+    override val intervalSeconds: Int,
+    override val timeoutSeconds: Int,
+    val hostname: String,
+    val resolver: String?,
+    val recordType: DnsRecordType,
+    val expectedValues: List<String>
+) : CheckSpec {
+    override val type = CheckType.DNS
+}
+
 data class CheckResult(
     val id: UUID?,
     val checkId: UUID?,
@@ -121,7 +152,8 @@ data class CheckResult(
     val latencyMs: Long,
     val message: String,
     val responseCode: Int?,
-    val errorBody: String?
+    val errorBody: String?,
+    val resolvedValues: List<String>?
 )
 
 enum class CheckResolution {

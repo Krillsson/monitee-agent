@@ -64,6 +64,13 @@ class TcpCheckResolver(
 ) : CheckFieldResolver(checkService, historyService)
 
 @Controller
+@SchemaMapping(typeName = "DnsCheck")
+class DnsCheckResolver(
+    checkService: CheckService,
+    historyService: CheckHistoryService
+) : CheckFieldResolver(checkService, historyService)
+
+@Controller
 @SchemaMapping(typeName = "PingCheck")
 class PingCheckResolver(
     checkService: CheckService,

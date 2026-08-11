@@ -682,6 +682,7 @@ class MonitorInputCreator(
             CheckType.HTTP -> "Answers an HTTP request as expected"
             CheckType.TCP -> "Accepts a connection on its port"
             CheckType.PING -> "Answers a reachability probe"
+            CheckType.DNS -> "Resolves as expected"
         },
         maxValue = true.toConditionalValue(),
         currentValue = (checkService.latestResult(it.id)?.successful == true).toConditionalValue(),

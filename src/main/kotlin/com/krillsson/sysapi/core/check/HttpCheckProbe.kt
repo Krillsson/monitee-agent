@@ -62,7 +62,8 @@ class HttpCheckProbe {
                 latencyMs = latencyMs,
                 message = message,
                 responseCode = -1,
-                errorBody = null
+                errorBody = null,
+                resolvedValues = null
             )
         }
     }
@@ -86,7 +87,8 @@ class HttpCheckProbe {
             latencyMs = latencyMs,
             message = message,
             responseCode = response.code,
-            errorBody = body?.take(ERROR_BODY_LIMIT.toInt())
+            errorBody = body?.take(ERROR_BODY_LIMIT.toInt()),
+            resolvedValues = null
         )
     }
 

@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.check
 
+import com.krillsson.sysapi.core.history.db.converters.StringListJsonConverter
 import jakarta.persistence.Convert
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -29,7 +30,13 @@ class CheckEntity(
     @Convert(converter = HttpHeaderListJsonConverter::class)
     val headers: List<HttpHeader>? = null,
     val host: String? = null,
-    val port: Int? = null
+    val port: Int? = null,
+    val dnsHostname: String? = null,
+    val dnsResolver: String? = null,
+    @Enumerated(EnumType.STRING)
+    val dnsRecordType: DnsRecordType? = null,
+    @Convert(converter = StringListJsonConverter::class)
+    val dnsExpectedValues: List<String>? = null
 )
 
 @Entity
@@ -44,7 +51,9 @@ class CheckResultEntity(
     val latencyMs: Long,
     val message: String,
     val responseCode: Int?,
-    val errorBody: String?
+    val errorBody: String?,
+    @Convert(converter = StringListJsonConverter::class)
+    val resolvedValues: List<String>?
 )
 
 enum class BucketResolution {

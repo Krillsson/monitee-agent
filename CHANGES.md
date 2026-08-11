@@ -12,6 +12,7 @@
   - How long each tier is kept is configured under `metricsConfig.history.checks`, and the existing `purging` section no longer governs check results
 - Feature: Checks can now be a TCP connection to a host and port, or a ping
   - `PingCheck.icmpAvailable` is false when the agent cannot send ICMP echo requests, in which case a ping check falls back to TCP port 7 and a reachable host can report as down
+- Feature: A check can be a DNS lookup against a resolver of your choosing, asserting on the records that come back
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
 - Fix: a day with more than one outage counted only the last one towards its downtime
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers

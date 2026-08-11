@@ -59,7 +59,8 @@ class PingCheckProbe {
             latencyMs = latencyMs,
             message = message,
             responseCode = null,
-            errorBody = null
+            errorBody = null,
+            resolvedValues = null
         )
     }
 }
