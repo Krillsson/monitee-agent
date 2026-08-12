@@ -12,6 +12,9 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.time.Duration
+import java.time.Instant
 import kotlin.io.path.name
 import kotlin.io.path.readBytes
 import kotlin.io.path.readText
@@ -23,6 +26,8 @@ class FileBrowserUploadTest {
     lateinit var tempDir: Path
 
     private lateinit var root: Path
+
+    private val twoHoursAgo: FileTime = FileTime.from(Instant.now().minus(Duration.ofHours(2)))
 
     @BeforeEach
     fun setUp() {
@@ -159,5 +164,53 @@ class FileBrowserUploadTest {
         shouldThrow<FileBrowserException> {
             manager.upload(tempDir.toString(), "photo.jpg", false, ByteArrayInputStream(ByteArray(0)))
         }
+    }
+
+    @Test
+    fun `clears out a temporary file an earlier upload abandoned`() {
+        // Given
+        val abandoned = root.resolve(
+            "${FileBrowserManager.TEMP_FILE_PREFIX}12345${FileBrowserManager.TEMP_FILE_SUFFIX}"
+        )
+        abandoned.writeText("half an upload")
+        Files.setLastModifiedTime(abandoned, twoHoursAgo)
+        val manager = manager()
+
+        // When
+        manager.upload(root.toString(), "photo.jpg", false, ByteArrayInputStream(ByteArray(0)))
+
+        // Then
+        namesIn(root) shouldBe listOf("photo.jpg")
+    }
+
+    @Test
+    fun `leaves a file of the user's own alone though its name starts the same way`() {
+        // Given
+        val theirs = root.resolve("${FileBrowserManager.TEMP_FILE_PREFIX}notes.txt")
+        theirs.writeText("my important data")
+        Files.setLastModifiedTime(theirs, twoHoursAgo)
+        val manager = manager()
+
+        // When
+        manager.upload(root.toString(), "photo.jpg", false, ByteArrayInputStream(ByteArray(0)))
+
+        // Then
+        theirs.readText() shouldBe "my important data"
+    }
+
+    @Test
+    fun `keeps a temporary file that is still being written`() {
+        // Given
+        val inFlight = root.resolve(
+            "${FileBrowserManager.TEMP_FILE_PREFIX}67890${FileBrowserManager.TEMP_FILE_SUFFIX}"
+        )
+        inFlight.writeText("still going")
+        val manager = manager()
+
+        // When
+        manager.upload(root.toString(), "photo.jpg", false, ByteArrayInputStream(ByteArray(0)))
+
+        // Then
+        inFlight.readText() shouldBe "still going"
     }
 }

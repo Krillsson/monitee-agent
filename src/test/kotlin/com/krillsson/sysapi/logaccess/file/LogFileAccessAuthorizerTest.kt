@@ -2,6 +2,7 @@ package com.krillsson.sysapi.logaccess.file
 
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.filebrowser.FileBrowserSandbox
+import com.krillsson.sysapi.filebrowser.FileTypeRegistry
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -10,6 +11,8 @@ import io.mockk.mockk
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -44,7 +47,12 @@ class LogFileAccessAuthorizerTest {
             roots = listOf(browserRoot.toString()),
             maxLogViewBytes = maxLogViewBytes
         )
-        return LogFileAccessAuthorizer(logFilesManager, FileBrowserSandbox(configuration), configuration)
+        return LogFileAccessAuthorizer(
+            logFilesManager,
+            FileBrowserSandbox(configuration),
+            configuration,
+            FileTypeRegistry()
+        )
     }
 
     @Test
@@ -108,6 +116,28 @@ class LogFileAccessAuthorizerTest {
 
         // When / Then
         authorizer.authorizedFileOrNull(browserRoot.resolve("huge.log").toString()) shouldBe null
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["notes.html", "archive.zip", "database.sqlite"])
+    fun `denies a browsed file the browser does not offer to open as a log`(name: String) {
+        // Given
+        browserRoot.resolve(name).writeText("contents")
+        val authorizer = authorizer()
+
+        // When / Then
+        authorizer.authorizedFileOrNull(browserRoot.resolve(name).toString()) shouldBe null
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["nginx.log", "notes.txt", "stdout.out", "messages"])
+    fun `allows a browsed file that reads like a log`(name: String) {
+        // Given
+        browserRoot.resolve(name).writeText("contents")
+        val authorizer = authorizer()
+
+        // When / Then
+        authorizer.authorizedFileOrNull(browserRoot.resolve(name).toString()).shouldNotBeNull()
     }
 
     @Test
