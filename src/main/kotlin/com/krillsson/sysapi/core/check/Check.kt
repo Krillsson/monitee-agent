@@ -70,6 +70,11 @@ data class PingCheck(
     override val type = CheckType.PING
 }
 
+data class PingAvailability(
+    val available: Boolean,
+    val unavailableReason: String?
+)
+
 data class DnsCheck(
     override val id: UUID,
     override val name: String,

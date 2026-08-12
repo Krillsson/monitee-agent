@@ -91,6 +91,44 @@ class PingCheckProbeTest {
         result.message shouldContain "cannot send ICMP echo requests"
     }
 
+    @Test
+    fun `reports ping as available with no reason when the loopback answers`() {
+        // When
+        val availability = probe.availability()
+
+        // Then
+        availability.available shouldBe true
+        availability.unavailableReason shouldBe null
+    }
+
+    @Test
+    fun `reports why ping is unavailable when this platform has no ping command`() {
+        // Given
+        every { ping.supported } returns false
+
+        // When
+        val availability = probe.availability()
+
+        // Then
+        availability.available shouldBe false
+        availability.unavailableReason!! shouldContain "no ping command for LINUX"
+    }
+
+    @Test
+    fun `answers the availability question once and remembers it`() {
+        // Given
+        every { ping.installed() } returns false
+
+        // When
+        probe.availability()
+        every { ping.installed() } returns true
+        val availability = probe.availability()
+
+        // Then
+        availability.available shouldBe false
+        verify(exactly = 1) { ping.installed() }
+    }
+
     companion object {
         private val LINUX_REPLY = """
             PING router.lan (10.0.0.1) 56(84) bytes of data.
