@@ -15,6 +15,7 @@ import com.krillsson.sysapi.core.check.DnsRecordType
 import com.krillsson.sysapi.core.check.HttpCheck
 import com.krillsson.sysapi.core.check.HttpHeader
 import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.PingAvailability
 import com.krillsson.sysapi.core.check.PingCheck
 import com.krillsson.sysapi.core.check.TcpCheck
 import com.krillsson.sysapi.core.check.UptimeDay
@@ -188,6 +189,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     HttpCheck::class,
     TcpCheck::class,
     PingCheck::class,
+    PingAvailability::class,
     DnsCheck::class,
     DnsRecordType::class,
     CheckResult::class,

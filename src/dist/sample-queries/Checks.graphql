@@ -113,6 +113,15 @@ mutation CreateTcpCheck($host: String!, $port: Int!) {
     }
 }
 
+# Ask before offering the ping check type, so you can leave it out or say why it is missing
+# rather than having createPingCheck refuse it.
+query PingAvailability {
+    pingAvailability {
+        available
+        unavailableReason
+    }
+}
+
 # A ping check asks whether a host is reachable by running the system ping command. It is
 # refused with a reason when this agent has no ping it can use, which happens when the
 # command is missing or the process may not send ICMP echo requests. Offer a TCP check

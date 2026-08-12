@@ -18,6 +18,8 @@ import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.check.HttpCheck
 import com.krillsson.sysapi.core.check.HttpCheckSpec
 import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.check.PingAvailability
+import com.krillsson.sysapi.core.check.PingCheckProbe
 import com.krillsson.sysapi.core.check.RunCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
@@ -46,6 +48,7 @@ class QueryResolver(
     private val platform: Platform,
     private val containerManager: ContainerService,
     private val checkService: CheckService,
+    private val pingProbe: PingCheckProbe,
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
@@ -159,6 +162,9 @@ class QueryResolver(
 
     @QueryMapping
     fun checkById(@Argument id: UUID): Check? = checkService.getById(id)
+
+    @QueryMapping
+    fun pingAvailability(): PingAvailability = pingProbe.availability()
 
     @QueryMapping
     fun webServerChecks(): List<HttpCheck> = checkService.getAll().filterIsInstance<HttpCheck>()

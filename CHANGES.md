@@ -13,6 +13,7 @@
 - Feature: Checks can now be a TCP connection to a host and port, or a ping
   - A ping check runs the system `ping` command and takes the round trip time it reports as the latency
   - Creating or updating a ping check is refused with a reason when this system has no ping the agent can use, which `PingCheck.pingAvailable` also reports
+  - The `pingAvailability` query answers whether ping checks can run here, and why not when they cannot, without having to create one first
 - Feature: A check can be a DNS lookup against a resolver of your choosing, asserting on the records that come back
 - Feature: New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day

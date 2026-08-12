@@ -27,6 +27,8 @@ class PingCheckProbe(private val ping: Ping) {
     val available: Boolean
         get() = unavailable == null
 
+    fun availability() = PingAvailability(available = available, unavailableReason = unavailable)
+
     fun probe(spec: PingCheckSpec): CheckResult {
         val start = Instant.now()
         unavailable?.let { return result(spec, start, false, it, null) }
