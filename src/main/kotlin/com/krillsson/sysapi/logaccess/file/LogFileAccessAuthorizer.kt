@@ -3,12 +3,14 @@ package com.krillsson.sysapi.logaccess.file
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.filebrowser.FileBrowserException
 import com.krillsson.sysapi.filebrowser.FileBrowserSandbox
+import com.krillsson.sysapi.filebrowser.FileTypeRegistry
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import kotlin.io.path.name
 
 class LogFileAccessDeniedException(path: String) :
     RuntimeException("$path is not one of the log files this agent exposes")
@@ -17,7 +19,8 @@ class LogFileAccessDeniedException(path: String) :
 class LogFileAccessAuthorizer(
     private val logFilesManager: LogFilesManager,
     private val fileBrowserSandbox: FileBrowserSandbox,
-    private val fileBrowserConfiguration: FileBrowserConfiguration
+    private val fileBrowserConfiguration: FileBrowserConfiguration,
+    private val fileTypeRegistry: FileTypeRegistry
 ) {
 
     val logger by logger()
@@ -45,6 +48,9 @@ class LogFileAccessAuthorizer(
             .getOrElse { if (it is FileBrowserException) null else throw it }
             ?: return null
         if (!Files.isRegularFile(browsed, LinkOption.NOFOLLOW_LINKS)) {
+            return null
+        }
+        if (!fileTypeRegistry.looksLikeALogFile(browsed.name)) {
             return null
         }
         if (Files.size(browsed) > fileBrowserConfiguration.maxLogViewBytes) {

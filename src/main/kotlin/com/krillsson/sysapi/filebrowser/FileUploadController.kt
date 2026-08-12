@@ -18,7 +18,8 @@ class FileUploadController(private val manager: FileBrowserManager) {
     companion object {
         private val CONTENT_TYPES_THE_BODY_IS_NOT = listOf(
             "application/x-www-form-urlencoded",
-            "multipart/form-data"
+            "multipart/form-data",
+            "text/plain"
         )
     }
 
@@ -38,6 +39,11 @@ class FileUploadController(private val manager: FileBrowserManager) {
      * A form encoded body is read by the servlet container as soon as a request parameter is asked
      * for, which would leave nothing of it to store, and a multipart body would be stored envelope
      * and all. Neither is worth guessing at, so both are refused.
+     *
+     * text/plain is refused for a different reason. Those three are the content types a form can
+     * post without asking permission first, and the API authenticates with credentials a browser
+     * attaches on its own, so leaving it open would let any page write a file here on behalf of
+     * whoever is logged in. Anything else is preflighted and cannot reach this from another origin.
      */
     private fun rejectAnythingButTheFileItself(contentType: String?) {
         val given = contentType.orEmpty()

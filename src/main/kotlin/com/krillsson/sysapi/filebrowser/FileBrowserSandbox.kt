@@ -36,7 +36,7 @@ class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
                 logger.warn("The file browser is enabled but none of its configured roots could be used")
             } else {
                 logger.info("File browser serving ${roots.joinToString { it.toString() }} in $access mode")
-                warnAboutAgentDirectoriesInside(roots)
+                warnAboutReachableAgentDirectories()
             }
         }
     }
@@ -141,7 +141,7 @@ class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
 
     private fun realPath(path: Path): Path? = runCatching { path.toRealPath() }.getOrNull()
 
-    private fun warnAboutAgentDirectoriesInside(roots: List<Path>) {
+    private fun warnAboutReachableAgentDirectories() {
         listOf(FileSystem.config, FileSystem.data)
             .mapNotNull { realPath(it.toPath().toAbsolutePath()) }
             .filter { contains(it) }

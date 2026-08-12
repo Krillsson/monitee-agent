@@ -34,8 +34,12 @@ class FileBrowserManager(
     companion object {
         const val MAX_ENTRIES = 10_000
         const val TEMP_FILE_PREFIX = ".monitee-upload-"
+        const val TEMP_FILE_SUFFIX = ".part"
 
         private val ABANDONED_TEMP_FILE_AGE: Duration = Duration.ofHours(1)
+
+        private val TEMP_FILE_NAME =
+            Regex("${Regex.escape(TEMP_FILE_PREFIX)}\\d+${Regex.escape(TEMP_FILE_SUFFIX)}")
 
         private val DEFAULT_PERMISSIONS = setOf(
             PosixFilePermission.OWNER_READ,
@@ -224,7 +228,7 @@ class FileBrowserManager(
 
     fun <T> writeAtomically(target: Path, write: (Path) -> T): T {
         val directory = target.parent
-        val temp = Files.createTempFile(directory, TEMP_FILE_PREFIX, null)
+        val temp = Files.createTempFile(directory, TEMP_FILE_PREFIX, TEMP_FILE_SUFFIX)
         return try {
             copyPermissionsOf(target, temp)
             val result = write(temp)
@@ -258,11 +262,16 @@ class FileBrowserManager(
         return written
     }
 
+    /**
+     * Only the names createTempFile itself produces are swept, digits and all, so a file the user
+     * happens to have called something starting with the same prefix is left alone.
+     */
     private fun removeAbandonedTempFilesIn(directory: Path) {
         val abandonedBefore = Instant.now().minus(ABANDONED_TEMP_FILE_AGE)
         runCatching {
-            Files.newDirectoryStream(directory, "$TEMP_FILE_PREFIX*").use { stream ->
-                stream.filter { Files.getLastModifiedTime(it).toInstant().isBefore(abandonedBefore) }
+            Files.newDirectoryStream(directory, "$TEMP_FILE_PREFIX*$TEMP_FILE_SUFFIX").use { stream ->
+                stream.filter { TEMP_FILE_NAME.matches(it.name) }
+                    .filter { Files.getLastModifiedTime(it).toInstant().isBefore(abandonedBefore) }
                     .forEach { leftover ->
                         logger.info("Removing abandoned upload $leftover")
                         runCatching { Files.deleteIfExists(leftover) }
