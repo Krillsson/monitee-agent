@@ -85,6 +85,8 @@ trash. A few things worth knowing before turning that on:
   everything you mount. Mount the directories you actually want to reach, never `/`.
 - Mount the volume `:ro` while you are on `access: READ`, and the kernel enforces the read only
   part for you.
+- The `native` image tag has no image decoder, so thumbnails are only served by the JVM
+  image. Everything else in the browser works on both.
 - Keep `/config` and `/data` out of the roots. If they are reachable, `READ_WRITE` lets a caller
   edit the agent's own configuration and database, and the agent says so in the log at startup.
 

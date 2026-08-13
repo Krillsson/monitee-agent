@@ -3,6 +3,7 @@ package com.krillsson.sysapi.filebrowser
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -15,6 +16,10 @@ import kotlin.io.path.writeText
 
 class ThumbnailServiceTest {
 
+    private companion object {
+        const val NATIVE_IMAGE_CODE = "org.graalvm.nativeimage.imagecode"
+    }
+
     @TempDir
     lateinit var tempDir: Path
 
@@ -26,6 +31,11 @@ class ThumbnailServiceTest {
     fun setUp() {
         root = Files.createDirectory(tempDir.resolve("storage"))
         cache = tempDir.resolve("cache")
+    }
+
+    @AfterEach
+    fun tearDown() {
+        System.clearProperty(NATIVE_IMAGE_CODE)
     }
 
     private fun service(thumbnails: Boolean = true, maxThumbnailSourceBytes: Long = 67_108_864) = fileBrowser(
@@ -154,5 +164,28 @@ class ThumbnailServiceTest {
             service(maxThumbnailSourceBytes = 16).thumbnail(file.toString(), 128)
         }
         shouldThrow<FileBrowserException> { service(thumbnails = false).thumbnail(file.toString(), 128) }
+    }
+
+    @Test
+    fun `refuses to render at all in a build that cannot reach ImageIO`() {
+        // Given
+        val file = image("photo.png", 400, 400)
+        System.setProperty(NATIVE_IMAGE_CODE, "runtime")
+
+        // When / Then
+        ThumbnailSupport.available shouldBe false
+        shouldThrow<UnsupportedThumbnailException> { service().thumbnail(file.toString(), 128) }
+        Files.exists(cache) shouldBe false
+    }
+
+    @Test
+    fun `does not offer a thumbnail on an entry in a build that cannot reach ImageIO`() {
+        // Given
+        val file = image("photo.png", 400, 400)
+
+        // When / Then
+        fileBrowser(root, cache = cache).entryFactory.entryOf(file).hasThumbnail shouldBe true
+        System.setProperty(NATIVE_IMAGE_CODE, "runtime")
+        fileBrowser(root, cache = cache).entryFactory.entryOf(file).hasThumbnail shouldBe false
     }
 }

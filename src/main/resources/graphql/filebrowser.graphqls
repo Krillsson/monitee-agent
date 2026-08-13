@@ -99,7 +99,8 @@ type FileEntry {
     openableAsLog: Boolean!
     # True when this file can be passed to extractArchive
     isArchive: Boolean!
-    # True when GET /files/thumbnail?path=&size= renders this file
+    # True when GET /files/thumbnail?path=&size= renders this file. Always false in the
+    # native build, which has no image decoder
     hasThumbnail: Boolean!
     # By the unix convention of a leading dot, on every platform
     isHidden: Boolean!
