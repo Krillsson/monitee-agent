@@ -217,6 +217,8 @@ class ArchiveService(
         }
     }
 
+    private fun entryNameOf(base: Path, path: Path) = base.relativize(path).joinToString("/")
+
     private fun addToZip(zip: ZipOutputStream, source: Path, budget: Budget) {
         val base = requireNotNull(source.parent)
         Files.walkFileTree(source, object : SimpleFileVisitor<Path>() {
@@ -225,7 +227,7 @@ class ArchiveService(
                     return FileVisitResult.SKIP_SUBTREE
                 }
                 budget.countEntry()
-                zip.putNextEntry(ZipEntry("${base.relativize(dir)}/"))
+                zip.putNextEntry(ZipEntry(entryNameOf(base, dir) + "/"))
                 zip.closeEntry()
                 return FileVisitResult.CONTINUE
             }
@@ -235,7 +237,7 @@ class ArchiveService(
                     return FileVisitResult.CONTINUE
                 }
                 budget.countEntry()
-                val entry = ZipEntry(base.relativize(file).toString())
+                val entry = ZipEntry(entryNameOf(base, file))
                 entry.lastModifiedTime = attrs.lastModifiedTime()
                 zip.putNextEntry(entry)
                 Files.newInputStream(file).use { input -> copy(input, zip, budget) }
