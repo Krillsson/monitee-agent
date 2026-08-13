@@ -17,10 +17,15 @@
 - Feature: A check can be a DNS lookup against a resolver of your choosing, asserting on the records that come back
 - Feature: New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
 - Feature: Browse, read, edit, download, upload and manage files in the directories listed under `fileBrowser` in `configuration.yml`
-  - `access: READ` exposes browsing, reading and downloading, `access: READ_WRITE` also allows saving, uploading, copying, moving and deleting
+  - `access: READ` exposes browsing, searching, reading, downloading and thumbnails, `access: READ_WRITE` also allows saving, uploading, copying, moving, deleting, archives and the trash
   - Downloads and uploads are streamed over HTTP at `/files/download` and `/files/upload` rather than through GraphQL
-  - Every entry names an icon served from `/files/icons/{iconId}.svg`
+  - Every entry names an icon served from `/files/icons/{iconId}.svg`, and `GET /files/thumbnail?path=&size=` serves a downscaled image of one, cached under the data directory
   - A browsed log file can be opened in the log viewer and tailed like any configured one
+  - `search` finds a name anywhere under a path and `directorySize` adds a directory up recursively, both bounded by a depth, a result count and a wall clock budget that they report running into
+  - `extractArchive` unpacks zip, tar, tar.gz and gz, and `createArchive` packs a zip
+  - Copying, moving and deleting take a whole selection in one call and report each path that failed without undoing the rest, and a copy or a move can be told to overwrite what is already at the destination
+  - `moveToTrash` puts a file in a `.monitee-trash` directory inside its root, which `restoreFromTrash` takes it back out of and `emptyTrash` empties
+  - `FileEntry` carries the POSIX metadata a properties sheet shows, and `listDirectoryConnection` pages a directory holding more entries than `listDirectory` returns
   - See `sample-queries/FileBrowser.graphql`
 - Updating a container now removes the image it was running as a last step, when the update left it untagged and unused
 - The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day

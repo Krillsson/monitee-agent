@@ -13,6 +13,24 @@ extend type Mutation {
     deleteFile(input: DeleteFileInput!): DeleteFileOutput!
     # Create a directory. Its parent has to exist already. Requires READ_WRITE
     createDirectory(input: CreateDirectoryInput!): CreateDirectoryOutput!
+    # Copy several files or directories into one directory, keeping their names. Each one
+    # is reported on its own, so a batch where one fails still copies the rest. Requires READ_WRITE
+    copyFiles(input: CopyFilesInput!): BatchFileOutput!
+    # Move several files or directories into one directory, keeping their names. Requires READ_WRITE
+    moveFiles(input: MoveFilesInput!): BatchFileOutput!
+    # Delete several files or directories. Requires READ_WRITE
+    deleteFiles(input: DeleteFilesInput!): BatchFileOutput!
+    # Unpack a zip, tar, tar.gz or gz into a directory that already exists. Requires READ_WRITE
+    extractArchive(input: ExtractArchiveInput!): ExtractArchiveOutput!
+    # Pack files and directories into a zip. Requires READ_WRITE
+    createArchive(input: CreateArchiveInput!): CreateArchiveOutput!
+    # Move a file or directory into the trash of the root it lives in, from where it can be
+    # restored. Requires READ_WRITE
+    moveToTrash(input: MoveToTrashInput!): MoveToTrashOutput!
+    # Put a trashed file back where it came from. Requires READ_WRITE
+    restoreFromTrash(input: RestoreFromTrashInput!): RestoreFromTrashOutput!
+    # Delete one trashed entry, or the whole trash of every root. Requires READ_WRITE
+    emptyTrash(input: EmptyTrashInput!): EmptyTrashOutput!
 }
 
 # Browsing of the directories listed under fileBrowser.roots in configuration.yml.
@@ -28,9 +46,22 @@ type FileBrowser {
     # The configured roots, as the paths every other field expects. Start browsing here
     roots: [FileEntry!]!
     listDirectory(path: String!): DirectoryListing!
+    # The same listing, one page at a time, for a directory with more entries than
+    # listDirectory is willing to return. Same order, so paging through it gives the
+    # same sequence
+    listDirectoryConnection(path: String!, after: String, first: Int): DirectoryListingConnection!
     # Reads a text file into the response. Refused for anything that is not valid UTF-8
     # or is larger than fileBrowser.maxEditableBytes
     openTextFile(path: String!): TextFileContent!
+    # Looks for a name anywhere under path. Bounded by maxResults, maxDepth and a wall clock
+    # budget, and truncated says which of them the walk ran into. File contents are not searched
+    search(input: FileSearchInput!): FileSearchResult!
+    # Adds up a directory recursively. Never part of a listing, because it is a full walk
+    directorySize(path: String!, maxDepth: Int = 32): DirectorySize!
+    # Whether a delete can go through the trash. False when fileBrowser.trash is off
+    trashEnabled: Boolean!
+    # Everything in the trash of every root, most recently deleted first
+    trash: [TrashEntry!]!
 }
 
 enum FileBrowserAccess {
@@ -66,6 +97,72 @@ type FileEntry {
     # True when this file can be passed to logFiles.openLogFileConnection and the
     # tailLogFile subscription
     openableAsLog: Boolean!
+    # True when this file can be passed to extractArchive
+    isArchive: Boolean!
+    # True when GET /files/thumbnail?path=&size= renders this file
+    hasThumbnail: Boolean!
+    # By the unix convention of a leading dot, on every platform
+    isHidden: Boolean!
+    # BasicFileAttributes.lastAccessTime, null on a filesystem that does not keep one
+    accessedAt: Instant
+    # As "rwxr-xr-x". Null on a filesystem without a POSIX view, Windows among them
+    permissions: String
+    owner: String
+    group: String
+    # What a SYMLINK points at, so the UI can explain the dead end. Null for everything else
+    linkTarget: String
+}
+
+type FileEntryEdge {
+    cursor: String!
+    node: FileEntry!
+}
+
+type DirectoryListingConnection {
+    # The directory that was listed
+    entry: FileEntry!
+    edges: [FileEntryEdge!]!
+    pageInfo: PageInfo!
+    # How many entries the directory holds in total
+    totalCount: Int!
+}
+
+input FileSearchInput {
+    # The subtree to search. Has to be inside a root like every other path
+    path: String!
+    # Matched against the name of each entry, case insensitively, anywhere in it
+    query: String!
+    maxResults: Int = 500
+    maxDepth: Int = 16
+    includeDirectories: Boolean = true
+}
+
+type FileSearchResult {
+    entries: [FileEntry!]!
+    # True when the walk hit maxResults, maxDepth or the time budget, so there may be more
+    truncated: Boolean!
+    durationMillis: Long!
+}
+
+type DirectorySize {
+    entry: FileEntry!
+    totalBytes: Long!
+    fileCount: Int!
+    directoryCount: Int!
+    # True when the walk gave up, which makes every figure above a lower bound
+    truncated: Boolean!
+}
+
+type TrashEntry {
+    # Pass this to restoreFromTrash and emptyTrash
+    id: String!
+    # The trashed file itself, named as it was when it was deleted
+    entry: FileEntry!
+    # Where it was deleted from, and where restoring puts it back
+    originalPath: String!
+    deletedAt: Instant
+    # The root whose trash it is in
+    root: String!
 }
 
 type DirectoryListing {
@@ -89,14 +186,69 @@ input SaveTextFileInput {
 
 input CopyFileInput {
     source: String!
-    # Full path of the copy, including its name. Has to not exist yet
+    # Full path of the copy, including its name
     destination: String!
+    # Replace the destination when it is already there. A file can only replace a file and a
+    # directory only a directory, and copying a directory over one merges the two
+    overwrite: Boolean = false
 }
 
 input MoveFileInput {
     source: String!
-    # Full path to move to, including the name. Has to not exist yet
+    # Full path to move to, including the name
     destination: String!
+    # Replace the destination when it is already there. A file can only replace a file and a
+    # directory only a directory, and the directory has to be empty
+    overwrite: Boolean = false
+}
+
+input CopyFilesInput {
+    sources: [String!]!
+    # The directory to copy them into. Each keeps its own name
+    destinationDirectory: String!
+    overwrite: Boolean = false
+}
+
+input MoveFilesInput {
+    sources: [String!]!
+    destinationDirectory: String!
+    overwrite: Boolean = false
+}
+
+input DeleteFilesInput {
+    paths: [String!]!
+    recursive: Boolean = false
+}
+
+input ExtractArchiveInput {
+    # The archive. Its name decides how it is read: zip, tar, tar.gz, tgz or gz
+    path: String!
+    # An existing directory to unpack into
+    destinationDirectory: String!
+    # Replace files already in the destination
+    overwrite: Boolean = false
+}
+
+input CreateArchiveInput {
+    sources: [String!]!
+    # Full path of the archive to write, ending in .zip
+    destination: String!
+    overwrite: Boolean = false
+}
+
+input MoveToTrashInput {
+    path: String!
+}
+
+input RestoreFromTrashInput {
+    id: String!
+    # Replace whatever has taken the original path in the meantime
+    overwrite: Boolean = false
+}
+
+input EmptyTrashInput {
+    # One entry, or the whole trash of every root when left out
+    id: String
 }
 
 input DeleteFileInput {
@@ -135,4 +287,53 @@ type CreateDirectoryOutput {
     reason: String
     # The directory that was created, when success is true
     entry: FileEntry
+}
+
+type FileOperationFailure {
+    path: String!
+    reason: String!
+}
+
+# A batch is not undone when one of its paths fails, so both lists can hold something
+type BatchFileOutput {
+    success: Boolean!
+    # What went wrong with the batch as a whole, when it was refused before anything was touched
+    reason: String
+    successes: [String!]!
+    failures: [FileOperationFailure!]!
+}
+
+type ExtractArchiveOutput {
+    success: Boolean!
+    reason: String
+    # The directory that was unpacked into, when success is true
+    entry: FileEntry
+    entryCount: Int!
+    totalBytes: Long!
+}
+
+type CreateArchiveOutput {
+    success: Boolean!
+    reason: String
+    # The archive that was written, when success is true
+    entry: FileEntry
+}
+
+type MoveToTrashOutput {
+    success: Boolean!
+    reason: String
+    entry: TrashEntry
+}
+
+type RestoreFromTrashOutput {
+    success: Boolean!
+    reason: String
+    # Where it was put back, when success is true
+    entry: FileEntry
+}
+
+type EmptyTrashOutput {
+    success: Boolean!
+    reason: String
+    deletedCount: Int!
 }

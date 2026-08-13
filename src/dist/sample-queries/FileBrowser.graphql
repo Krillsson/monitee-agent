@@ -23,6 +23,77 @@ query ListDirectory {
                 iconId
                 editable
                 openableAsLog
+                isArchive
+                hasThumbnail
+                isHidden
+                permissions
+                owner
+                group
+                accessedAt
+                linkTarget
+            }
+        }
+    }
+}
+
+# For a directory with more entries than listDirectory returns, page through it instead.
+# Pass pageInfo.endCursor back as after until hasNextPage is false
+query ListDirectoryConnection {
+    fileBrowser {
+        listDirectoryConnection(path: "/storage/media", first: 200, after: null) {
+            totalCount
+            pageInfo {
+                hasNextPage
+                endCursor
+            }
+            edges {
+                cursor
+                node {
+                    name
+                    path
+                    type
+                }
+            }
+        }
+    }
+}
+
+query Search {
+    fileBrowser {
+        search(input: { path: "/storage", query: "holiday", maxResults: 500, maxDepth: 16 }) {
+            truncated
+            durationMillis
+            entries {
+                name
+                path
+                type
+            }
+        }
+    }
+}
+
+query DirectorySize {
+    fileBrowser {
+        directorySize(path: "/storage/media") {
+            totalBytes
+            fileCount
+            directoryCount
+            truncated
+        }
+    }
+}
+
+query Trash {
+    fileBrowser {
+        trashEnabled
+        trash {
+            id
+            originalPath
+            deletedAt
+            root
+            entry {
+                name
+                sizeBytes
             }
         }
     }
@@ -44,9 +115,84 @@ mutation SaveTextFile {
 }
 
 mutation MoveFile {
-    moveFile(input: { source: "/storage/notes.txt", destination: "/storage/archive/notes.txt" }) {
+    moveFile(input: { source: "/storage/notes.txt", destination: "/storage/archive/notes.txt", overwrite: false }) {
         success
         reason
+    }
+}
+
+# A batch is not undone when one path fails, so read both lists
+mutation CopyFiles {
+    copyFiles(
+        input: {
+            sources: ["/storage/one.jpg", "/storage/two.jpg"]
+            destinationDirectory: "/storage/archive"
+            overwrite: false
+        }
+    ) {
+        success
+        reason
+        successes
+        failures {
+            path
+            reason
+        }
+    }
+}
+
+mutation ExtractArchive {
+    extractArchive(
+        input: { path: "/storage/bundle.zip", destinationDirectory: "/storage/archive", overwrite: false }
+    ) {
+        success
+        reason
+        entryCount
+        totalBytes
+        entry {
+            path
+        }
+    }
+}
+
+mutation CreateArchive {
+    createArchive(
+        input: { sources: ["/storage/media"], destination: "/storage/media.zip", overwrite: false }
+    ) {
+        success
+        reason
+        entry {
+            path
+            sizeBytes
+        }
+    }
+}
+
+mutation MoveToTrash {
+    moveToTrash(input: { path: "/storage/notes.txt" }) {
+        success
+        reason
+        entry {
+            id
+            originalPath
+        }
+    }
+}
+
+mutation RestoreFromTrash {
+    restoreFromTrash(input: { id: "3c98243a-4dd7-40ed-9abc-ec7981d79897", overwrite: false }) {
+        success
+        reason
+        entry {
+            path
+        }
+    }
+}
+
+mutation EmptyTrash {
+    emptyTrash(input: { id: null }) {
+        success
+        reason
+        deletedCount
     }
 }
 
@@ -73,3 +219,4 @@ mutation CreateDirectory {
 #   POST /files/upload?directory=/storage/media&name=photo.jpg&overwrite=false
 #        Content-Type: application/octet-stream, the file itself as the body
 #   GET  /files/icons/{iconId}.svg
+#   GET  /files/thumbnail?path=/storage/photos/holiday.jpg&size=256

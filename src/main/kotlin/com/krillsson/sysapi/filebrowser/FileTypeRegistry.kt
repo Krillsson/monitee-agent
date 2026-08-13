@@ -15,6 +15,13 @@ enum class FileCategory {
 
 data class FileType(val mimeType: String, val category: FileCategory)
 
+enum class ArchiveFormat {
+    ZIP,
+    TAR,
+    TAR_GZ,
+    GZIP
+}
+
 @Service
 class FileTypeRegistry {
 
@@ -24,6 +31,16 @@ class FileTypeRegistry {
         private const val OCTET_STREAM = "application/octet-stream"
 
         private val LOG_EXTENSIONS = setOf("log", "txt", "out", "")
+
+        private val THUMBNAIL_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
+
+        private val ARCHIVE_SUFFIXES = listOf(
+            ".tar.gz" to ArchiveFormat.TAR_GZ,
+            ".tgz" to ArchiveFormat.TAR_GZ,
+            ".tar" to ArchiveFormat.TAR,
+            ".gz" to ArchiveFormat.GZIP,
+            ".zip" to ArchiveFormat.ZIP
+        )
 
         private val CATEGORY_ICONS = mapOf(
             FileCategory.IMAGE to "image",
@@ -169,6 +186,14 @@ class FileTypeRegistry {
     fun isTextual(name: String) = categoryOf(name) == FileCategory.TEXT
 
     fun looksLikeALogFile(name: String) = extensionOf(name) in LOG_EXTENSIONS
+
+    fun isThumbnailable(name: String) = extensionOf(name) in THUMBNAIL_EXTENSIONS
+
+    fun archiveFormatOf(name: String): ArchiveFormat? {
+        val lower = name.lowercase()
+        return ARCHIVE_SUFFIXES.firstOrNull { (suffix, _) -> lower.endsWith(suffix) && lower.length > suffix.length }
+            ?.second
+    }
 
     fun iconIds(): Set<String> = TYPES.keys + CATEGORY_ICONS.values + FOLDER_ICON + UNKNOWN_ICON
 }

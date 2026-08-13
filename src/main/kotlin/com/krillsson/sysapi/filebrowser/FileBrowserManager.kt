@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.filebrowser
 
 import com.krillsson.sysapi.config.FileBrowserConfiguration
+import com.krillsson.sysapi.graphql.domain.PageInfo
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 import java.io.FileOutputStream
@@ -22,17 +23,22 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermission
 import java.time.Duration
 import java.time.Instant
+import java.util.Base64
 import kotlin.io.path.name
 
 @Service
 class FileBrowserManager(
     private val configuration: FileBrowserConfiguration,
     private val sandbox: FileBrowserSandbox,
-    private val fileTypeRegistry: FileTypeRegistry
+    private val entryFactory: FileEntryFactory
 ) {
 
     companion object {
         const val MAX_ENTRIES = 10_000
+        const val MAX_PAGE_SIZE = 1_000
+        const val DEFAULT_PAGE_SIZE = 200
+        const val MAX_SCANNED_ENTRIES = 500_000
+        const val MAX_BATCH_SIZE = 5_000
         const val TEMP_FILE_PREFIX = ".monitee-upload-"
         const val TEMP_FILE_SUFFIX = ".part"
 
@@ -47,7 +53,11 @@ class FileBrowserManager(
             PosixFilePermission.GROUP_READ,
             PosixFilePermission.OTHERS_READ
         )
+
+        private val ORDER = compareBy<SortKey>({ !it.directory }, { it.name.lowercase() }, { it.name })
     }
+
+    private data class SortKey(val directory: Boolean, val name: String)
 
     val logger by logger()
 
@@ -58,29 +68,53 @@ class FileBrowserManager(
     fun roots(): List<FileEntry> = sandbox.roots.map { entryOf(it) }
 
     fun listDirectory(path: String): DirectoryListing {
-        val directory = sandbox.resolveExisting(path)
-        if (!Files.isDirectory(directory)) {
-            throw FileBrowserException("$path is not a directory")
-        }
+        val directory = requireDirectory(path)
         val entries = mutableListOf<FileEntry>()
         var truncated = false
-        try {
-            Files.newDirectoryStream(directory).use { stream ->
-                for (child in stream) {
-                    if (entries.size == MAX_ENTRIES) {
-                        truncated = true
-                        break
-                    }
-                    entries += entryOf(child)
-                }
+        readDirectory(directory) { child ->
+            if (entries.size == MAX_ENTRIES) {
+                truncated = true
+                false
+            } else {
+                entries += entryOf(child)
+                true
             }
-        } catch (ex: IOException) {
-            throw FileBrowserException("$path could not be read: ${ex.message}")
         }
         return DirectoryListing(
             entry = entryOf(directory),
             entries = entries.sortedWith(compareBy({ it.type != FileEntryType.DIRECTORY }, { it.name.lowercase() })),
             truncated = truncated
+        )
+    }
+
+    fun listDirectoryPage(path: String, after: String?, first: Int?): DirectoryListingConnection {
+        val directory = requireDirectory(path)
+        val size = (first ?: DEFAULT_PAGE_SIZE).coerceIn(1, MAX_PAGE_SIZE)
+        val keys = mutableListOf<SortKey>()
+        readDirectory(directory) { child ->
+            keys += SortKey(isDirectory(child), child.name)
+            keys.size < MAX_SCANNED_ENTRIES
+        }
+        keys.sortWith(ORDER)
+        val start = after?.let { cursor ->
+            val decoded = decodeCursor(cursor)
+            val index = keys.binarySearch(decoded, ORDER)
+            if (index >= 0) index + 1 else -index - 1
+        } ?: 0
+        val page = keys.drop(start).take(size)
+        val edges = page.map { key ->
+            FileEntryEdge(cursor = encodeCursor(key), node = entryOf(directory.resolve(key.name)))
+        }
+        return DirectoryListingConnection(
+            entry = entryOf(directory),
+            edges = edges,
+            pageInfo = PageInfo(
+                hasNextPage = start + page.size < keys.size,
+                hasPreviousPage = start > 0,
+                startCursor = edges.firstOrNull()?.cursor,
+                endCursor = edges.lastOrNull()?.cursor
+            ),
+            totalCount = keys.size
         )
     }
 
@@ -112,31 +146,40 @@ class FileBrowserManager(
         logger.info("Wrote ${bytes.size} bytes to $file")
     }
 
-    fun copy(source: String, destination: String) {
+    fun copy(source: String, destination: String, overwrite: Boolean = false) {
         sandbox.requireWritable()
         val from = sandbox.resolveExisting(source)
-        val to = destinationFor(from, destination)
-        if (Files.isDirectory(from)) {
-            copyRecursively(from, to)
-        } else {
-            Files.copy(from, to, StandardCopyOption.COPY_ATTRIBUTES)
-        }
+        val to = destinationFor(from, destination, overwrite)
+        copyInto(from, to)
         logger.info("Copied $from to $to")
     }
 
-    fun move(source: String, destination: String) {
+    fun move(source: String, destination: String, overwrite: Boolean = false) {
         sandbox.requireWritable()
         val from = sandbox.resolveExisting(source)
-        if (sandbox.isRoot(from)) {
-            throw FileBrowserException("$source is one of the configured roots and cannot be moved")
-        }
-        val to = destinationFor(from, destination)
-        try {
-            Files.move(from, to, StandardCopyOption.ATOMIC_MOVE)
-        } catch (ex: AtomicMoveNotSupportedException) {
-            Files.move(from, to)
-        }
+        requireMovable(from, source)
+        val to = destinationFor(from, destination, overwrite)
+        moveInto(from, to, overwrite)
         logger.info("Moved $from to $to")
+    }
+
+    fun copyAll(sources: List<String>, destinationDirectory: String, overwrite: Boolean): BatchFileOutcome {
+        sandbox.requireWritable()
+        return batch(sources) { source ->
+            copy(source, targetIn(destinationDirectory, source).toString(), overwrite)
+        }
+    }
+
+    fun moveAll(sources: List<String>, destinationDirectory: String, overwrite: Boolean): BatchFileOutcome {
+        sandbox.requireWritable()
+        return batch(sources) { source ->
+            move(source, targetIn(destinationDirectory, source).toString(), overwrite)
+        }
+    }
+
+    fun deleteAll(paths: List<String>, recursive: Boolean): BatchFileOutcome {
+        sandbox.requireWritable()
+        return batch(paths) { path -> delete(path, recursive) }
     }
 
     fun delete(path: String, recursive: Boolean) {
@@ -193,37 +236,39 @@ class FileBrowserManager(
         return file
     }
 
-    fun entryOf(path: Path): FileEntry {
-        val attributes = runCatching {
-            Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS)
-        }.getOrNull()
-        val type = when {
-            attributes == null -> FileEntryType.OTHER
-            attributes.isSymbolicLink -> FileEntryType.SYMLINK
-            attributes.isDirectory -> FileEntryType.DIRECTORY
-            attributes.isRegularFile -> FileEntryType.FILE
-            else -> FileEntryType.OTHER
+    fun entryOf(path: Path): FileEntry = entryFactory.entryOf(path)
+
+    fun requireDirectory(path: String): Path {
+        val directory = sandbox.resolveExisting(path)
+        if (!Files.isDirectory(directory)) {
+            throw FileBrowserException("$path is not a directory")
         }
-        val name = path.name.ifEmpty { path.toString() }
-        val size = if (type == FileEntryType.FILE) attributes?.size() ?: 0L else 0L
-        return FileEntry(
-            name = name,
-            path = path.toString(),
-            type = type,
-            sizeBytes = size,
-            createdAt = attributes?.creationTime()?.toInstant()?.takeIf { it != Instant.EPOCH },
-            updatedAt = attributes?.lastModifiedTime()?.toInstant(),
-            mimeType = if (type == FileEntryType.FILE) fileTypeRegistry.mimeTypeOf(name) else null,
-            iconId = if (type == FileEntryType.DIRECTORY) FileTypeRegistry.FOLDER_ICON else fileTypeRegistry.iconIdOf(
-                name
-            ),
-            editable = type == FileEntryType.FILE &&
-                    fileTypeRegistry.isTextual(name) &&
-                    size <= configuration.maxEditableBytes,
-            openableAsLog = type == FileEntryType.FILE &&
-                    fileTypeRegistry.looksLikeALogFile(name) &&
-                    size <= configuration.maxLogViewBytes
-        )
+        return directory
+    }
+
+    fun copyInto(from: Path, to: Path) {
+        if (Files.isDirectory(from)) {
+            copyRecursively(from, to)
+        } else if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
+            writeAtomically(to) { temp ->
+                Files.copy(from, temp, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES)
+            }
+        } else {
+            Files.copy(from, to, StandardCopyOption.COPY_ATTRIBUTES)
+        }
+    }
+
+    fun moveInto(from: Path, to: Path, overwrite: Boolean) {
+        val options = if (overwrite && Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
+            arrayOf(StandardCopyOption.REPLACE_EXISTING)
+        } else {
+            emptyArray()
+        }
+        try {
+            Files.move(from, to, *options, StandardCopyOption.ATOMIC_MOVE)
+        } catch (ex: AtomicMoveNotSupportedException) {
+            Files.move(from, to, *options)
+        }
     }
 
     fun <T> writeAtomically(target: Path, write: (Path) -> T): T {
@@ -238,6 +283,64 @@ class FileBrowserManager(
             runCatching { Files.deleteIfExists(temp) }
             throw ex
         }
+    }
+
+    private fun batch(paths: List<String>, action: (String) -> Unit): BatchFileOutcome {
+        if (paths.isEmpty()) {
+            throw FileBrowserException("No paths were given")
+        }
+        if (paths.size > MAX_BATCH_SIZE) {
+            throw FileBrowserException("A batch cannot hold more than $MAX_BATCH_SIZE paths")
+        }
+        val successes = mutableListOf<String>()
+        val failures = mutableListOf<FileOperationFailure>()
+        paths.forEach { path ->
+            try {
+                action(path)
+                successes += path
+            } catch (ex: Exception) {
+                logger.info("$path was left alone: ${ex.message}")
+                failures += FileOperationFailure(path, ex.message ?: requireNotNull(ex::class.simpleName))
+            }
+        }
+        return BatchFileOutcome(successes, failures)
+    }
+
+    private fun targetIn(destinationDirectory: String, source: String): Path {
+        val name = sandbox.resolveExisting(source).name
+        return sandbox.resolveInDirectory(destinationDirectory, name)
+    }
+
+    private fun readDirectory(directory: Path, consume: (Path) -> Boolean) {
+        try {
+            Files.newDirectoryStream(directory).use { stream ->
+                for (child in stream) {
+                    if (sandbox.isTrash(child)) {
+                        continue
+                    }
+                    if (!consume(child)) {
+                        break
+                    }
+                }
+            }
+        } catch (ex: IOException) {
+            throw FileBrowserException("$directory could not be read: ${ex.message}")
+        }
+    }
+
+    private fun encodeCursor(key: SortKey): String =
+        Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("${if (key.directory) "d" else "f"}:${key.name}".toByteArray(StandardCharsets.UTF_8))
+
+    private fun decodeCursor(cursor: String): SortKey {
+        val decoded = runCatching {
+            String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8)
+        }.getOrNull() ?: throw FileBrowserException("$cursor is not a cursor this directory handed out")
+        val marker = decoded.substringBefore(':', "")
+        if (marker != "d" && marker != "f") {
+            throw FileBrowserException("$cursor is not a cursor this directory handed out")
+        }
+        return SortKey(marker == "d", decoded.substringAfter(':'))
     }
 
     private fun writeStream(source: InputStream, target: Path): Long {
@@ -280,16 +383,42 @@ class FileBrowserManager(
         }
     }
 
-    private fun destinationFor(source: Path, destination: String): Path {
+    private fun destinationFor(source: Path, destination: String, overwrite: Boolean): Path {
         val to = sandbox.resolveForCreate(destination)
-        if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
-            throw FileBrowserException("$destination already exists")
+        if (to == source) {
+            throw FileBrowserException("$destination is the source itself")
         }
         if (to.startsWith(source)) {
             throw FileBrowserException("$destination is inside $source")
         }
+        if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
+            if (!overwrite) {
+                throw FileBrowserException("$destination already exists")
+            }
+            if (sandbox.isRoot(to)) {
+                throw FileBrowserException("$destination is one of the configured roots and cannot be replaced")
+            }
+            if (Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS) !=
+                Files.isDirectory(to, LinkOption.NOFOLLOW_LINKS)
+            ) {
+                throw FileBrowserException("$destination is not the same kind of thing as $source")
+            }
+        }
         return to
     }
+
+    private fun requireMovable(target: Path, path: String) {
+        if (sandbox.isRoot(target)) {
+            throw FileBrowserException("$path is one of the configured roots and cannot be moved")
+        }
+        if (sandbox.isInTrash(target)) {
+            throw FileBrowserException("$path is in the trash. Restore it instead")
+        }
+    }
+
+    private fun isDirectory(path: Path): Boolean = runCatching {
+        Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS).isDirectory
+    }.getOrDefault(false)
 
     private fun copyRecursively(from: Path, to: Path) {
         Files.walkFileTree(from, object : SimpleFileVisitor<Path>() {
@@ -300,7 +429,12 @@ class FileBrowserManager(
 
             override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                 if (!attrs.isSymbolicLink) {
-                    Files.copy(file, to.resolve(from.relativize(file)), StandardCopyOption.COPY_ATTRIBUTES)
+                    Files.copy(
+                        file,
+                        to.resolve(from.relativize(file)),
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.COPY_ATTRIBUTES
+                    )
                 }
                 return FileVisitResult.CONTINUE
             }
