@@ -1,7 +1,7 @@
 package com.krillsson.sysapi.graphql.mutations
 
 import com.krillsson.sysapi.filebrowser.FileEntry
-import com.krillsson.sysapi.filebrowser.FileOperationFailure
+import com.krillsson.sysapi.filebrowser.FileOperation
 import com.krillsson.sysapi.filebrowser.TrashEntry
 
 data class SaveTextFileInput(
@@ -72,22 +72,11 @@ data class EmptyTrashInput(
     val id: String? = null
 )
 
+data class CancelFileOperationInput(
+    val id: String
+)
+
 data class SaveTextFileOutput(
-    val success: Boolean,
-    val reason: String?
-)
-
-data class CopyFileOutput(
-    val success: Boolean,
-    val reason: String?
-)
-
-data class MoveFileOutput(
-    val success: Boolean,
-    val reason: String?
-)
-
-data class DeleteFileOutput(
     val success: Boolean,
     val reason: String?
 )
@@ -98,25 +87,10 @@ data class CreateDirectoryOutput(
     val entry: FileEntry?
 )
 
-data class BatchFileOutput(
+data class FileOperationOutput(
     val success: Boolean,
     val reason: String?,
-    val successes: List<String>,
-    val failures: List<FileOperationFailure>
-)
-
-data class ExtractArchiveOutput(
-    val success: Boolean,
-    val reason: String?,
-    val entry: FileEntry?,
-    val entryCount: Int,
-    val totalBytes: Long
-)
-
-data class CreateArchiveOutput(
-    val success: Boolean,
-    val reason: String?,
-    val entry: FileEntry?
+    val operation: FileOperation?
 )
 
 data class MoveToTrashOutput(
@@ -131,8 +105,3 @@ data class RestoreFromTrashOutput(
     val entry: FileEntry?
 )
 
-data class EmptyTrashOutput(
-    val success: Boolean,
-    val reason: String?,
-    val deletedCount: Int
-)

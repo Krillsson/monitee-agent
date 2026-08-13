@@ -73,11 +73,6 @@ data class FileOperationFailure(
     val reason: String
 )
 
-data class BatchFileOutcome(
-    val successes: List<String>,
-    val failures: List<FileOperationFailure>
-)
-
 data class TrashEntry(
     val id: String,
     val entry: FileEntry,

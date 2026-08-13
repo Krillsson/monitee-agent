@@ -5,6 +5,8 @@ import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
 import com.krillsson.sysapi.filebrowser.FileBrowserManager
 import com.krillsson.sysapi.filebrowser.FileEntry
+import com.krillsson.sysapi.filebrowser.FileOperation
+import com.krillsson.sysapi.filebrowser.FileOperationService
 import com.krillsson.sysapi.filebrowser.FileSearchInput
 import com.krillsson.sysapi.filebrowser.FileSearchResult
 import com.krillsson.sysapi.filebrowser.FileTreeWalker
@@ -20,7 +22,8 @@ import org.springframework.stereotype.Controller
 class FileBrowserResolver(
     private val manager: FileBrowserManager,
     private val treeWalker: FileTreeWalker,
-    private val trashService: TrashService
+    private val trashService: TrashService,
+    private val operations: FileOperationService
 ) {
 
     @SchemaMapping
@@ -57,4 +60,10 @@ class FileBrowserResolver(
 
     @SchemaMapping
     fun trash(): List<TrashEntry> = trashService.list()
+
+    @SchemaMapping
+    fun fileOperations(): List<FileOperation> = operations.all()
+
+    @SchemaMapping
+    fun fileOperation(@Argument id: String): FileOperation? = operations.find(id)
 }
