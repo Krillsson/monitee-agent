@@ -25,19 +25,6 @@ class FileUploadControllerTest {
         return request
     }
 
-    private fun entry(name: String) = FileEntry(
-        name = name,
-        path = "/storage/$name",
-        type = FileEntryType.FILE,
-        sizeBytes = 3,
-        createdAt = Instant.EPOCH,
-        updatedAt = Instant.EPOCH,
-        mimeType = "text/plain",
-        iconId = "txt",
-        editable = true,
-        openableAsLog = true
-    )
-
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -62,20 +49,20 @@ class FileUploadControllerTest {
     @Test
     fun `accepts a body sent as its own content type`() {
         // Given
-        every { manager.upload(any(), any(), any(), any()) } returns entry("notes.txt")
+        every { manager.upload(any(), any(), any(), any()) } returns fileEntry("notes.txt")
 
         // When
         val response = controller.upload("/storage", "notes.txt", false, request("application/octet-stream"))
 
         // Then
         response.statusCode shouldBe HttpStatus.CREATED
-        response.body shouldBe entry("notes.txt")
+        response.body shouldBe fileEntry("notes.txt")
     }
 
     @Test
     fun `accepts a body that came without a content type`() {
         // Given
-        every { manager.upload(any(), any(), any(), any()) } returns entry("notes.txt")
+        every { manager.upload(any(), any(), any(), any()) } returns fileEntry("notes.txt")
 
         // When
         val response = controller.upload("/storage", "notes.txt", false, request(null))

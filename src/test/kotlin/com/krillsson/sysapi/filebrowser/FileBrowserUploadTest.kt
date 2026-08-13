@@ -1,7 +1,6 @@
 package com.krillsson.sysapi.filebrowser
 
 import com.krillsson.sysapi.config.FileBrowserAccess
-import com.krillsson.sysapi.config.FileBrowserConfiguration
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
@@ -37,15 +36,7 @@ class FileBrowserUploadTest {
     private fun manager(
         access: FileBrowserAccess = FileBrowserAccess.READ_WRITE,
         maxUploadBytes: Long = 0
-    ): FileBrowserManager {
-        val configuration = FileBrowserConfiguration(
-            enabled = true,
-            access = access,
-            roots = listOf(root.toString()),
-            maxUploadBytes = maxUploadBytes
-        )
-        return FileBrowserManager(configuration, FileBrowserSandbox(configuration), FileTypeRegistry())
-    }
+    ): FileBrowserManager = fileBrowser(root, access = access, maxUploadBytes = maxUploadBytes).manager
 
     private fun namesIn(directory: Path) = Files.list(directory).use { it.toList() }.map { it.name }.sorted()
 

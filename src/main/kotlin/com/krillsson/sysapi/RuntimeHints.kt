@@ -26,6 +26,27 @@ class RuntimeHint : RuntimeHintsRegistrar {
         private const val PAHO_JSR47_LOGGER = "org.eclipse.paho.client.mqttv3.logging.JSR47Logger"
         private const val PAHO_LOGCAT_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.logcat"
         private const val PAHO_MESSAGES_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.messages"
+
+        private val IMAGE_IO_SERVICE_PROVIDERS = listOf(
+            "com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi",
+            "com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi",
+            "com.sun.imageio.plugins.png.PNGImageReaderSpi",
+            "com.sun.imageio.plugins.png.PNGImageWriterSpi",
+            "com.sun.imageio.plugins.gif.GIFImageReaderSpi",
+            "com.sun.imageio.plugins.gif.GIFImageWriterSpi",
+            "com.sun.imageio.plugins.bmp.BMPImageReaderSpi",
+            "com.sun.imageio.plugins.bmp.BMPImageWriterSpi",
+            "com.sun.imageio.plugins.wbmp.WBMPImageReaderSpi",
+            "com.sun.imageio.plugins.wbmp.WBMPImageWriterSpi",
+            "com.sun.imageio.plugins.tiff.TIFFImageReaderSpi",
+            "com.sun.imageio.plugins.tiff.TIFFImageWriterSpi",
+            "com.sun.imageio.spi.InputStreamImageInputStreamSpi",
+            "com.sun.imageio.spi.OutputStreamImageOutputStreamSpi",
+            "com.sun.imageio.spi.FileImageInputStreamSpi",
+            "com.sun.imageio.spi.FileImageOutputStreamSpi",
+            "com.sun.imageio.spi.RAFImageInputStreamSpi",
+            "com.sun.imageio.spi.RAFImageOutputStreamSpi"
+        )
     }
 
     private val bindingRegistrar = BindingReflectionHintsRegistrar()
@@ -42,6 +63,23 @@ class RuntimeHint : RuntimeHintsRegistrar {
         registerNvmlHints(hints)
         registerDockerJsonHints(hints, classLoader)
         registerPahoHints(hints)
+        registerImageIoHints(hints)
+    }
+
+    /**
+     * ImageIO finds its readers and writers through ServiceLoader, which the native image only
+     * follows for providers it can see registered. Without these the thumbnail endpoint answers
+     * that every image is unsupported, because `ImageIO.read` returns null rather than failing.
+     */
+    private fun registerImageIoHints(hints: RuntimeHints) {
+        IMAGE_IO_SERVICE_PROVIDERS.forEach { provider ->
+            hints.reflection().registerTypeIfPresent(
+                null,
+                provider,
+                MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+                MemberCategory.INVOKE_PUBLIC_METHODS
+            )
+        }
     }
 
     /**

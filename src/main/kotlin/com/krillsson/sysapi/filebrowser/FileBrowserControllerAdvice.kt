@@ -13,7 +13,8 @@ data class FileBrowserError(val reason: String)
     assignableTypes = [
         FileDownloadController::class,
         FileUploadController::class,
-        FileIconController::class
+        FileIconController::class,
+        ThumbnailController::class
     ]
 )
 class FileBrowserControllerAdvice {
@@ -23,6 +24,11 @@ class FileBrowserControllerAdvice {
     @ExceptionHandler(FileAlreadyThereException::class)
     fun handleConflict(ex: FileAlreadyThereException): ResponseEntity<FileBrowserError> {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(FileBrowserError(ex.message.orEmpty()))
+    }
+
+    @ExceptionHandler(UnsupportedThumbnailException::class)
+    fun handleUnsupportedThumbnail(ex: UnsupportedThumbnailException): ResponseEntity<FileBrowserError> {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(FileBrowserError(ex.message.orEmpty()))
     }
 
     @ExceptionHandler(UnsupportedUploadContentTypeException::class)

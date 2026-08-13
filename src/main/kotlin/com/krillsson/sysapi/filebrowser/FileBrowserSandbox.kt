@@ -13,10 +13,14 @@ open class FileBrowserException(message: String) : RuntimeException(message)
 
 class FileAlreadyThereException(message: String) : FileBrowserException(message)
 
+class UnsupportedThumbnailException(message: String) : FileBrowserException(message)
+
 @Service
 class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
 
     companion object {
+        const val TRASH_DIRECTORY = ".monitee-trash"
+
         private const val MAX_NAME_LENGTH = 255
     }
 
@@ -86,6 +90,15 @@ class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
     fun isRoot(path: Path) = roots.any { it == path }
 
     fun contains(path: Path) = roots.any { path.startsWith(it) }
+
+    fun rootOf(path: Path): Path = roots.firstOrNull { path.startsWith(it) }
+        ?: throw FileBrowserException("$path is outside of the directories this agent exposes")
+
+    fun trashOf(path: Path): Path = rootOf(path).resolve(TRASH_DIRECTORY)
+
+    fun isTrash(path: Path) = roots.any { it.resolve(TRASH_DIRECTORY) == path }
+
+    fun isInTrash(path: Path) = roots.any { path.startsWith(it.resolve(TRASH_DIRECTORY)) }
 
     fun validName(name: String): String {
         if (name.isEmpty() || name.length > MAX_NAME_LENGTH) {

@@ -1,8 +1,8 @@
 package com.krillsson.sysapi.filebrowser
 
 import com.krillsson.sysapi.config.FileBrowserAccess
-import com.krillsson.sysapi.config.FileBrowserConfiguration
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.BeforeEach
@@ -28,15 +28,7 @@ class FileBrowserManagerTest {
     private fun manager(
         access: FileBrowserAccess = FileBrowserAccess.READ_WRITE,
         maxEditableBytes: Long = 1024
-    ): FileBrowserManager {
-        val configuration = FileBrowserConfiguration(
-            enabled = true,
-            access = access,
-            roots = listOf(root.toString()),
-            maxEditableBytes = maxEditableBytes
-        )
-        return FileBrowserManager(configuration, FileBrowserSandbox(configuration), FileTypeRegistry())
-    }
+    ): FileBrowserManager = fileBrowser(root, access = access, maxEditableBytes = maxEditableBytes).manager
 
     @Test
     fun `lists directories before files, both by name`() {
@@ -176,6 +168,179 @@ class FileBrowserManagerTest {
         // When / Then
         shouldThrow<FileBrowserException> { manager.move(file.toString(), root.resolve("b.txt").toString()) }
         shouldThrow<FileBrowserException> { manager.copy(file.toString(), root.resolve("b.txt").toString()) }
+    }
+
+    @Test
+    fun `replaces the destination when it is told to overwrite`() {
+        // Given
+        val file = root.resolve("a.txt")
+        file.writeText("a")
+        val other = root.resolve("b.txt")
+        other.writeText("b")
+        val manager = manager()
+
+        // When
+        manager.copy(file.toString(), other.toString(), overwrite = true)
+
+        // Then
+        other.readText() shouldBe "a"
+        file.readText() shouldBe "a"
+    }
+
+    @Test
+    fun `leaves the destination alone when an overwriting copy fails`() {
+        // Given
+        val destination = root.resolve("b.txt")
+        destination.writeText("original")
+        val manager = manager()
+
+        // When
+        shouldThrow<Exception> {
+            manager.copy(root.resolve("missing.txt").toString(), destination.toString(), overwrite = true)
+        }
+
+        // Then
+        destination.readText() shouldBe "original"
+        Files.list(root).use { it.toList() }.map { it.fileName.toString() } shouldContainExactly listOf("b.txt")
+    }
+
+    @Test
+    fun `moves onto an existing destination when it is told to overwrite`() {
+        // Given
+        val file = root.resolve("a.txt")
+        file.writeText("a")
+        val other = root.resolve("b.txt")
+        other.writeText("b")
+        val manager = manager()
+
+        // When
+        manager.move(file.toString(), other.toString(), overwrite = true)
+
+        // Then
+        other.readText() shouldBe "a"
+        Files.exists(file) shouldBe false
+    }
+
+    @Test
+    fun `refuses to overwrite a directory with a file, and the other way round`() {
+        // Given
+        val file = root.resolve("a.txt")
+        file.writeText("a")
+        val directory = Files.createDirectory(root.resolve("b"))
+        val manager = manager()
+
+        // When / Then
+        shouldThrow<FileBrowserException> { manager.copy(file.toString(), directory.toString(), overwrite = true) }
+        shouldThrow<FileBrowserException> { manager.move(directory.toString(), file.toString(), overwrite = true) }
+    }
+
+    @Test
+    fun `refuses to copy something onto itself`() {
+        // Given
+        val file = root.resolve("a.txt")
+        file.writeText("a")
+        val manager = manager()
+
+        // When / Then
+        shouldThrow<FileBrowserException> { manager.copy(file.toString(), file.toString(), overwrite = true) }
+        file.readText() shouldBe "a"
+    }
+
+    @Test
+    fun `merges a directory copied over an existing one`() {
+        // Given
+        val source = Files.createDirectory(root.resolve("source"))
+        source.resolve("shared.txt").writeText("new")
+        source.resolve("only-source.txt").writeText("source")
+        val destination = Files.createDirectory(root.resolve("destination"))
+        destination.resolve("shared.txt").writeText("old")
+        destination.resolve("only-destination.txt").writeText("destination")
+        val manager = manager()
+
+        // When
+        manager.copy(source.toString(), destination.toString(), overwrite = true)
+
+        // Then
+        destination.resolve("shared.txt").readText() shouldBe "new"
+        destination.resolve("only-source.txt").readText() shouldBe "source"
+        destination.resolve("only-destination.txt").readText() shouldBe "destination"
+    }
+
+    @Test
+    fun `copies a batch and reports the ones that failed without undoing the rest`() {
+        // Given
+        root.resolve("a.txt").writeText("a")
+        root.resolve("b.txt").writeText("b")
+        val destination = Files.createDirectory(root.resolve("destination"))
+        val manager = manager()
+
+        // When
+        val outcome = manager.copyAll(
+            listOf(root.resolve("a.txt").toString(), root.resolve("missing.txt").toString(), root.resolve("b.txt").toString()),
+            destination.toString(),
+            overwrite = false
+        )
+
+        // Then
+        outcome.successes shouldContainExactly listOf(root.resolve("a.txt").toString(), root.resolve("b.txt").toString())
+        outcome.failures.single().path shouldBe root.resolve("missing.txt").toString()
+        destination.resolve("a.txt").readText() shouldBe "a"
+        destination.resolve("b.txt").readText() shouldBe "b"
+    }
+
+    @Test
+    fun `moves and deletes a batch by name into a directory`() {
+        // Given
+        root.resolve("a.txt").writeText("a")
+        root.resolve("b.txt").writeText("b")
+        val destination = Files.createDirectory(root.resolve("destination"))
+        val manager = manager()
+
+        // When
+        manager.moveAll(
+            listOf(root.resolve("a.txt").toString(), root.resolve("b.txt").toString()),
+            destination.toString(),
+            overwrite = false
+        )
+        val deleted = manager.deleteAll(listOf(destination.resolve("a.txt").toString()), recursive = false)
+
+        // Then
+        deleted.failures.shouldBeEmpty()
+        Files.exists(root.resolve("a.txt")) shouldBe false
+        Files.exists(destination.resolve("a.txt")) shouldBe false
+        destination.resolve("b.txt").readText() shouldBe "b"
+    }
+
+    @Test
+    fun `pages a directory in the same order as it lists it`() {
+        // Given
+        (1..9).forEach { root.resolve("file-$it.txt").writeText("$it") }
+        Files.createDirectory(root.resolve("directory"))
+        val manager = manager()
+        val listed = manager.listDirectory(root.toString()).entries.map { it.name }
+
+        // When
+        val paged = mutableListOf<String>()
+        var after: String? = null
+        do {
+            val page = manager.listDirectoryPage(root.toString(), after, 4)
+            paged += page.edges.map { it.node.name }
+            after = page.pageInfo.endCursor
+            page.totalCount shouldBe 10
+        } while (page.pageInfo.hasNextPage)
+
+        // Then
+        paged shouldContainExactly listed
+    }
+
+    @Test
+    fun `refuses a cursor it did not hand out`() {
+        // Given
+        root.resolve("a.txt").writeText("a")
+        val manager = manager()
+
+        // When / Then
+        shouldThrow<FileBrowserException> { manager.listDirectoryPage(root.toString(), "!! not a cursor !!", 10) }
     }
 
     @Test

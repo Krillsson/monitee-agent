@@ -90,4 +90,56 @@ class FileTypeRegistryTest {
         // Then
         result shouldBe false
     }
+
+    @ParameterizedTest
+    @CsvSource(
+        "bundle.zip, ZIP",
+        "backup.tar, TAR",
+        "backup.tar.gz, TAR_GZ",
+        "backup.TGZ, TAR_GZ",
+        "syslog.log.gz, GZIP"
+    )
+    fun `reads the archive format out of the name`(name: String, format: ArchiveFormat) {
+        // Given
+        val given = name
+
+        // When
+        val result = registry.archiveFormatOf(given)
+
+        // Then
+        result shouldBe format
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["photo.jpg", "notes.txt", "movie.mkv", ".gz", "bundle.zipper"])
+    fun `does not offer to extract anything else`(name: String) {
+        // Given
+        val given = name
+
+        // When
+        val result = registry.archiveFormatOf(given)
+
+        // Then
+        result shouldBe null
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "holiday.JPG, true",
+        "sketch.png, true",
+        "animation.gif, true",
+        "raw.cr2, false",
+        "movie.mkv, false",
+        "notes.txt, false"
+    )
+    fun `only offers a thumbnail for the image formats it can decode`(name: String, expected: Boolean) {
+        // Given
+        val given = name
+
+        // When
+        val result = registry.isThumbnailable(given)
+
+        // Then
+        result shouldBe expected
+    }
 }
