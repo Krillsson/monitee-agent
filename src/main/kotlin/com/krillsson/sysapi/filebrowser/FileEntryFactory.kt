@@ -44,6 +44,7 @@ class FileEntryFactory(
             isArchive = type == FileEntryType.FILE && fileTypeRegistry.archiveFormatOf(name) != null,
             hasThumbnail = type == FileEntryType.FILE &&
                     configuration.thumbnails &&
+                    ThumbnailSupport.available &&
                     fileTypeRegistry.isThumbnailable(name) &&
                     size <= configuration.maxThumbnailSourceBytes,
             isHidden = name.startsWith("."),

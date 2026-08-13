@@ -19,7 +19,7 @@
 - Feature: Browse, read, edit, download, upload and manage files in the directories listed under `fileBrowser` in `configuration.yml`
   - `access: READ` exposes browsing, searching, reading, downloading and thumbnails, `access: READ_WRITE` also allows saving, uploading, copying, moving, deleting, archives and the trash
   - Downloads and uploads are streamed over HTTP at `/files/download` and `/files/upload` rather than through GraphQL
-  - Every entry names an icon served from `/files/icons/{iconId}.svg`, and `GET /files/thumbnail?path=&size=` serves a downscaled image of one, cached under the data directory
+  - Every entry names an icon served from `/files/icons/{iconId}.svg`, and `GET /files/thumbnail?path=&size=` serves a downscaled image of one, cached under the data directory, on every build but the native one
   - A browsed log file can be opened in the log viewer and tailed like any configured one
   - `search` finds a name anywhere under a path and `directorySize` adds a directory up recursively, both bounded by a depth, a result count and a wall clock budget that they report running into
   - `extractArchive` unpacks zip, tar, tar.gz and gz, and `createArchive` packs a zip

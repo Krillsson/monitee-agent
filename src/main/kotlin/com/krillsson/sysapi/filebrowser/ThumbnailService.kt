@@ -21,6 +21,19 @@ import javax.imageio.ImageIO
 import javax.imageio.ImageWriteParam
 import kotlin.io.path.name
 
+/**
+ * ImageIO reaches AWT's Toolkit the first time it is touched, and the native image cannot load
+ * that JNI library. The failure is a fatal JNI error that takes the process down rather than
+ * something a caller can catch, so the native build must not reach ImageIO at all, not even to
+ * ask whether it has a JPEG writer.
+ */
+object ThumbnailSupport {
+
+    private const val NATIVE_IMAGE_CODE = "org.graalvm.nativeimage.imagecode"
+
+    val available: Boolean get() = System.getProperty(NATIVE_IMAGE_CODE) == null
+}
+
 @Service
 class ThumbnailService(
     private val configuration: FileBrowserConfiguration,
@@ -49,13 +62,12 @@ class ThumbnailService(
 
     val logger by logger()
 
-    init {
-        ImageIO.setUseCache(false)
-    }
-
     fun thumbnail(path: String, size: Int?): Path {
         if (!configuration.thumbnails) {
             throw FileBrowserException("Thumbnails are switched off")
+        }
+        if (!ThumbnailSupport.available) {
+            throw UnsupportedThumbnailException("This build of the agent cannot render images")
         }
         val file = sandbox.resolveExisting(path)
         if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
@@ -88,6 +100,7 @@ class ThumbnailService(
     }
 
     private fun render(file: Path, cached: Path, edge: Int) {
+        ImageIO.setUseCache(false)
         val source = read(file)
         val scaled = scale(source, edge)
         Files.createDirectories(cache)

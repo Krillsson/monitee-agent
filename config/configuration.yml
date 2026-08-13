@@ -76,7 +76,8 @@ fileBrowser:
   trash: true
   # how long a search or a recursive size is allowed to walk before it gives up and says so
   searchTimeoutSeconds: 20
-  # serve downscaled images from /files/thumbnail, cached under the data directory
+  # serve downscaled images from /files/thumbnail, cached under the data directory.
+  # The native build has no image decoder and refuses them whatever this says
   thumbnails: true
   # largest image a thumbnail is rendered from
   maxThumbnailSourceBytes: 67108864
