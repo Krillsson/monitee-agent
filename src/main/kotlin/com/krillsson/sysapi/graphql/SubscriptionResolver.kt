@@ -10,6 +10,8 @@ import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.filebrowser.FileOperation
+import com.krillsson.sysapi.filebrowser.FileOperationService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.InternetService
@@ -34,8 +36,12 @@ class SubscriptionResolver(
     val containerUpdateJobs: ContainerUpdateJobs,
     val serverIdService: ServerIdService,
     val upsService: UpsService,
-    val systemDaemonManager: SystemDaemonManager
+    val systemDaemonManager: SystemDaemonManager,
+    val fileOperations: FileOperationService
 ) {
+    @SubscriptionMapping
+    fun fileOperationProgress(@Argument id: String): Flux<FileOperation> = fileOperations.events(id)
+
     @SubscriptionMapping
     fun processorMetrics(): Flux<CpuLoad> {
         return metrics.cpuMetrics().cpuLoadEvents()

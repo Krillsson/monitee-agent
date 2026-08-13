@@ -31,7 +31,11 @@ class ArchiveService(
 
     val logger by logger()
 
-    private class Budget(private val maxEntries: Int, private val maxBytes: Long) {
+    private class Budget(
+        private val maxEntries: Int,
+        private val maxBytes: Long,
+        private val sink: FileOperationSink
+    ) {
         var entries = 0
             private set
         var bytes = 0L
@@ -45,23 +49,32 @@ class ArchiveService(
         }
 
         fun countBytes(written: Long) {
+            sink.addBytes(written)
             bytes += written
             if (bytes > maxBytes) {
                 throw FileBrowserException("The archive unpacks to more than $maxBytes bytes")
             }
         }
+
+        fun beginEntry(name: String, sizeBytes: Long) {
+            sink.requireNotCancelled()
+            sink.beginFile(name, sizeBytes)
+        }
+
+        fun completeEntry() = sink.fileDone()
     }
 
-    fun extract(path: String, destinationDirectory: String, overwrite: Boolean): ArchiveExtraction {
-        sandbox.requireWritable()
-        val archive = sandbox.resolveExisting(path)
-        if (!Files.isRegularFile(archive, LinkOption.NOFOLLOW_LINKS)) {
-            throw FileBrowserException("$path is not a file")
-        }
+    fun extract(
+        path: String,
+        destinationDirectory: String,
+        overwrite: Boolean,
+        sink: FileOperationSink = NoFileOperationSink
+    ): ArchiveExtraction {
+        val archive = prepareExtract(path)
         val format = fileTypeRegistry.archiveFormatOf(archive.name)
             ?: throw FileBrowserException("${archive.name} is not an archive this agent can open")
         val destination = manager.requireDirectory(destinationDirectory)
-        val budget = Budget(configuration.maxArchiveEntries, configuration.maxArchiveBytes)
+        val budget = Budget(configuration.maxArchiveEntries, configuration.maxArchiveBytes, sink)
         Files.newInputStream(archive).buffered().use { input ->
             when (format) {
                 ArchiveFormat.ZIP -> extractZip(input, destination, overwrite, budget)
@@ -70,11 +83,26 @@ class ArchiveService(
                 ArchiveFormat.GZIP -> extractGzip(input, archive, destination, overwrite, budget)
             }
         }
+        if (budget.entries == 0) {
+            throw FileBrowserException("${archive.name} does not hold anything this agent can read as an archive")
+        }
         logger.info("Extracted ${budget.entries} entries of $archive into $destination")
         return ArchiveExtraction(manager.entryOf(destination), budget.entries, budget.bytes)
     }
 
-    fun create(sources: List<String>, destination: String, overwrite: Boolean): FileEntry {
+    fun prepareExtract(path: String): Path {
+        sandbox.requireWritable()
+        val archive = sandbox.resolveExisting(path)
+        if (!Files.isRegularFile(archive, LinkOption.NOFOLLOW_LINKS)) {
+            throw FileBrowserException("$path is not a file")
+        }
+        if (fileTypeRegistry.archiveFormatOf(archive.name) == null) {
+            throw FileBrowserException("${archive.name} is not an archive this agent can open")
+        }
+        return archive
+    }
+
+    fun prepareCreate(sources: List<String>, destination: String, overwrite: Boolean): Pair<List<Path>, Path> {
         sandbox.requireWritable()
         if (sources.isEmpty()) {
             throw FileBrowserException("No paths were given")
@@ -94,7 +122,17 @@ class ArchiveService(
         val roots = sources.map { sandbox.resolveExisting(it) }
         roots.firstOrNull { target.startsWith(it) }
             ?.let { throw FileBrowserException("$destination would be inside $it, which it is archiving") }
-        val budget = Budget(configuration.maxArchiveEntries, configuration.maxArchiveBytes)
+        return roots to target
+    }
+
+    fun create(
+        sources: List<String>,
+        destination: String,
+        overwrite: Boolean,
+        sink: FileOperationSink = NoFileOperationSink
+    ): FileEntry {
+        val (roots, target) = prepareCreate(sources, destination, overwrite)
+        val budget = Budget(configuration.maxArchiveEntries, configuration.maxArchiveBytes, sink)
         manager.writeAtomically(target) { temp ->
             ZipOutputStream(Files.newOutputStream(temp).buffered()).use { zip ->
                 roots.forEach { source -> addToZip(zip, source, budget) }
@@ -110,11 +148,13 @@ class ArchiveService(
                 val entry: ZipEntry = zip.nextEntry ?: break
                 budget.countEntry()
                 val target = targetOf(destination, entry.name)
+                budget.beginEntry(entry.name, entry.size.coerceAtLeast(0))
                 if (entry.isDirectory) {
                     createDirectory(target)
                 } else {
                     writeEntry(zip, target, overwrite, budget)
                 }
+                budget.completeEntry()
                 zip.closeEntry()
             }
         }
@@ -124,11 +164,13 @@ class ArchiveService(
         TarArchive(BufferedInputStream(input)).forEach { entry, data ->
             budget.countEntry()
             val target = targetOf(destination, entry.name)
+            budget.beginEntry(entry.name, entry.sizeBytes)
             if (entry.directory) {
                 createDirectory(target)
             } else {
                 writeEntry(data, target, overwrite, budget)
             }
+            budget.completeEntry()
         }
     }
 
@@ -141,7 +183,9 @@ class ArchiveService(
     ) {
         val name = archive.name.dropLast(".gz".length)
         budget.countEntry()
+        budget.beginEntry(name, 0)
         GZIPInputStream(input).use { data -> writeEntry(data, targetOf(destination, name), overwrite, budget) }
+        budget.completeEntry()
     }
 
     /**
@@ -227,8 +271,10 @@ class ArchiveService(
                     return FileVisitResult.SKIP_SUBTREE
                 }
                 budget.countEntry()
+                budget.beginEntry(entryNameOf(base, dir), 0)
                 zip.putNextEntry(ZipEntry(entryNameOf(base, dir) + "/"))
                 zip.closeEntry()
+                budget.completeEntry()
                 return FileVisitResult.CONTINUE
             }
 
@@ -237,11 +283,14 @@ class ArchiveService(
                     return FileVisitResult.CONTINUE
                 }
                 budget.countEntry()
-                val entry = ZipEntry(entryNameOf(base, file))
+                val name = entryNameOf(base, file)
+                budget.beginEntry(name, attrs.size())
+                val entry = ZipEntry(name)
                 entry.lastModifiedTime = attrs.lastModifiedTime()
                 zip.putNextEntry(entry)
                 Files.newInputStream(file).use { input -> copy(input, zip, budget) }
                 zip.closeEntry()
+                budget.completeEntry()
                 return FileVisitResult.CONTINUE
             }
 

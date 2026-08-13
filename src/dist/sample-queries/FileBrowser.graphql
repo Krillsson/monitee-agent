@@ -114,10 +114,63 @@ mutation SaveTextFile {
     }
 }
 
+# Copy, move, delete and the archive mutations start an operation and answer straight away.
+# Follow it with the fileOperationProgress subscription below, or read it back with
+# fileBrowser.fileOperation. success is false only when the request was refused outright
 mutation MoveFile {
     moveFile(input: { source: "/storage/notes.txt", destination: "/storage/archive/notes.txt", overwrite: false }) {
         success
         reason
+        operation {
+            id
+            state
+        }
+    }
+}
+
+subscription FileOperationProgress {
+    fileOperationProgress(id: "3c98243a-4dd7-40ed-9abc-ec7981d79897") {
+        id
+        type
+        state
+        currentPath
+        processedFiles
+        totalFiles
+        processedBytes
+        totalBytes
+        successes
+        failures {
+            path
+            reason
+        }
+        reason
+        finishedAt
+    }
+}
+
+query FileOperations {
+    fileBrowser {
+        fileOperations {
+            id
+            type
+            state
+            paths
+            destination
+            startedAt
+            finishedAt
+            processedFiles
+            totalFiles
+        }
+    }
+}
+
+mutation CancelFileOperation {
+    cancelFileOperation(input: { id: "3c98243a-4dd7-40ed-9abc-ec7981d79897" }) {
+        success
+        reason
+        operation {
+            state
+        }
     }
 }
 
@@ -132,10 +185,8 @@ mutation CopyFiles {
     ) {
         success
         reason
-        successes
-        failures {
-            path
-            reason
+        operation {
+            id
         }
     }
 }
@@ -146,10 +197,8 @@ mutation ExtractArchive {
     ) {
         success
         reason
-        entryCount
-        totalBytes
-        entry {
-            path
+        operation {
+            id
         }
     }
 }
@@ -160,9 +209,8 @@ mutation CreateArchive {
     ) {
         success
         reason
-        entry {
-            path
-            sizeBytes
+        operation {
+            id
         }
     }
 }
@@ -192,7 +240,9 @@ mutation EmptyTrash {
     emptyTrash(input: { id: null }) {
         success
         reason
-        deletedCount
+        operation {
+            id
+        }
     }
 }
 

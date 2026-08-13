@@ -146,43 +146,45 @@ class FileBrowserManager(
         logger.info("Wrote ${bytes.size} bytes to $file")
     }
 
-    fun copy(source: String, destination: String, overwrite: Boolean = false) {
-        sandbox.requireWritable()
-        val from = sandbox.resolveExisting(source)
-        val to = destinationFor(from, destination, overwrite)
-        copyInto(from, to)
-        logger.info("Copied $from to $to")
+    fun copy(
+        source: String,
+        destination: String,
+        overwrite: Boolean = false,
+        sink: FileOperationSink = NoFileOperationSink
+    ) {
+        val (from, to) = prepareCopy(source, destination, overwrite)
+        runCopy(from, to, sink)
     }
 
-    fun move(source: String, destination: String, overwrite: Boolean = false) {
+    fun move(
+        source: String,
+        destination: String,
+        overwrite: Boolean = false,
+        sink: FileOperationSink = NoFileOperationSink
+    ) {
+        val (from, to) = prepareMove(source, destination, overwrite)
+        runMove(from, to, overwrite, sink)
+    }
+
+    fun delete(path: String, recursive: Boolean, sink: FileOperationSink = NoFileOperationSink) {
+        val target = prepareDelete(path, recursive)
+        runDelete(target, sink)
+    }
+
+    fun prepareCopy(source: String, destination: String, overwrite: Boolean): Pair<Path, Path> {
+        sandbox.requireWritable()
+        val from = sandbox.resolveExisting(source)
+        return from to destinationFor(from, destination, overwrite)
+    }
+
+    fun prepareMove(source: String, destination: String, overwrite: Boolean): Pair<Path, Path> {
         sandbox.requireWritable()
         val from = sandbox.resolveExisting(source)
         requireMovable(from, source)
-        val to = destinationFor(from, destination, overwrite)
-        moveInto(from, to, overwrite)
-        logger.info("Moved $from to $to")
+        return from to destinationFor(from, destination, overwrite)
     }
 
-    fun copyAll(sources: List<String>, destinationDirectory: String, overwrite: Boolean): BatchFileOutcome {
-        sandbox.requireWritable()
-        return batch(sources) { source ->
-            copy(source, targetIn(destinationDirectory, source).toString(), overwrite)
-        }
-    }
-
-    fun moveAll(sources: List<String>, destinationDirectory: String, overwrite: Boolean): BatchFileOutcome {
-        sandbox.requireWritable()
-        return batch(sources) { source ->
-            move(source, targetIn(destinationDirectory, source).toString(), overwrite)
-        }
-    }
-
-    fun deleteAll(paths: List<String>, recursive: Boolean): BatchFileOutcome {
-        sandbox.requireWritable()
-        return batch(paths) { path -> delete(path, recursive) }
-    }
-
-    fun delete(path: String, recursive: Boolean) {
+    fun prepareDelete(path: String, recursive: Boolean): Path {
         sandbox.requireWritable()
         val target = sandbox.resolveExisting(path)
         if (sandbox.isRoot(target)) {
@@ -193,11 +195,34 @@ class FileBrowserManager(
             if (!empty && !recursive) {
                 throw FileBrowserException("$path is not empty. Send recursive to delete it with everything in it")
             }
-            deleteRecursively(target)
+        }
+        return target
+    }
+
+    fun runCopy(from: Path, to: Path, sink: FileOperationSink) {
+        copyInto(from, to, sink)
+        logger.info("Copied $from to $to")
+    }
+
+    fun runMove(from: Path, to: Path, overwrite: Boolean, sink: FileOperationSink) {
+        moveInto(from, to, overwrite, sink)
+        logger.info("Moved $from to $to")
+    }
+
+    fun runDelete(target: Path, sink: FileOperationSink) {
+        if (Files.isDirectory(target)) {
+            deleteRecursively(target, sink)
         } else {
+            sink.beginFile(target.toString(), 0)
             Files.delete(target)
+            sink.fileDone()
         }
         logger.info("Deleted $target")
+    }
+
+    fun targetIn(destinationDirectory: String, source: String): Path {
+        val name = sandbox.resolveExisting(source).name
+        return sandbox.resolveInDirectory(destinationDirectory, name)
     }
 
     fun createDirectory(path: String): FileEntry {
@@ -246,29 +271,72 @@ class FileBrowserManager(
         return directory
     }
 
-    fun copyInto(from: Path, to: Path) {
+    fun copyInto(from: Path, to: Path, sink: FileOperationSink = NoFileOperationSink) {
         if (Files.isDirectory(from)) {
-            copyRecursively(from, to)
-        } else if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
-            writeAtomically(to) { temp ->
-                Files.copy(from, temp, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES)
-            }
+            copyRecursively(from, to, sink)
         } else {
-            Files.copy(from, to, StandardCopyOption.COPY_ATTRIBUTES)
+            copyFile(from, to, sink)
         }
     }
 
-    fun moveInto(from: Path, to: Path, overwrite: Boolean) {
+    /**
+     * A move that cannot be a rename falls back to copying and then deleting, so that crossing a
+     * volume reports progress and can be cancelled like any other copy. Files.move would do the
+     * same thing internally, but in one call that says nothing until it is over.
+     *
+     * A rename moves no bytes, so it counts the file's own size as moved rather than leaving a
+     * progress bar sitting at nothing until the operation is suddenly over.
+     */
+    fun moveInto(from: Path, to: Path, overwrite: Boolean, sink: FileOperationSink = NoFileOperationSink) {
         val options = if (overwrite && Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
             arrayOf(StandardCopyOption.REPLACE_EXISTING)
         } else {
             emptyArray()
         }
         try {
+            val size = if (Files.isRegularFile(from, LinkOption.NOFOLLOW_LINKS)) Files.size(from) else 0L
+            sink.beginFile(from.toString(), size)
             Files.move(from, to, *options, StandardCopyOption.ATOMIC_MOVE)
+            sink.addBytes(size)
+            sink.fileDone()
         } catch (ex: AtomicMoveNotSupportedException) {
-            Files.move(from, to, *options)
+            copyInto(from, to, sink)
+            if (Files.isDirectory(from)) {
+                deleteRecursively(from, NoFileOperationSink)
+            } else {
+                Files.delete(from)
+            }
         }
+    }
+
+    private fun copyFile(from: Path, to: Path, sink: FileOperationSink) {
+        sink.beginFile(from.toString(), runCatching { Files.size(from) }.getOrDefault(0L))
+        writeAtomically(to) { temp -> streamInto(from, temp, sink) }
+        copyAttributesOf(from, to)
+        sink.fileDone()
+    }
+
+    private fun streamInto(from: Path, to: Path, sink: FileOperationSink) {
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        Files.newInputStream(from).use { input ->
+            FileOutputStream(to.toFile()).use { output ->
+                while (true) {
+                    sink.requireNotCancelled()
+                    val read = input.read(buffer)
+                    if (read < 0) {
+                        break
+                    }
+                    output.write(buffer, 0, read)
+                    sink.addBytes(read.toLong())
+                }
+                output.flush()
+            }
+        }
+    }
+
+    private fun copyAttributesOf(from: Path, to: Path) {
+        runCatching { Files.setPosixFilePermissions(to, Files.getPosixFilePermissions(from)) }
+        runCatching { Files.setLastModifiedTime(to, Files.getLastModifiedTime(from)) }
     }
 
     fun <T> writeAtomically(target: Path, write: (Path) -> T): T {
@@ -283,32 +351,6 @@ class FileBrowserManager(
             runCatching { Files.deleteIfExists(temp) }
             throw ex
         }
-    }
-
-    private fun batch(paths: List<String>, action: (String) -> Unit): BatchFileOutcome {
-        if (paths.isEmpty()) {
-            throw FileBrowserException("No paths were given")
-        }
-        if (paths.size > MAX_BATCH_SIZE) {
-            throw FileBrowserException("A batch cannot hold more than $MAX_BATCH_SIZE paths")
-        }
-        val successes = mutableListOf<String>()
-        val failures = mutableListOf<FileOperationFailure>()
-        paths.forEach { path ->
-            try {
-                action(path)
-                successes += path
-            } catch (ex: Exception) {
-                logger.info("$path was left alone: ${ex.message}")
-                failures += FileOperationFailure(path, ex.message ?: requireNotNull(ex::class.simpleName))
-            }
-        }
-        return BatchFileOutcome(successes, failures)
-    }
-
-    private fun targetIn(destinationDirectory: String, source: String): Path {
-        val name = sandbox.resolveExisting(source).name
-        return sandbox.resolveInDirectory(destinationDirectory, name)
     }
 
     private fun readDirectory(directory: Path, consume: (Path) -> Boolean) {
@@ -420,31 +462,30 @@ class FileBrowserManager(
         Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS).isDirectory
     }.getOrDefault(false)
 
-    private fun copyRecursively(from: Path, to: Path) {
+    private fun copyRecursively(from: Path, to: Path, sink: FileOperationSink) {
         Files.walkFileTree(from, object : SimpleFileVisitor<Path>() {
             override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                sink.requireNotCancelled()
                 Files.createDirectories(to.resolve(from.relativize(dir)))
                 return FileVisitResult.CONTINUE
             }
 
             override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
                 if (!attrs.isSymbolicLink) {
-                    Files.copy(
-                        file,
-                        to.resolve(from.relativize(file)),
-                        StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.COPY_ATTRIBUTES
-                    )
+                    copyFile(file, to.resolve(from.relativize(file)), sink)
                 }
                 return FileVisitResult.CONTINUE
             }
         })
     }
 
-    private fun deleteRecursively(target: Path) {
+    private fun deleteRecursively(target: Path, sink: FileOperationSink) {
         Files.walkFileTree(target, object : SimpleFileVisitor<Path>() {
             override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                sink.requireNotCancelled()
+                sink.beginFile(file.toString(), attrs.size())
                 Files.delete(file)
+                sink.fileDone()
                 return FileVisitResult.CONTINUE
             }
 

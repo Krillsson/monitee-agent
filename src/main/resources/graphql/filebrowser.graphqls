@@ -2,35 +2,45 @@ extend type Query {
     fileBrowser: FileBrowser!
 }
 
+extend type Subscription {
+    # Follow a copy, move, delete or archive operation until it is over.
+    # The current state arrives immediately, so subscribing to something that already
+    # finished answers with its outcome instead of waiting. The stream completes when the
+    # operation reaches COMPLETED, FAILED or CANCELLED
+    fileOperationProgress(id: ID!): FileOperation!
+}
+
 extend type Mutation {
     # Replace the contents of a text file. Requires READ_WRITE
     saveTextFile(input: SaveTextFileInput!): SaveTextFileOutput!
     # Copy a file, or a directory with everything in it. Requires READ_WRITE
-    copyFile(input: CopyFileInput!): CopyFileOutput!
+    copyFile(input: CopyFileInput!): FileOperationOutput!
     # Move a file or a directory. Renaming is a move within the same directory. Requires READ_WRITE
-    moveFile(input: MoveFileInput!): MoveFileOutput!
+    moveFile(input: MoveFileInput!): FileOperationOutput!
     # Delete a file or a directory. Requires READ_WRITE
-    deleteFile(input: DeleteFileInput!): DeleteFileOutput!
+    deleteFile(input: DeleteFileInput!): FileOperationOutput!
     # Create a directory. Its parent has to exist already. Requires READ_WRITE
     createDirectory(input: CreateDirectoryInput!): CreateDirectoryOutput!
     # Copy several files or directories into one directory, keeping their names. Each one
     # is reported on its own, so a batch where one fails still copies the rest. Requires READ_WRITE
-    copyFiles(input: CopyFilesInput!): BatchFileOutput!
+    copyFiles(input: CopyFilesInput!): FileOperationOutput!
     # Move several files or directories into one directory, keeping their names. Requires READ_WRITE
-    moveFiles(input: MoveFilesInput!): BatchFileOutput!
+    moveFiles(input: MoveFilesInput!): FileOperationOutput!
     # Delete several files or directories. Requires READ_WRITE
-    deleteFiles(input: DeleteFilesInput!): BatchFileOutput!
+    deleteFiles(input: DeleteFilesInput!): FileOperationOutput!
     # Unpack a zip, tar, tar.gz or gz into a directory that already exists. Requires READ_WRITE
-    extractArchive(input: ExtractArchiveInput!): ExtractArchiveOutput!
+    extractArchive(input: ExtractArchiveInput!): FileOperationOutput!
     # Pack files and directories into a zip. Requires READ_WRITE
-    createArchive(input: CreateArchiveInput!): CreateArchiveOutput!
+    createArchive(input: CreateArchiveInput!): FileOperationOutput!
     # Move a file or directory into the trash of the root it lives in, from where it can be
     # restored. Requires READ_WRITE
     moveToTrash(input: MoveToTrashInput!): MoveToTrashOutput!
     # Put a trashed file back where it came from. Requires READ_WRITE
     restoreFromTrash(input: RestoreFromTrashInput!): RestoreFromTrashOutput!
     # Delete one trashed entry, or the whole trash of every root. Requires READ_WRITE
-    emptyTrash(input: EmptyTrashInput!): EmptyTrashOutput!
+    emptyTrash(input: EmptyTrashInput!): FileOperationOutput!
+    # Ask a running operation to stop. What it has already done stays done. Requires READ_WRITE
+    cancelFileOperation(input: CancelFileOperationInput!): FileOperationOutput!
 }
 
 # Browsing of the directories listed under fileBrowser.roots in configuration.yml.
@@ -62,6 +72,11 @@ type FileBrowser {
     trashEnabled: Boolean!
     # Everything in the trash of every root, most recently deleted first
     trash: [TrashEntry!]!
+    # Operations that are running, and the ones that finished within
+    # fileBrowser.fileOperationRetentionMinutes, most recently started first
+    fileOperations: [FileOperation!]!
+    # Null once an operation is too old to still be held
+    fileOperation(id: ID!): FileOperation
 }
 
 enum FileBrowserAccess {
@@ -268,21 +283,6 @@ type SaveTextFileOutput {
     reason: String
 }
 
-type CopyFileOutput {
-    success: Boolean!
-    reason: String
-}
-
-type MoveFileOutput {
-    success: Boolean!
-    reason: String
-}
-
-type DeleteFileOutput {
-    success: Boolean!
-    reason: String
-}
-
 type CreateDirectoryOutput {
     success: Boolean!
     reason: String
@@ -295,29 +295,63 @@ type FileOperationFailure {
     reason: String!
 }
 
-# A batch is not undone when one of its paths fails, so both lists can hold something
-type BatchFileOutput {
-    success: Boolean!
-    # What went wrong with the batch as a whole, when it was refused before anything was touched
-    reason: String
+enum FileOperationType {
+    COPY,
+    MOVE,
+    DELETE,
+    EXTRACT_ARCHIVE,
+    CREATE_ARCHIVE,
+    EMPTY_TRASH
+}
+
+enum FileOperationState {
+    RUNNING,
+    # Finished. A batch can complete with entries in failures
+    COMPLETED,
+    # Gave up, and reason says why. What it had already done stays done
+    FAILED,
+    CANCELLED
+}
+
+# Anything that can take a while runs in the background and is followed through here.
+# Subscribe with fileOperationProgress, or read it with fileOperation
+type FileOperation {
+    id: ID!
+    type: FileOperationType!
+    state: FileOperationState!
+    # What it was asked to work on
+    paths: [String!]!
+    # Where it is putting them, for the types that have somewhere to put them
+    destination: String
+    startedAt: Instant!
+    finishedAt: Instant
+    # The file being worked on right now, null once it is over
+    currentPath: String
+    # Individual files done so far, which for a directory counts what is inside it
+    processedFiles: Int!
+    # Null when it would have taken a walk to work out, so show a count rather than a bar
+    totalFiles: Int
+    processedBytes: Long!
+    # Null for the same reason as totalFiles, and always null for a delete
+    totalBytes: Long
+    # The requested paths that worked, and the ones that did not. A batch attempts all of
+    # them, so a failure here does not undo the entries in successes
     successes: [String!]!
     failures: [FileOperationFailure!]!
+    # Why it stopped, when state is FAILED
+    reason: String
 }
 
-type ExtractArchiveOutput {
+# The operation was accepted and has started. Follow it with fileOperationProgress.
+# success is false when it was refused outright, which is checked before anything is touched
+type FileOperationOutput {
     success: Boolean!
     reason: String
-    # The directory that was unpacked into, when success is true
-    entry: FileEntry
-    entryCount: Int!
-    totalBytes: Long!
+    operation: FileOperation
 }
 
-type CreateArchiveOutput {
-    success: Boolean!
-    reason: String
-    # The archive that was written, when success is true
-    entry: FileEntry
+input CancelFileOperationInput {
+    id: ID!
 }
 
 type MoveToTrashOutput {
@@ -333,8 +367,4 @@ type RestoreFromTrashOutput {
     entry: FileEntry
 }
 
-type EmptyTrashOutput {
-    success: Boolean!
-    reason: String
-    deletedCount: Int!
-}
+

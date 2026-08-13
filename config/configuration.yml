@@ -57,8 +57,7 @@ logReader:
 # browse, read and manage files in the directories listed under roots
 fileBrowser:
   enabled: false
-  # READ or READ_WRITE. READ_WRITE enables editing, upload, copy, move, delete,
-  # archives and the trash
+  # READ or READ_WRITE. READ_WRITE enables editing, upload, copy, move and delete
   access: READ
   # the directories the browser is allowed inside. Nothing outside of them can be reached.
   # In docker, bind mount a host directory (for example - /mnt/user:/storage) and list the
@@ -71,21 +70,6 @@ fileBrowser:
   maxUploadBytes: 0
   # largest browsed file that can be opened in the log viewer
   maxLogViewBytes: 33554432
-  # a .monitee-trash directory inside each root, that moveToTrash puts things in and
-  # restoreFromTrash takes them back out of. deleteFile still deletes outright
-  trash: true
-  # how long a search or a recursive size is allowed to walk before it gives up and says so
-  searchTimeoutSeconds: 20
-  # serve downscaled images from /files/thumbnail, cached under the data directory.
-  # The native build has no image decoder and refuses them whatever this says
-  thumbnails: true
-  # largest image a thumbnail is rendered from
-  maxThumbnailSourceBytes: 67108864
-  # how much of the data directory the thumbnail cache is allowed to fill
-  maxThumbnailCacheBytes: 268435456
-  # what an archive is allowed to unpack to, which is what makes a zip bomb harmless
-  maxArchiveEntries: 100000
-  maxArchiveBytes: 21474836480
 # docker management and metrics support
 ups:
   enabled: false

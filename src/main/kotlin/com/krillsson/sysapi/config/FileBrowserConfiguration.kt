@@ -18,5 +18,6 @@ data class FileBrowserConfiguration(
     val maxThumbnailSourceBytes: Long = 67_108_864,
     val maxThumbnailCacheBytes: Long = 268_435_456,
     val maxArchiveEntries: Int = 100_000,
-    val maxArchiveBytes: Long = 21_474_836_480
+    val maxArchiveBytes: Long = 21_474_836_480,
+    val fileOperationRetentionMinutes: Long = 30
 )

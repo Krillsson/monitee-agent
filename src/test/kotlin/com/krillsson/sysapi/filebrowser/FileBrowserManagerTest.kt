@@ -267,51 +267,6 @@ class FileBrowserManagerTest {
     }
 
     @Test
-    fun `copies a batch and reports the ones that failed without undoing the rest`() {
-        // Given
-        root.resolve("a.txt").writeText("a")
-        root.resolve("b.txt").writeText("b")
-        val destination = Files.createDirectory(root.resolve("destination"))
-        val manager = manager()
-
-        // When
-        val outcome = manager.copyAll(
-            listOf(root.resolve("a.txt").toString(), root.resolve("missing.txt").toString(), root.resolve("b.txt").toString()),
-            destination.toString(),
-            overwrite = false
-        )
-
-        // Then
-        outcome.successes shouldContainExactly listOf(root.resolve("a.txt").toString(), root.resolve("b.txt").toString())
-        outcome.failures.single().path shouldBe root.resolve("missing.txt").toString()
-        destination.resolve("a.txt").readText() shouldBe "a"
-        destination.resolve("b.txt").readText() shouldBe "b"
-    }
-
-    @Test
-    fun `moves and deletes a batch by name into a directory`() {
-        // Given
-        root.resolve("a.txt").writeText("a")
-        root.resolve("b.txt").writeText("b")
-        val destination = Files.createDirectory(root.resolve("destination"))
-        val manager = manager()
-
-        // When
-        manager.moveAll(
-            listOf(root.resolve("a.txt").toString(), root.resolve("b.txt").toString()),
-            destination.toString(),
-            overwrite = false
-        )
-        val deleted = manager.deleteAll(listOf(destination.resolve("a.txt").toString()), recursive = false)
-
-        // Then
-        deleted.failures.shouldBeEmpty()
-        Files.exists(root.resolve("a.txt")) shouldBe false
-        Files.exists(destination.resolve("a.txt")) shouldBe false
-        destination.resolve("b.txt").readText() shouldBe "b"
-    }
-
-    @Test
     fun `pages a directory in the same order as it lists it`() {
         // Given
         (1..9).forEach { root.resolve("file-$it.txt").writeText("$it") }

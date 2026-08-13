@@ -24,6 +24,9 @@
   - `search` finds a name anywhere under a path and `directorySize` adds a directory up recursively, both bounded by a depth, a result count and a wall clock budget that they report running into
   - `extractArchive` unpacks zip, tar, tar.gz and gz, and `createArchive` packs a zip
   - Copying, moving and deleting take a whole selection in one call and report each path that failed without undoing the rest, and a copy or a move can be told to overwrite what is already at the destination
+  - Copy, move, delete and the archive mutations now start a `FileOperation` and answer immediately instead of holding the request open until they are done
+  - Follow one with the `fileOperationProgress` subscription, which reports the file being worked on, how much has moved and how it ended, and answers with the outcome even when it is asked after the operation already finished
+  - `cancelFileOperation` stops a copy or a delete part way through, which was previously only possible by restarting the agent
   - `moveToTrash` puts a file in a `.monitee-trash` directory inside its root, which `restoreFromTrash` takes it back out of and `emptyTrash` empties
   - `FileEntry` carries the POSIX metadata a properties sheet shows, and `listDirectoryConnection` pages a directory holding more entries than `listDirectory` returns
   - See `sample-queries/FileBrowser.graphql`

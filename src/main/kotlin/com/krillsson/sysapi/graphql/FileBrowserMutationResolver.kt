@@ -1,27 +1,21 @@
 package com.krillsson.sysapi.graphql
 
-import com.krillsson.sysapi.filebrowser.ArchiveService
-import com.krillsson.sysapi.filebrowser.BatchFileOutcome
 import com.krillsson.sysapi.filebrowser.FileBrowserException
 import com.krillsson.sysapi.filebrowser.FileBrowserManager
+import com.krillsson.sysapi.filebrowser.FileOperationService
 import com.krillsson.sysapi.filebrowser.TrashService
-import com.krillsson.sysapi.graphql.mutations.BatchFileOutput
+import com.krillsson.sysapi.graphql.mutations.CancelFileOperationInput
 import com.krillsson.sysapi.graphql.mutations.CopyFileInput
-import com.krillsson.sysapi.graphql.mutations.CopyFileOutput
 import com.krillsson.sysapi.graphql.mutations.CopyFilesInput
 import com.krillsson.sysapi.graphql.mutations.CreateArchiveInput
-import com.krillsson.sysapi.graphql.mutations.CreateArchiveOutput
 import com.krillsson.sysapi.graphql.mutations.CreateDirectoryInput
 import com.krillsson.sysapi.graphql.mutations.CreateDirectoryOutput
 import com.krillsson.sysapi.graphql.mutations.DeleteFileInput
-import com.krillsson.sysapi.graphql.mutations.DeleteFileOutput
 import com.krillsson.sysapi.graphql.mutations.DeleteFilesInput
 import com.krillsson.sysapi.graphql.mutations.EmptyTrashInput
-import com.krillsson.sysapi.graphql.mutations.EmptyTrashOutput
 import com.krillsson.sysapi.graphql.mutations.ExtractArchiveInput
-import com.krillsson.sysapi.graphql.mutations.ExtractArchiveOutput
+import com.krillsson.sysapi.graphql.mutations.FileOperationOutput
 import com.krillsson.sysapi.graphql.mutations.MoveFileInput
-import com.krillsson.sysapi.graphql.mutations.MoveFileOutput
 import com.krillsson.sysapi.graphql.mutations.MoveFilesInput
 import com.krillsson.sysapi.graphql.mutations.MoveToTrashInput
 import com.krillsson.sysapi.graphql.mutations.MoveToTrashOutput
@@ -37,7 +31,7 @@ import org.springframework.stereotype.Controller
 @Controller
 class FileBrowserMutationResolver(
     private val manager: FileBrowserManager,
-    private val archiveService: ArchiveService,
+    private val operations: FileOperationService,
     private val trashService: TrashService
 ) {
 
@@ -51,25 +45,16 @@ class FileBrowserMutationResolver(
         }
 
     @MutationMapping
-    fun copyFile(@Argument input: CopyFileInput): CopyFileOutput =
-        attempt("Copying ${input.source}", { CopyFileOutput(false, it) }) {
-            manager.copy(input.source, input.destination, input.overwrite)
-            CopyFileOutput(true, null)
-        }
+    fun copyFile(@Argument input: CopyFileInput): FileOperationOutput =
+        started("Copying ${input.source}") { operations.copy(input.source, input.destination, input.overwrite) }
 
     @MutationMapping
-    fun moveFile(@Argument input: MoveFileInput): MoveFileOutput =
-        attempt("Moving ${input.source}", { MoveFileOutput(false, it) }) {
-            manager.move(input.source, input.destination, input.overwrite)
-            MoveFileOutput(true, null)
-        }
+    fun moveFile(@Argument input: MoveFileInput): FileOperationOutput =
+        started("Moving ${input.source}") { operations.move(input.source, input.destination, input.overwrite) }
 
     @MutationMapping
-    fun deleteFile(@Argument input: DeleteFileInput): DeleteFileOutput =
-        attempt("Deleting ${input.path}", { DeleteFileOutput(false, it) }) {
-            manager.delete(input.path, input.recursive)
-            DeleteFileOutput(true, null)
-        }
+    fun deleteFile(@Argument input: DeleteFileInput): FileOperationOutput =
+        started("Deleting ${input.path}") { operations.delete(input.path, input.recursive) }
 
     @MutationMapping
     fun createDirectory(@Argument input: CreateDirectoryInput): CreateDirectoryOutput =
@@ -78,35 +63,36 @@ class FileBrowserMutationResolver(
         }
 
     @MutationMapping
-    fun copyFiles(@Argument input: CopyFilesInput): BatchFileOutput =
-        attempt("Copying ${input.sources.size} paths", { refusedBatch(it) }) {
-            manager.copyAll(input.sources, input.destinationDirectory, input.overwrite).asOutput()
+    fun copyFiles(@Argument input: CopyFilesInput): FileOperationOutput =
+        started("Copying ${input.sources.size} paths") {
+            operations.copyAll(input.sources, input.destinationDirectory, input.overwrite)
         }
 
     @MutationMapping
-    fun moveFiles(@Argument input: MoveFilesInput): BatchFileOutput =
-        attempt("Moving ${input.sources.size} paths", { refusedBatch(it) }) {
-            manager.moveAll(input.sources, input.destinationDirectory, input.overwrite).asOutput()
+    fun moveFiles(@Argument input: MoveFilesInput): FileOperationOutput =
+        started("Moving ${input.sources.size} paths") {
+            operations.moveAll(input.sources, input.destinationDirectory, input.overwrite)
         }
 
     @MutationMapping
-    fun deleteFiles(@Argument input: DeleteFilesInput): BatchFileOutput =
-        attempt("Deleting ${input.paths.size} paths", { refusedBatch(it) }) {
-            manager.deleteAll(input.paths, input.recursive).asOutput()
+    fun deleteFiles(@Argument input: DeleteFilesInput): FileOperationOutput =
+        started("Deleting ${input.paths.size} paths") { operations.deleteAll(input.paths, input.recursive) }
+
+    @MutationMapping
+    fun extractArchive(@Argument input: ExtractArchiveInput): FileOperationOutput =
+        started("Extracting ${input.path}") {
+            operations.extractArchive(input.path, input.destinationDirectory, input.overwrite)
         }
 
     @MutationMapping
-    fun extractArchive(@Argument input: ExtractArchiveInput): ExtractArchiveOutput =
-        attempt("Extracting ${input.path}", { ExtractArchiveOutput(false, it, null, 0, 0) }) {
-            val extraction = archiveService.extract(input.path, input.destinationDirectory, input.overwrite)
-            ExtractArchiveOutput(true, null, extraction.entry, extraction.entryCount, extraction.totalBytes)
+    fun createArchive(@Argument input: CreateArchiveInput): FileOperationOutput =
+        started("Archiving into ${input.destination}") {
+            operations.createArchive(input.sources, input.destination, input.overwrite)
         }
 
     @MutationMapping
-    fun createArchive(@Argument input: CreateArchiveInput): CreateArchiveOutput =
-        attempt("Archiving into ${input.destination}", { CreateArchiveOutput(false, it, null) }) {
-            CreateArchiveOutput(true, null, archiveService.create(input.sources, input.destination, input.overwrite))
-        }
+    fun cancelFileOperation(@Argument input: CancelFileOperationInput): FileOperationOutput =
+        started("Cancelling ${input.id}") { operations.cancel(input.id) }
 
     @MutationMapping
     fun moveToTrash(@Argument input: MoveToTrashInput): MoveToTrashOutput =
@@ -121,15 +107,13 @@ class FileBrowserMutationResolver(
         }
 
     @MutationMapping
-    fun emptyTrash(@Argument input: EmptyTrashInput): EmptyTrashOutput =
-        attempt("Emptying the trash", { EmptyTrashOutput(false, it, 0) }) {
-            EmptyTrashOutput(true, null, trashService.empty(input.id))
+    fun emptyTrash(@Argument input: EmptyTrashInput): FileOperationOutput =
+        started("Emptying the trash") { operations.emptyTrash(input.id) }
+
+    private fun started(operation: String, start: () -> com.krillsson.sysapi.filebrowser.FileOperation) =
+        attempt(operation, { FileOperationOutput(false, it, null) }) {
+            FileOperationOutput(true, null, start())
         }
-
-    private fun BatchFileOutcome.asOutput() =
-        BatchFileOutput(failures.isEmpty(), null, successes, failures)
-
-    private fun refusedBatch(reason: String) = BatchFileOutput(false, reason, emptyList(), emptyList())
 
     private fun <T> attempt(operation: String, failed: (String) -> T, action: () -> T): T {
         return try {

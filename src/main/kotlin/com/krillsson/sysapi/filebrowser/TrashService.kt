@@ -96,16 +96,24 @@ class TrashService(
         return manager.entryOf(destination)
     }
 
-    fun empty(id: String?): Int {
+    fun requireEmptyable(id: String?) {
         requireEnabled()
         sandbox.requireWritable()
+        if (id != null) {
+            rootHolding(id)
+        }
+    }
+
+    fun empty(id: String?, sink: FileOperationSink = NoFileOperationSink): Int {
+        requireEmptyable(id)
         val emptied = if (id == null) {
             sandbox.roots.flatMap { root -> idsIn(root).map { root to it } }
         } else {
             listOf(rootHolding(id) to id)
         }
         emptied.forEach { (root, each) ->
-            manager.delete(storedFile(root, each).toString(), recursive = true)
+            sink.requireNotCancelled()
+            manager.runDelete(storedFile(root, each), sink)
             runCatching { Files.deleteIfExists(infoFile(root, each)) }
         }
         logger.info("Emptied ${emptied.size} entries from the trash")

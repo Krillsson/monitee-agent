@@ -3,6 +3,7 @@ package com.krillsson.sysapi.filebrowser
 import com.krillsson.sysapi.config.FileBrowserAccess
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import java.nio.file.Path
+import java.time.Duration
 import java.time.Instant
 
 class FileBrowser(val configuration: FileBrowserConfiguration, cache: Path) {
@@ -13,6 +14,12 @@ class FileBrowser(val configuration: FileBrowserConfiguration, cache: Path) {
     val treeWalker = FileTreeWalker(configuration, sandbox, entryFactory)
     val archives = ArchiveService(configuration, sandbox, manager, fileTypeRegistry)
     val trash = TrashService(configuration, sandbox, manager)
+    val registry = FileOperationRegistry(configuration)
+    val operations = FileOperationService(sandbox, manager, archives, trash, registry)
+
+    fun await(operation: FileOperation): FileOperation =
+        operations.events(operation.id).blockLast(Duration.ofSeconds(20))
+            ?: error("The ${operation.type} operation never reported anything")
     val thumbnails = ThumbnailService(configuration, sandbox, fileTypeRegistry, cache)
 }
 
@@ -28,7 +35,8 @@ fun fileBrowser(
     maxThumbnailSourceBytes: Long = 67_108_864,
     maxThumbnailCacheBytes: Long = 268_435_456,
     maxArchiveEntries: Int = 100_000,
-    maxArchiveBytes: Long = 21_474_836_480
+    maxArchiveBytes: Long = 21_474_836_480,
+    fileOperationRetentionMinutes: Long = 30
 ) = FileBrowser(
     FileBrowserConfiguration(
         enabled = true,
@@ -42,7 +50,8 @@ fun fileBrowser(
         maxThumbnailSourceBytes = maxThumbnailSourceBytes,
         maxThumbnailCacheBytes = maxThumbnailCacheBytes,
         maxArchiveEntries = maxArchiveEntries,
-        maxArchiveBytes = maxArchiveBytes
+        maxArchiveBytes = maxArchiveBytes,
+        fileOperationRetentionMinutes = fileOperationRetentionMinutes
     ),
     cache
 )

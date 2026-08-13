@@ -28,7 +28,6 @@ import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
-import com.krillsson.sysapi.filebrowser.BatchFileOutcome
 import com.krillsson.sysapi.filebrowser.DirectoryListing
 import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
@@ -36,7 +35,10 @@ import com.krillsson.sysapi.filebrowser.FileBrowserError
 import com.krillsson.sysapi.filebrowser.FileEntry
 import com.krillsson.sysapi.filebrowser.FileEntryEdge
 import com.krillsson.sysapi.filebrowser.FileEntryType
+import com.krillsson.sysapi.filebrowser.FileOperation
 import com.krillsson.sysapi.filebrowser.FileOperationFailure
+import com.krillsson.sysapi.filebrowser.FileOperationState
+import com.krillsson.sysapi.filebrowser.FileOperationType
 import com.krillsson.sysapi.filebrowser.FileSearchInput
 import com.krillsson.sysapi.filebrowser.FileSearchResult
 import com.krillsson.sysapi.filebrowser.TextFileContent
@@ -45,14 +47,12 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
-import com.krillsson.sysapi.graphql.mutations.BatchFileOutput
 import com.krillsson.sysapi.graphql.mutations.CopyFileInput
-import com.krillsson.sysapi.graphql.mutations.CopyFileOutput
 import com.krillsson.sysapi.graphql.mutations.CopyFilesInput
 import com.krillsson.sysapi.graphql.mutations.CreateArchiveInput
-import com.krillsson.sysapi.graphql.mutations.CreateArchiveOutput
 import com.krillsson.sysapi.graphql.mutations.CreateCheckFailed
 import com.krillsson.sysapi.graphql.mutations.CreateCheckSuccess
+import com.krillsson.sysapi.graphql.mutations.CancelFileOperationInput
 import com.krillsson.sysapi.graphql.mutations.CreateDirectoryInput
 import com.krillsson.sysapi.graphql.mutations.CreateDirectoryOutput
 import com.krillsson.sysapi.graphql.mutations.CreateHttpCheckInput
@@ -62,15 +62,12 @@ import com.krillsson.sysapi.graphql.mutations.CreateTcpCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckInput
 import com.krillsson.sysapi.graphql.mutations.DeleteCheckOutput
 import com.krillsson.sysapi.graphql.mutations.DeleteFileInput
-import com.krillsson.sysapi.graphql.mutations.DeleteFileOutput
 import com.krillsson.sysapi.graphql.mutations.DeleteFilesInput
 import com.krillsson.sysapi.graphql.mutations.EmptyTrashInput
-import com.krillsson.sysapi.graphql.mutations.EmptyTrashOutput
 import com.krillsson.sysapi.graphql.mutations.ExtractArchiveInput
-import com.krillsson.sysapi.graphql.mutations.ExtractArchiveOutput
 import com.krillsson.sysapi.graphql.mutations.HttpHeaderInput
 import com.krillsson.sysapi.graphql.mutations.MoveFileInput
-import com.krillsson.sysapi.graphql.mutations.MoveFileOutput
+import com.krillsson.sysapi.graphql.mutations.FileOperationOutput
 import com.krillsson.sysapi.graphql.mutations.MoveFilesInput
 import com.krillsson.sysapi.graphql.mutations.MoveToTrashInput
 import com.krillsson.sysapi.graphql.mutations.MoveToTrashOutput
@@ -270,11 +267,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     SaveTextFileInput::class,
     SaveTextFileOutput::class,
     CopyFileInput::class,
-    CopyFileOutput::class,
     MoveFileInput::class,
-    MoveFileOutput::class,
     DeleteFileInput::class,
-    DeleteFileOutput::class,
     CreateDirectoryInput::class,
     CreateDirectoryOutput::class,
     DirectoryListingConnection::class,
@@ -283,22 +277,22 @@ import org.springframework.context.annotation.ImportRuntimeHints
     FileSearchResult::class,
     DirectorySize::class,
     TrashEntry::class,
-    BatchFileOutcome::class,
     FileOperationFailure::class,
-    BatchFileOutput::class,
+    FileOperation::class,
+    FileOperationType::class,
+    FileOperationState::class,
+    FileOperationOutput::class,
+    CancelFileOperationInput::class,
     CopyFilesInput::class,
     MoveFilesInput::class,
     DeleteFilesInput::class,
     ExtractArchiveInput::class,
-    ExtractArchiveOutput::class,
     CreateArchiveInput::class,
-    CreateArchiveOutput::class,
     MoveToTrashInput::class,
     MoveToTrashOutput::class,
     RestoreFromTrashInput::class,
     RestoreFromTrashOutput::class,
     EmptyTrashInput::class,
-    EmptyTrashOutput::class,
 )
 // https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/JNI/
 // Failed to parse docker config.json
