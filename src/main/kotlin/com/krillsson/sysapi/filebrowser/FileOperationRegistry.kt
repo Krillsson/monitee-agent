@@ -55,13 +55,11 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
     /**
      * The sink replays its latest value, and a finished operation is kept around for
      * fileOperationRetentionMinutes, so subscribing to something that was already over answers
-     * with its outcome and completes rather than waiting for an event that will never come.
+     * with its outcome and completes rather than waiting for an event that will never come. An id
+     * this agent never held, or has since swept, completes the same way with nothing emitted,
+     * since a client cannot tell the two apart and should not have to sort that out by message.
      */
-    fun events(id: String): Flux<FileOperation> {
-        val operation = operations[id]
-            ?: throw FileBrowserException("$id is not an operation this agent is holding on to")
-        return operation.events()
-    }
+    fun events(id: String): Flux<FileOperation> = operations[id]?.events() ?: Flux.empty()
 
     fun cancel(id: String): FileOperation {
         val operation = operations[id] ?: throw FileBrowserException("$id is not a running operation")
@@ -95,7 +93,7 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         private val lastEmittedAt = AtomicLong(0)
 
         @Volatile
-        private var state = FileOperationState.RUNNING
+        private var state = FileOperationState.QUEUED
 
         @Volatile
         private var finishedAt: Instant? = null
@@ -114,6 +112,8 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         }
 
         fun run(work: (FileOperationSink) -> Unit) {
+            state = FileOperationState.RUNNING
+            emit(force = true)
             try {
                 work(this)
                 finish(if (cancelled) FileOperationState.CANCELLED else FileOperationState.COMPLETED, null)
@@ -132,7 +132,9 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
             cancelled = true
         }
 
-        fun isFinished() = state != FileOperationState.RUNNING
+        fun isFinished() = state == FileOperationState.COMPLETED ||
+            state == FileOperationState.FAILED ||
+            state == FileOperationState.CANCELLED
 
         fun finishedBefore(instant: Instant) = finishedAt?.isBefore(instant) == true
 

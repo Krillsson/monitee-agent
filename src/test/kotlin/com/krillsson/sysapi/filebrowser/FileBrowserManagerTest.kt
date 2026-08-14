@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.filebrowser
 
 import com.krillsson.sysapi.config.FileBrowserAccess
+import com.krillsson.sysapi.config.FileBrowserConfiguration
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -29,6 +30,41 @@ class FileBrowserManagerTest {
         access: FileBrowserAccess = FileBrowserAccess.READ_WRITE,
         maxEditableBytes: Long = 1024
     ): FileBrowserManager = fileBrowser(root, access = access, maxEditableBytes = maxEditableBytes).manager
+
+    @Test
+    fun `mirrors the configured limits, so a client can learn a ceiling before hitting it`() {
+        // Given
+        val configuration = FileBrowserConfiguration(
+            enabled = true,
+            roots = listOf(root.toString()),
+            maxEditableBytes = 111,
+            maxUploadBytes = 222,
+            maxLogViewBytes = 333,
+            searchTimeoutSeconds = 4,
+            thumbnails = false,
+            maxThumbnailSourceBytes = 555,
+            maxArchiveEntries = 6,
+            maxArchiveBytes = 777,
+            fileOperationRetentionMinutes = 8
+        )
+        val manager = FileBrowser(configuration, tempDir.resolve("cache")).manager
+
+        // When
+        val limits = manager.limits
+
+        // Then
+        limits shouldBe FileBrowserLimits(
+            maxEditableBytes = 111,
+            maxUploadBytes = 222,
+            maxLogViewBytes = 333,
+            searchTimeoutSeconds = 4,
+            thumbnails = false,
+            maxThumbnailSourceBytes = 555,
+            maxArchiveEntries = 6,
+            maxArchiveBytes = 777,
+            fileOperationRetentionMinutes = 8
+        )
+    }
 
     @Test
     fun `lists directories before files, both by name`() {

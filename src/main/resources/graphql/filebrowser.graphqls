@@ -6,7 +6,9 @@ extend type Subscription {
     # Follow a copy, move, delete or archive operation until it is over.
     # The current state arrives immediately, so subscribing to something that already
     # finished answers with its outcome instead of waiting. The stream completes when the
-    # operation reaches COMPLETED, FAILED or CANCELLED
+    # operation reaches COMPLETED, FAILED or CANCELLED. Completes the same way, with nothing
+    # emitted, when id is not one this agent is holding on to - never seen, or already past
+    # fileBrowser.limits.fileOperationRetentionMinutes
     fileOperationProgress(id: ID!): FileOperation!
 }
 
@@ -53,6 +55,9 @@ type FileBrowser {
     # READ exposes browsing, reading and downloading. READ_WRITE also allows the mutations
     # above and uploading
     access: FileBrowserAccess!
+    # The ceilings a request can run into, so a client can refuse an oversized upload or
+    # edit before streaming a byte instead of after
+    limits: FileBrowserLimits!
     # The configured roots, as the paths every other field expects. Start browsing here
     roots: [FileEntry!]!
     listDirectory(path: String!): DirectoryListing!
@@ -87,6 +92,29 @@ type FileBrowser {
 enum FileBrowserAccess {
     READ,
     READ_WRITE
+}
+
+type FileBrowserLimits {
+    # openTextFile and saveTextFile refuse anything larger than this
+    maxEditableBytes: Long!
+    # The largest upload the server accepts, 0 for no limit
+    maxUploadBytes: Long!
+    # openLogFileConnection and tailLogFile refuse a file larger than this
+    maxLogViewBytes: Long!
+    # The wall clock budget search runs into before it reports truncated
+    searchTimeoutSeconds: Long!
+    # Whether GET /files/thumbnail is served at all. Always false in the native build
+    thumbnails: Boolean!
+    # A file larger than this has no thumbnail, whatever hasThumbnail on it says
+    maxThumbnailSourceBytes: Long!
+    # listArchive truncates past this many entries, and extractArchive and createArchive
+    # fail an operation that crosses it part way through
+    maxArchiveEntries: Int!
+    # The same, but for the uncompressed size an archive holds or would unpack to
+    maxArchiveBytes: Long!
+    # How long a finished FileOperation is still readable through fileOperation and
+    # fileOperationProgress
+    fileOperationRetentionMinutes: Long!
 }
 
 enum FileEntryType {
@@ -344,6 +372,8 @@ enum FileOperationType {
 }
 
 enum FileOperationState {
+    # Accepted, but waiting for a worker. Only two operations run at once
+    QUEUED,
     RUNNING,
     # Finished. A batch can complete with entries in failures
     COMPLETED,

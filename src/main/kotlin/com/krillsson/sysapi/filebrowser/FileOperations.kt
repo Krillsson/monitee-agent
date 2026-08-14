@@ -12,6 +12,7 @@ enum class FileOperationType {
 }
 
 enum class FileOperationState {
+    QUEUED,
     RUNNING,
     COMPLETED,
     FAILED,

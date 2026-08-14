@@ -28,6 +28,9 @@
   - Copying, moving and deleting take a whole selection in one call and report each path that failed without undoing the rest, and a copy or a move can be told to overwrite what is already at the destination
   - Copy, move, delete and the archive mutations now start a `FileOperation` and answer immediately instead of holding the request open until they are done
   - Follow one with the `fileOperationProgress` subscription, which reports the file being worked on, how much has moved and how it ended, and answers with the outcome even when it is asked after the operation already finished
+  - `FileOperation.state` can now be `QUEUED`, since only two operations run at once and a third otherwise looked exactly like one that had stalled
+  - `fileOperationProgress` completes without emitting instead of throwing when the id is no longer tracked, which is the ordinary outcome once `fileOperationRetentionMinutes` passes
+  - `fileBrowser.limits` exposes the byte, count and time ceilings a request can run into, so a client can refuse an oversized upload or edit before streaming a byte
   - `cancelFileOperation` stops a copy or a delete part way through, which was previously only possible by restarting the agent
   - `moveToTrash` puts a file in a `.monitee-trash` directory inside its root, which `restoreFromTrash` takes it back out of and `emptyTrash` empties
   - `FileEntry` carries the POSIX metadata a properties sheet shows, and `listDirectoryConnection` pages a directory holding more entries than `listDirectory` returns

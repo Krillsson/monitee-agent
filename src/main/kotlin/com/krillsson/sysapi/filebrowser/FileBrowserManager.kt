@@ -65,6 +65,19 @@ class FileBrowserManager(
 
     val access get() = sandbox.access
 
+    val limits
+        get() = FileBrowserLimits(
+            maxEditableBytes = configuration.maxEditableBytes,
+            maxUploadBytes = configuration.maxUploadBytes,
+            maxLogViewBytes = configuration.maxLogViewBytes,
+            searchTimeoutSeconds = configuration.searchTimeoutSeconds,
+            thumbnails = configuration.thumbnails,
+            maxThumbnailSourceBytes = configuration.maxThumbnailSourceBytes,
+            maxArchiveEntries = configuration.maxArchiveEntries,
+            maxArchiveBytes = configuration.maxArchiveBytes,
+            fileOperationRetentionMinutes = configuration.fileOperationRetentionMinutes
+        )
+
     fun roots(): List<FileEntry> = sandbox.roots.map { entryOf(it) }
 
     fun listDirectory(path: String): DirectoryListing {
