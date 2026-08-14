@@ -5,6 +5,7 @@ import com.krillsson.sysapi.filebrowser.ArchiveListing
 import com.krillsson.sysapi.filebrowser.DirectoryListing
 import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
+import com.krillsson.sysapi.filebrowser.FileBrowserLimits
 import com.krillsson.sysapi.filebrowser.FileBrowserManager
 import com.krillsson.sysapi.filebrowser.FileEntry
 import com.krillsson.sysapi.filebrowser.FileOperation
@@ -34,6 +35,9 @@ class FileBrowserResolver(
 
     @SchemaMapping
     fun access() = manager.access
+
+    @SchemaMapping
+    fun limits(): FileBrowserLimits = manager.limits
 
     @SchemaMapping
     fun roots(): List<FileEntry> = manager.roots()

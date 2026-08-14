@@ -34,6 +34,7 @@ import com.krillsson.sysapi.filebrowser.DirectoryListing
 import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
 import com.krillsson.sysapi.filebrowser.FileBrowserError
+import com.krillsson.sysapi.filebrowser.FileBrowserLimits
 import com.krillsson.sysapi.filebrowser.FileEntry
 import com.krillsson.sysapi.filebrowser.FileEntryEdge
 import com.krillsson.sysapi.filebrowser.FileEntryType
@@ -261,6 +262,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     RunCheckNowFailed::class,
     FileBrowserConfiguration::class,
     FileBrowserAccess::class,
+    FileBrowserLimits::class,
     FileEntry::class,
     FileEntryType::class,
     DirectoryListing::class,

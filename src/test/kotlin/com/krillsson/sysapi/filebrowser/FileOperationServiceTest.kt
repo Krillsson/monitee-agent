@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 
@@ -240,9 +241,9 @@ class FileOperationServiceTest {
     }
 
     @Test
-    fun `does not hand out events for an operation it has never heard of`() {
+    fun `completes without emitting instead of throwing for an operation it has never heard of`() {
         // When / Then
-        shouldThrow<FileBrowserException> { browser.operations.events("not-an-operation") }
+        browser.operations.events("not-an-operation").blockLast(Duration.ofSeconds(5)) shouldBe null
         browser.operations.find("not-an-operation") shouldBe null
     }
 

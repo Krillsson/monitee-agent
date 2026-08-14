@@ -38,6 +38,18 @@ data class DirectoryListing(
     val truncated: Boolean
 )
 
+data class FileBrowserLimits(
+    val maxEditableBytes: Long,
+    val maxUploadBytes: Long,
+    val maxLogViewBytes: Long,
+    val searchTimeoutSeconds: Long,
+    val thumbnails: Boolean,
+    val maxThumbnailSourceBytes: Long,
+    val maxArchiveEntries: Int,
+    val maxArchiveBytes: Long,
+    val fileOperationRetentionMinutes: Long
+)
+
 data class FileEntryEdge(
     val cursor: String,
     val node: FileEntry
