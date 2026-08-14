@@ -23,6 +23,8 @@
   - A browsed log file can be opened in the log viewer and tailed like any configured one
   - `search` finds a name anywhere under a path and `directorySize` adds a directory up recursively, both bounded by a depth, a result count and a wall clock budget that they report running into
   - `extractArchive` unpacks zip, tar, tar.gz and gz, and `createArchive` packs a zip
+  - `listArchive` looks inside a zip without unpacking it, one folder at a time, and `GET /files/archive/download` reads a single file out of one, both of which work in `READ` mode
+  - `extractArchive` takes an `entries` list, so one file or one folder can be unpacked instead of the whole archive
   - Copying, moving and deleting take a whole selection in one call and report each path that failed without undoing the rest, and a copy or a move can be told to overwrite what is already at the destination
   - Copy, move, delete and the archive mutations now start a `FileOperation` and answer immediately instead of holding the request open until they are done
   - Follow one with the `fileOperationProgress` subscription, which reports the file being worked on, how much has moved and how it ended, and answers with the outcome even when it is asked after the operation already finished

@@ -13,6 +13,7 @@ class FileBrowser(val configuration: FileBrowserConfiguration, cache: Path) {
     val manager = FileBrowserManager(configuration, sandbox, entryFactory)
     val treeWalker = FileTreeWalker(configuration, sandbox, entryFactory)
     val archives = ArchiveService(configuration, sandbox, manager, fileTypeRegistry)
+    val archiveBrowser = ArchiveBrowser(configuration, sandbox, entryFactory, fileTypeRegistry)
     val trash = TrashService(configuration, sandbox, manager)
     val registry = FileOperationRegistry(configuration)
     val operations = FileOperationService(sandbox, manager, archives, trash, registry)
@@ -73,6 +74,7 @@ fun fileEntry(
     editable = true,
     openableAsLog = true,
     isArchive = false,
+    browsableAsArchive = false,
     hasThumbnail = false,
     isHidden = false,
     permissions = "rw-r--r--",

@@ -14,7 +14,8 @@ data class FileBrowserError(val reason: String)
         FileDownloadController::class,
         FileUploadController::class,
         FileIconController::class,
-        ThumbnailController::class
+        ThumbnailController::class,
+        ArchiveEntryDownloadController::class
     ]
 )
 class FileBrowserControllerAdvice {

@@ -81,7 +81,7 @@ class FileBrowserMutationResolver(
     @MutationMapping
     fun extractArchive(@Argument input: ExtractArchiveInput): FileOperationOutput =
         started("Extracting ${input.path}") {
-            operations.extractArchive(input.path, input.destinationDirectory, input.overwrite)
+            operations.extractArchive(input.path, input.destinationDirectory, input.overwrite, input.entries)
         }
 
     @MutationMapping

@@ -23,6 +23,7 @@ data class FileEntry(
     val editable: Boolean,
     val openableAsLog: Boolean,
     val isArchive: Boolean,
+    val browsableAsArchive: Boolean,
     val hasThumbnail: Boolean,
     val isHidden: Boolean,
     val permissions: String?,
@@ -65,6 +66,24 @@ data class DirectorySize(
     val totalBytes: Long,
     val fileCount: Int,
     val directoryCount: Int,
+    val truncated: Boolean
+)
+
+data class ArchiveEntry(
+    val name: String,
+    val entryPath: String,
+    val type: FileEntryType,
+    val sizeBytes: Long,
+    val compressedBytes: Long,
+    val updatedAt: Instant?,
+    val mimeType: String?,
+    val iconId: String
+)
+
+data class ArchiveListing(
+    val entry: FileEntry,
+    val entryPath: String,
+    val entries: List<ArchiveEntry>,
     val truncated: Boolean
 )
 

@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.filebrowser.ArchiveBrowser
+import com.krillsson.sysapi.filebrowser.ArchiveListing
 import com.krillsson.sysapi.filebrowser.DirectoryListing
 import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
@@ -23,7 +25,8 @@ class FileBrowserResolver(
     private val manager: FileBrowserManager,
     private val treeWalker: FileTreeWalker,
     private val trashService: TrashService,
-    private val operations: FileOperationService
+    private val operations: FileOperationService,
+    private val archiveBrowser: ArchiveBrowser
 ) {
 
     @SchemaMapping
@@ -54,6 +57,10 @@ class FileBrowserResolver(
     @SchemaMapping
     fun directorySize(@Argument path: String, @Argument maxDepth: Int): DirectorySize =
         treeWalker.directorySize(path, maxDepth)
+
+    @SchemaMapping
+    fun listArchive(@Argument path: String, @Argument entryPath: String?): ArchiveListing =
+        archiveBrowser.list(path, entryPath)
 
     @SchemaMapping
     fun trashEnabled(): Boolean = trashService.enabled
