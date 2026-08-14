@@ -50,7 +50,8 @@ data class CreateDirectoryInput(
 data class ExtractArchiveInput(
     val path: String,
     val destinationDirectory: String,
-    val overwrite: Boolean = false
+    val overwrite: Boolean = false,
+    val entries: List<String> = emptyList()
 )
 
 data class CreateArchiveInput(

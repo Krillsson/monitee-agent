@@ -31,6 +31,23 @@ class ArchiveService(
 
     val logger by logger()
 
+    /**
+     * An asked-for name takes the whole subtree under it with it, so extracting one folder out of
+     * an archive is the same request as extracting one file.
+     */
+    private class Wanted(private val entries: List<String>) {
+
+        private val names = entries.map { it.replace('\\', '/').trim('/') }.filter { it.isNotEmpty() }
+
+        fun holds(name: String): Boolean {
+            if (names.isEmpty()) {
+                return true
+            }
+            val cleaned = name.replace('\\', '/').trim('/')
+            return names.any { cleaned == it || cleaned.startsWith("$it/") }
+        }
+    }
+
     private class Budget(
         private val maxEntries: Int,
         private val maxBytes: Long,
@@ -68,6 +85,7 @@ class ArchiveService(
         path: String,
         destinationDirectory: String,
         overwrite: Boolean,
+        entries: List<String> = emptyList(),
         sink: FileOperationSink = NoFileOperationSink
     ): ArchiveExtraction {
         val archive = prepareExtract(path)
@@ -75,16 +93,23 @@ class ArchiveService(
             ?: throw FileBrowserException("${archive.name} is not an archive this agent can open")
         val destination = manager.requireDirectory(destinationDirectory)
         val budget = Budget(configuration.maxArchiveEntries, configuration.maxArchiveBytes, sink)
+        val wanted = Wanted(entries)
         Files.newInputStream(archive).buffered().use { input ->
             when (format) {
-                ArchiveFormat.ZIP -> extractZip(input, destination, overwrite, budget)
-                ArchiveFormat.TAR -> extractTar(input, destination, overwrite, budget)
-                ArchiveFormat.TAR_GZ -> extractTar(GZIPInputStream(input), destination, overwrite, budget)
+                ArchiveFormat.ZIP -> extractZip(input, destination, overwrite, budget, wanted)
+                ArchiveFormat.TAR -> extractTar(input, destination, overwrite, budget, wanted)
+                ArchiveFormat.TAR_GZ -> extractTar(GZIPInputStream(input), destination, overwrite, budget, wanted)
                 ArchiveFormat.GZIP -> extractGzip(input, archive, destination, overwrite, budget)
             }
         }
         if (budget.entries == 0) {
-            throw FileBrowserException("${archive.name} does not hold anything this agent can read as an archive")
+            throw FileBrowserException(
+                if (entries.isEmpty()) {
+                    "${archive.name} does not hold anything this agent can read as an archive"
+                } else {
+                    "${archive.name} does not hold any of the entries that were asked for"
+                }
+            )
         }
         logger.info("Extracted ${budget.entries} entries of $archive into $destination")
         return ArchiveExtraction(manager.entryOf(destination), budget.entries, budget.bytes)
@@ -142,10 +167,20 @@ class ArchiveService(
         return manager.entryOf(target)
     }
 
-    private fun extractZip(input: InputStream, destination: Path, overwrite: Boolean, budget: Budget) {
+    private fun extractZip(
+        input: InputStream,
+        destination: Path,
+        overwrite: Boolean,
+        budget: Budget,
+        wanted: Wanted
+    ) {
         ZipInputStream(input).use { zip ->
             while (true) {
                 val entry: ZipEntry = zip.nextEntry ?: break
+                if (!wanted.holds(entry.name)) {
+                    zip.closeEntry()
+                    continue
+                }
                 budget.countEntry()
                 val target = targetOf(destination, entry.name)
                 budget.beginEntry(entry.name, entry.size.coerceAtLeast(0))
@@ -160,8 +195,17 @@ class ArchiveService(
         }
     }
 
-    private fun extractTar(input: InputStream, destination: Path, overwrite: Boolean, budget: Budget) {
+    private fun extractTar(
+        input: InputStream,
+        destination: Path,
+        overwrite: Boolean,
+        budget: Budget,
+        wanted: Wanted
+    ) {
         TarArchive(BufferedInputStream(input)).forEach { entry, data ->
+            if (!wanted.holds(entry.name)) {
+                return@forEach
+            }
             budget.countEntry()
             val target = targetOf(destination, entry.name)
             budget.beginEntry(entry.name, entry.sizeBytes)

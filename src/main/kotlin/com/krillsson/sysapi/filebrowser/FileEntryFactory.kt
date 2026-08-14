@@ -42,6 +42,8 @@ class FileEntryFactory(
                     fileTypeRegistry.looksLikeALogFile(name) &&
                     size <= configuration.maxLogViewBytes,
             isArchive = type == FileEntryType.FILE && fileTypeRegistry.archiveFormatOf(name) != null,
+            browsableAsArchive = type == FileEntryType.FILE &&
+                    fileTypeRegistry.archiveFormatOf(name) == ArchiveFormat.ZIP,
             hasThumbnail = type == FileEntryType.FILE &&
                     configuration.thumbnails &&
                     ThumbnailSupport.available &&

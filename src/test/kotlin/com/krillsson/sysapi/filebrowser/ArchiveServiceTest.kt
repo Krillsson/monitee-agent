@@ -332,6 +332,49 @@ class ArchiveServiceTest {
         namesIn(Path.of(entry.path)) shouldContainExactlyInAnyOrder listOf("photos/", "photos/one.jpg")
     }
 
+    @Test
+    fun `unpacks only the entries it was asked for, folders and all`() {
+        // Given
+        val archive = zip(
+            "bundle.zip",
+            "top.txt" to "top",
+            "photos/one.jpg" to "one",
+            "photos/raw/two.dng" to "two",
+            "notes/three.txt" to "three"
+        )
+
+        // When
+        val extraction = archives().extract(
+            archive.toString(),
+            destination.toString(),
+            overwrite = false,
+            entries = listOf("photos", "top.txt")
+        )
+
+        // Then
+        extraction.entryCount shouldBe 3
+        destination.resolve("top.txt").readText() shouldBe "top"
+        destination.resolve("photos/one.jpg").readText() shouldBe "one"
+        destination.resolve("photos/raw/two.dng").readText() shouldBe "two"
+        Files.exists(destination.resolve("notes")) shouldBe false
+    }
+
+    @Test
+    fun `refuses an extraction that asks for entries the archive does not hold`() {
+        // Given
+        val archive = zip("bundle.zip", "top.txt" to "top")
+
+        // When / Then
+        shouldThrow<FileBrowserException> {
+            archives().extract(
+                archive.toString(),
+                destination.toString(),
+                overwrite = false,
+                entries = listOf("nothing.txt")
+            )
+        }
+    }
+
     private fun namesIn(archive: Path): List<String> {
         val names = mutableListOf<String>()
         ZipInputStream(Files.newInputStream(archive)).use { input ->

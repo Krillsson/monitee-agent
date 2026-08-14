@@ -28,6 +28,8 @@ import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
+import com.krillsson.sysapi.filebrowser.ArchiveEntry
+import com.krillsson.sysapi.filebrowser.ArchiveListing
 import com.krillsson.sysapi.filebrowser.DirectoryListing
 import com.krillsson.sysapi.filebrowser.DirectoryListingConnection
 import com.krillsson.sysapi.filebrowser.DirectorySize
@@ -277,6 +279,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     FileSearchResult::class,
     DirectorySize::class,
     TrashEntry::class,
+    ArchiveEntry::class,
+    ArchiveListing::class,
     FileOperationFailure::class,
     FileOperation::class,
     FileOperationType::class,

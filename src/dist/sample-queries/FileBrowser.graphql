@@ -83,6 +83,31 @@ query DirectorySize {
     }
 }
 
+# Looking inside a zip does not unpack it, and works in READ mode.
+# Leave entryPath out for the top of the archive
+query ListArchive {
+    fileBrowser {
+        listArchive(path: "/storage/bundle.zip", entryPath: "photos") {
+            entryPath
+            truncated
+            entry {
+                name
+                sizeBytes
+            }
+            entries {
+                name
+                entryPath
+                type
+                sizeBytes
+                compressedBytes
+                updatedAt
+                mimeType
+                iconId
+            }
+        }
+    }
+}
+
 query Trash {
     fileBrowser {
         trashEnabled
@@ -193,7 +218,12 @@ mutation CopyFiles {
 
 mutation ExtractArchive {
     extractArchive(
-        input: { path: "/storage/bundle.zip", destinationDirectory: "/storage/archive", overwrite: false }
+        input: {
+            path: "/storage/bundle.zip"
+            destinationDirectory: "/storage/archive"
+            overwrite: false
+            entries: ["photos"]
+        }
     ) {
         success
         reason
@@ -270,3 +300,4 @@ mutation CreateDirectory {
 #        Content-Type: application/octet-stream, the file itself as the body
 #   GET  /files/icons/{iconId}.svg
 #   GET  /files/thumbnail?path=/storage/photos/holiday.jpg&size=256
+#   GET  /files/archive/download?path=/storage/bundle.zip&entry=photos/one.jpg

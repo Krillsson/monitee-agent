@@ -68,6 +68,11 @@ type FileBrowser {
     search(input: FileSearchInput!): FileSearchResult!
     # Adds up a directory recursively. Never part of a listing, because it is a full walk
     directorySize(path: String!, maxDepth: Int = 32): DirectorySize!
+    # Look inside a zip without unpacking it. Leave entryPath out for the top of the archive,
+    # or pass an entry from a previous listing to go into it. Reading is a read, so this
+    # answers in READ mode too. Only zip: tar has no index and a gzipped tar cannot be
+    # seeked, so listing either would mean reading the whole archive per screen
+    listArchive(path: String!, entryPath: String): ArchiveListing!
     # Whether a delete can go through the trash. False when fileBrowser.trash is off
     trashEnabled: Boolean!
     # Everything in the trash of every root, most recently deleted first
@@ -114,6 +119,8 @@ type FileEntry {
     openableAsLog: Boolean!
     # True when this file can be passed to extractArchive
     isArchive: Boolean!
+    # True when it can also be passed to listArchive, which only zip can answer cheaply
+    browsableAsArchive: Boolean!
     # True when GET /files/thumbnail?path=&size= renders this file. Always false in the
     # native build, which has no image decoder
     hasThumbnail: Boolean!
@@ -127,6 +134,35 @@ type FileEntry {
     group: String
     # What a SYMLINK points at, so the UI can explain the dead end. Null for everything else
     linkTarget: String
+}
+
+# One thing inside an archive. It is not a file on disk, so it has no path, only where it
+# sits inside the archive
+type ArchiveEntry {
+    name: String!
+    # Pass this back as listArchive's entryPath, to extractArchive's entries, or to
+    # GET /files/archive/download?path=&entry=
+    entryPath: String!
+    # DIRECTORY is also reported for a folder the archive only implies by the names in it
+    type: FileEntryType!
+    # Unpacked size. 0 for a directory, and for an entry whose archive does not record one
+    sizeBytes: Long!
+    compressedBytes: Long!
+    updatedAt: Instant
+    mimeType: String
+    # Fetch the icon for this entry at GET /files/icons/{iconId}.svg
+    iconId: String!
+}
+
+type ArchiveListing {
+    # The archive that was looked into
+    entry: FileEntry!
+    # Where inside it this listing is, empty at the top
+    entryPath: String!
+    # Directories first, then files, both by name
+    entries: [ArchiveEntry!]!
+    # True when the archive holds more than the browser is willing to read through
+    truncated: Boolean!
 }
 
 type FileEntryEdge {
@@ -243,6 +279,9 @@ input ExtractArchiveInput {
     destinationDirectory: String!
     # Replace files already in the destination
     overwrite: Boolean = false
+    # Unpack only these, as entryPath values from listArchive. A name here takes everything
+    # under it with it, so one folder can be asked for. Everything, when left empty
+    entries: [String!] = []
 }
 
 input CreateArchiveInput {

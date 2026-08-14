@@ -68,7 +68,12 @@ class FileOperationService(
             manager.runDelete(manager.prepareDelete(path, recursive), sink)
         }
 
-    fun extractArchive(path: String, destinationDirectory: String, overwrite: Boolean): FileOperation {
+    fun extractArchive(
+        path: String,
+        destinationDirectory: String,
+        overwrite: Boolean,
+        entries: List<String> = emptyList()
+    ): FileOperation {
         val archive = archiveService.prepareExtract(path)
         val destination = manager.requireDirectory(destinationDirectory)
         return registry.submit(
@@ -78,7 +83,7 @@ class FileOperationService(
                 destination = destination.toString()
             )
         ) { sink ->
-            archiveService.extract(archive.toString(), destination.toString(), overwrite, sink)
+            archiveService.extract(archive.toString(), destination.toString(), overwrite, entries, sink)
             sink.succeeded(archive.toString())
         }
     }
