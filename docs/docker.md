@@ -77,18 +77,13 @@ fileBrowser:
     - /storage
 ```
 
-`access: READ` gives browsing, reading, searching, downloading and thumbnails. `access: READ_WRITE`
-also allows editing, uploading, copying, moving, deleting, unpacking and creating archives, and the
-trash. A few things worth knowing before turning that on:
+`access: READ` gives browsing, reading and downloading. `access: READ_WRITE` also allows editing,
+uploading, copying, moving and deleting. A few things worth knowing before turning that on:
 
 - The container runs as root, so `READ_WRITE` means the agent password is write access to
   everything you mount. Mount the directories you actually want to reach, never `/`.
 - Mount the volume `:ro` while you are on `access: READ`, and the kernel enforces the read only
   part for you.
-- Looking inside a zip and reading one file out of it are reads, so they work under
-  `access: READ`. Unpacking one writes, and needs `READ_WRITE`.
-- The `native` image tag has no image decoder, so thumbnails are only served by the JVM
-  image. Everything else in the browser works on both.
 - Keep `/config` and `/data` out of the roots. If they are reachable, `READ_WRITE` lets a caller
   edit the agent's own configuration and database, and the agent says so in the log at startup.
 
