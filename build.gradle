@@ -268,9 +268,14 @@ dependencies {
     implementation 'org.apache.commons:commons-exec:1.3'
     implementation 'commons-io:commons-io:2.18.0'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
-    implementation('com.github.oshi:oshi-core:7.4.4') {
-        exclude group: "org.slf4j"
-    }
+    // TEMPORARY (#341): oshi-core and oshi-common are replaced by locally built jars carrying the fix from
+    // https://github.com/Krillsson/oshi/tree/fix/linux-nvidia-gpu-utilization
+    // The two are built as a matched pair, so both are vendored. Because file dependencies resolve nothing
+    // transitively, oshi-core's JNA dependencies are declared here; slf4j-api comes from Spring Boot.
+    // Revert to the plain oshi-core dependency once the fix is released upstream.
+    implementation files('lib/oshi-common-7.4.4-gpuutilfix.jar', 'lib/oshi-core-7.4.4-gpuutilfix.jar')
+    implementation 'net.java.dev.jna:jna-jpms:5.19.1'
+    implementation 'net.java.dev.jna:jna-platform-jpms:5.19.1'
     implementation name: 'jni4net.j-0.8.9.0', group: "net.sf.jni4net", version: "1"
     implementation name: 'OhmJniWrapper.j4n', group: "ohmwrapper", version: "1"
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
