@@ -13,6 +13,7 @@ enum class FileOperationType {
 
 enum class FileOperationState {
     QUEUED,
+    MEASURING,
     RUNNING,
     COMPLETED,
     FAILED,
@@ -32,10 +33,18 @@ data class FileOperation(
     val totalFiles: Int?,
     val processedBytes: Long,
     val totalBytes: Long?,
+    val bytesPerSecond: Long?,
     val successes: List<String>,
     val failures: List<FileOperationFailure>,
     val reason: String?
 )
+
+/**
+ * What a walk of the source paths found, for an operation that could not know its totals up
+ * front. Bytes is null when the operation does not count them at all (a delete), not when the
+ * walk gave up on a large tree - that case reports no PathTotals rather than a wrong number.
+ */
+data class PathTotals(val files: Int, val bytes: Long?)
 
 class FileOperationCancelledException : FileBrowserException("The operation was cancelled")
 

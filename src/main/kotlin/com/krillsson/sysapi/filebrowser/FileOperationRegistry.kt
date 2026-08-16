@@ -17,7 +17,8 @@ data class FileOperationRequest(
     val paths: List<String>,
     val destination: String? = null,
     val totalFiles: Int? = null,
-    val totalBytes: Long? = null
+    val totalBytes: Long? = null,
+    val measure: ((FileOperationSink) -> PathTotals?)? = null
 )
 
 @Service
@@ -91,6 +92,7 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         private val processedBytes = AtomicLong()
         private val processedFiles = AtomicLong()
         private val lastEmittedAt = AtomicLong(0)
+        private val throughput = ThroughputMeter()
 
         @Volatile
         private var state = FileOperationState.QUEUED
@@ -107,14 +109,30 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         @Volatile
         private var cancelled = false
 
+        @Volatile
+        private var totalFiles: Int? = request.totalFiles
+
+        @Volatile
+        private var totalBytes: Long? = request.totalBytes
+
+        @Volatile
+        private var bytesPerSecond: Long? = null
+
         init {
             emit(force = true)
         }
 
         fun run(work: (FileOperationSink) -> Unit) {
-            state = FileOperationState.RUNNING
-            emit(force = true)
             try {
+                request.measure?.let { measure ->
+                    state = FileOperationState.MEASURING
+                    emit(force = true)
+                    val totals = measure(this)
+                    totalFiles = totals?.files
+                    totalBytes = totals?.bytes
+                }
+                state = FileOperationState.RUNNING
+                emit(force = true)
                 work(this)
                 finish(if (cancelled) FileOperationState.CANCELLED else FileOperationState.COMPLETED, null)
             } catch (ex: FileOperationCancelledException) {
@@ -151,9 +169,10 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
                 finishedAt = finishedAt,
                 currentPath = currentPath,
                 processedFiles = processedFiles.get().toInt(),
-                totalFiles = request.totalFiles,
+                totalFiles = totalFiles,
                 processedBytes = processedBytes.get(),
-                totalBytes = request.totalBytes,
+                totalBytes = totalBytes,
+                bytesPerSecond = bytesPerSecond,
                 successes = successes.toList(),
                 failures = failures.toList(),
                 reason = reason
@@ -168,7 +187,8 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
 
         override fun addBytes(bytes: Long) {
             requireNotCancelled()
-            processedBytes.addAndGet(bytes)
+            val total = processedBytes.addAndGet(bytes)
+            bytesPerSecond = throughput.rateFor(total)
             emit(force = false)
         }
 
@@ -194,6 +214,7 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
             this.reason = reason
             this.currentPath = null
             this.finishedAt = Instant.now()
+            this.bytesPerSecond = null
             emit(force = true)
             sink.tryEmitComplete()
         }
@@ -205,6 +226,39 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
             }
             lastEmittedAt.set(now)
             sink.tryEmitNext(snapshot())
+        }
+    }
+
+    /**
+     * A rate averaged over the last few seconds of samples rather than the two most recent, so a
+     * client that only ever sees throttled or reconnect snapshots still gets a stable number
+     * instead of whatever the last 250ms happened to move.
+     */
+    private class ThroughputMeter {
+
+        companion object {
+            private val WINDOW = Duration.ofSeconds(5)
+        }
+
+        private data class Sample(val atNanos: Long, val bytes: Long)
+
+        private val samples = ArrayDeque<Sample>()
+
+        @Synchronized
+        fun rateFor(totalBytes: Long): Long? {
+            val now = System.nanoTime()
+            samples.addLast(Sample(now, totalBytes))
+            val cutoff = now - WINDOW.toNanos()
+            while (samples.size > 1 && samples.first().atNanos < cutoff) {
+                samples.removeFirst()
+            }
+            val oldest = samples.first()
+            val elapsedNanos = now - oldest.atNanos
+            val bytesMoved = totalBytes - oldest.bytes
+            if (elapsedNanos <= 0 || bytesMoved <= 0) {
+                return null
+            }
+            return bytesMoved * 1_000_000_000L / elapsedNanos
         }
     }
 }

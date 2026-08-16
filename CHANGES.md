@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Feature: A file operation on a directory now reports real totalFiles/totalBytes once it has walked the tree, with a MEASURING state while it does, and a smoothed bytesPerSecond while it runs
 - Feature: Web server checks are now checks
   - A check has a name, can be turned off without being deleted, and runs on its own interval and timeout instead of sharing one 30 second schedule
   - Up or down is decided by expected status codes, the request method, headers and an optional body keyword, rather than by a hardcoded 200

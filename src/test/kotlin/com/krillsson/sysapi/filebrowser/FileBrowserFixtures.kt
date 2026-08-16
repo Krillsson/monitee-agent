@@ -16,7 +16,7 @@ class FileBrowser(val configuration: FileBrowserConfiguration, cache: Path) {
     val archiveBrowser = ArchiveBrowser(configuration, sandbox, entryFactory, fileTypeRegistry)
     val trash = TrashService(configuration, sandbox, manager)
     val registry = FileOperationRegistry(configuration)
-    val operations = FileOperationService(sandbox, manager, archives, trash, registry)
+    val operations = FileOperationService(sandbox, manager, archives, trash, registry, treeWalker)
 
     fun await(operation: FileOperation): FileOperation =
         operations.events(operation.id).blockLast(Duration.ofSeconds(20))

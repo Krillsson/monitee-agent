@@ -15,6 +15,7 @@ import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.name
@@ -113,6 +114,39 @@ class ArchiveService(
         }
         logger.info("Extracted ${budget.entries} entries of $archive into $destination")
         return ArchiveExtraction(manager.entryOf(destination), budget.entries, budget.bytes)
+    }
+
+    /**
+     * Only zip can answer this cheaply, the same way ArchiveBrowser only looks inside a zip
+     * without unpacking it: its central directory is an index, so this is a seek rather than a
+     * read of the whole archive. tar and gzip have no index, so extracting them keeps the null
+     * totals it always had.
+     */
+    fun measureExtract(archive: Path, entries: List<String>): PathTotals? {
+        if (fileTypeRegistry.archiveFormatOf(archive.name) != ArchiveFormat.ZIP) {
+            return null
+        }
+        val wanted = Wanted(entries)
+        return try {
+            ZipFile(archive.toFile()).use { zip ->
+                var count = 0
+                var bytes = 0L
+                var withinLimit = true
+                val zipEntries = zip.entries()
+                while (withinLimit && zipEntries.hasMoreElements()) {
+                    val entry = zipEntries.nextElement()
+                    if (!wanted.holds(entry.name)) {
+                        continue
+                    }
+                    count++
+                    bytes += entry.size.coerceAtLeast(0)
+                    withinLimit = count <= configuration.maxArchiveEntries
+                }
+                if (withinLimit) PathTotals(count, bytes) else null
+            }
+        } catch (ex: IOException) {
+            null
+        }
     }
 
     fun prepareExtract(path: String): Path {

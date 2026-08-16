@@ -17,7 +17,8 @@ class FileOperationService(
     private val manager: FileBrowserManager,
     private val archiveService: ArchiveService,
     private val trashService: TrashService,
-    private val registry: FileOperationRegistry
+    private val registry: FileOperationRegistry,
+    private val treeWalker: FileTreeWalker
 ) {
 
     companion object {
@@ -80,7 +81,8 @@ class FileOperationService(
             FileOperationRequest(
                 type = FileOperationType.EXTRACT_ARCHIVE,
                 paths = listOf(archive.toString()),
-                destination = destination.toString()
+                destination = destination.toString(),
+                measure = { archiveService.measureExtract(archive, entries) }
             )
         ) { sink ->
             archiveService.extract(archive.toString(), destination.toString(), overwrite, entries, sink)
@@ -94,7 +96,8 @@ class FileOperationService(
             FileOperationRequest(
                 type = FileOperationType.CREATE_ARCHIVE,
                 paths = roots.map { it.toString() },
-                destination = target.toString()
+                destination = target.toString(),
+                measure = { sink -> treeWalker.measure(roots, countBytes = true, countDirectories = true, sink) }
             )
         ) { sink ->
             archiveService.create(roots.map { it.toString() }, target.toString(), overwrite, sink)
@@ -165,9 +168,10 @@ class FileOperationService(
     }
 
     /**
-     * Totals are only claimed when they are already known: every path is a regular file, so its
-     * size was there to be read while resolving it. Sizing a directory means walking it, and
-     * paying for that walk before the first byte moves is worse than showing a count that climbs.
+     * Totals are claimed outright when every path is a regular file, since its size was there to
+     * be read while resolving it. A directory means walking it, which is done lazily as a
+     * MEASURING step once the operation has a worker, rather than paying for the walk on the
+     * calling thread before the request even returns.
      */
     private fun request(
         type: FileOperationType,
@@ -175,19 +179,27 @@ class FileOperationService(
         destination: String?,
         countBytes: Boolean
     ): FileOperationRequest {
-        val sizes = paths.map { path ->
-            runCatching {
-                val resolved = sandbox.resolveExisting(path)
-                if (Files.isRegularFile(resolved, LinkOption.NOFOLLOW_LINKS)) Files.size(resolved) else null
-            }.getOrNull()
+        val resolved = paths.mapNotNull { path -> runCatching { sandbox.resolveExisting(path) }.getOrNull() }
+        if (resolved.size != paths.size) {
+            return FileOperationRequest(type = type, paths = paths, destination = destination)
         }
-        val allFiles = sizes.none { it == null }
+        val sizes = resolved.map { path ->
+            if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) Files.size(path) else null
+        }
+        if (sizes.none { it == null }) {
+            return FileOperationRequest(
+                type = type,
+                paths = paths,
+                destination = destination,
+                totalFiles = sizes.size,
+                totalBytes = if (countBytes) sizes.filterNotNull().sum() else null
+            )
+        }
         return FileOperationRequest(
             type = type,
             paths = paths,
             destination = destination,
-            totalFiles = if (allFiles) sizes.size else null,
-            totalBytes = if (allFiles && countBytes) sizes.filterNotNull().sum() else null
+            measure = { sink -> treeWalker.measure(resolved, countBytes, countDirectories = false, sink) }
         )
     }
 }
