@@ -71,6 +71,7 @@ class MonitorManager(
     @PostConstruct
     fun start() {
         restore()
+        eventManager.removeEventsForMonitorsNotIn(activeMonitors.keys)
     }
 
 

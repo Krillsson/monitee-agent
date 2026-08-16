@@ -60,6 +60,15 @@ class EventManager(
         .removeAll { it.monitorId == id }
         .also { persist() }
 
+    fun removeEventsForMonitorsNotIn(existingMonitorIds: Set<UUID>): Boolean {
+        val orphaned = events.count { it.monitorId !in existingMonitorIds }
+        if (orphaned == 0) {
+            return false
+        }
+        logger.info("Removing {} events referencing monitors that no longer exist", orphaned)
+        return events.removeAll { it.monitorId !in existingMonitorIds }.also { persist() }
+    }
+
     fun removePastEventsForMonitorId(id: UUID) = events
         .removeAll { event -> event.monitorId == id && event is PastEvent }
         .also { persist() }
