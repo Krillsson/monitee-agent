@@ -252,6 +252,7 @@ class ContainerRecreator(private val client: DockerJavaClient) {
             network.ipamConfig?.ipv6Address?.let { create.withIpv6Address(it) }
             network.aliasesToKeep(replacedContainerId)?.let { create.withAliases(it) }
         }
+        LOGGER.debug("Recreating {} from {} with hostConfig={}", name, image, hostConfig)
         return create.exec()
     }
 
