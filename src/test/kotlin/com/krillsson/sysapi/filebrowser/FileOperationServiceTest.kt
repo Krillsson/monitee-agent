@@ -279,6 +279,42 @@ class FileOperationServiceTest {
     }
 
     @Test
+    fun `walks a directory source and reports real totals once it is done measuring`() {
+        // Given
+        val directory = Files.createDirectory(root.resolve("directory"))
+        directory.resolve("inner.txt").writeText("inner")
+        Files.createDirectory(directory.resolve("nested")).resolve("deep.txt").writeText("deeper")
+
+        // When
+        val started = browser.operations.copy(directory.toString(), root.resolve("copied").toString(), false)
+        val finished = browser.await(started)
+
+        // Then
+        finished.state shouldBe FileOperationState.COMPLETED
+        finished.totalFiles shouldBe 2
+        finished.totalBytes shouldBe 11
+        finished.processedFiles shouldBe finished.totalFiles
+        finished.processedBytes shouldBe finished.totalBytes
+    }
+
+    @Test
+    fun `counts directories as entries when measuring what a create archive will pack`() {
+        // Given
+        val directory = Files.createDirectory(root.resolve("photos"))
+        directory.resolve("one.jpg").writeText("one")
+        Files.createDirectory(directory.resolve("nested")).resolve("two.jpg").writeText("two")
+
+        // When
+        val finished = browser.await(
+            browser.operations.createArchive(listOf(directory.toString()), root.resolve("bundle.zip").toString(), false)
+        )
+
+        // Then
+        finished.state shouldBe FileOperationState.COMPLETED
+        finished.totalFiles shouldBe finished.processedFiles
+    }
+
+    @Test
     fun `counts a rename as having moved the file, so it does not sit at nothing and then end`() {
         // Given
         val file = root.resolve("notes.txt")

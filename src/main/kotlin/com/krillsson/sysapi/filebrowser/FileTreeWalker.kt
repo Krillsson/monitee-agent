@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service
 import java.io.IOException
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
@@ -83,6 +84,40 @@ class FileTreeWalker(
             directoryCount = directoryCount,
             truncated = truncated
         )
+    }
+
+    /**
+     * The totals an operation could not know without a walk. Bounded by the same deadline and
+     * MAX_DEPTH as directorySize, so a tree too large to size in time gives up and returns null
+     * rather than a total that stopped partway through. Cancelling the operation while this is
+     * still walking aborts it the same way cancelling the work itself would, via the sink.
+     */
+    fun measure(paths: List<Path>, countBytes: Boolean, countDirectories: Boolean, sink: FileOperationSink): PathTotals? {
+        val deadline = System.nanoTime() + configuration.searchTimeoutSeconds * 1_000_000_000
+        var files = 0
+        var bytes = 0L
+        paths.forEach { path ->
+            if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                val truncated = walk(path, MAX_DEPTH, deadline) { _, attributes ->
+                    sink.requireNotCancelled()
+                    when {
+                        attributes.isRegularFile -> {
+                            files++
+                            if (countBytes) bytes += attributes.size()
+                        }
+
+                        attributes.isDirectory && countDirectories -> files++
+                    }
+                }
+                if (truncated) {
+                    return null
+                }
+            } else if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                files++
+                if (countBytes) bytes += runCatching { Files.size(path) }.getOrDefault(0L)
+            }
+        }
+        return PathTotals(files, if (countBytes) bytes else null)
     }
 
     private fun requireDirectory(path: String): Path {

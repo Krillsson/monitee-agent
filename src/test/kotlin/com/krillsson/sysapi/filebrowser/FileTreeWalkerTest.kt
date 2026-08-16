@@ -141,4 +141,78 @@ class FileTreeWalkerTest {
         size.totalBytes shouldBe 5
         size.truncated shouldBe true
     }
+
+    private object AlwaysCancelledSink : FileOperationSink {
+        override fun beginFile(path: String, sizeBytes: Long) = Unit
+        override fun addBytes(bytes: Long) = Unit
+        override fun fileDone() = Unit
+        override fun succeeded(path: String) = Unit
+        override fun failed(path: String, reason: String) = Unit
+        override fun isCancelled() = true
+    }
+
+    @Test
+    fun `measures the files and bytes under a directory without counting the directory itself`() {
+        // Given
+        root.resolve("a.txt").writeText("12345")
+        val nested = Files.createDirectory(root.resolve("nested"))
+        nested.resolve("b.txt").writeText("123")
+
+        // When
+        val totals = walker().measure(listOf(root), countBytes = true, countDirectories = false, NoFileOperationSink)
+
+        // Then
+        totals?.files shouldBe 2
+        totals?.bytes shouldBe 8
+    }
+
+    @Test
+    fun `counts directories as entries too when asked to`() {
+        // Given
+        root.resolve("a.txt").writeText("12345")
+        Files.createDirectory(root.resolve("nested"))
+
+        // When
+        val totals = walker().measure(listOf(root), countBytes = true, countDirectories = true, NoFileOperationSink)
+
+        // Then
+        totals?.files shouldBe 3
+    }
+
+    @Test
+    fun `leaves the byte total null when it was not asked to count them`() {
+        // Given
+        root.resolve("a.txt").writeText("12345")
+
+        // When
+        val totals = walker().measure(listOf(root), countBytes = false, countDirectories = false, NoFileOperationSink)
+
+        // Then
+        totals?.files shouldBe 1
+        totals?.bytes shouldBe null
+    }
+
+    @Test
+    fun `gives up and returns null rather than a total cut short by the deadline`() {
+        // Given
+        root.resolve("a.txt").writeText("12345")
+
+        // When
+        val totals =
+            walker(searchTimeoutSeconds = 0).measure(listOf(root), countBytes = true, countDirectories = false, NoFileOperationSink)
+
+        // Then
+        totals shouldBe null
+    }
+
+    @Test
+    fun `aborts the walk instead of finishing it once the sink says the operation was cancelled`() {
+        // Given
+        root.resolve("a.txt").writeText("12345")
+
+        // When / Then
+        shouldThrow<FileOperationCancelledException> {
+            walker().measure(listOf(root), countBytes = true, countDirectories = false, AlwaysCancelledSink)
+        }
+    }
 }

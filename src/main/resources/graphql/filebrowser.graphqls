@@ -374,6 +374,8 @@ enum FileOperationType {
 enum FileOperationState {
     # Accepted, but waiting for a worker. Only two operations run at once
     QUEUED,
+    # Walking a directory source to find real totals before the work starts
+    MEASURING,
     RUNNING,
     # Finished. A batch can complete with entries in failures
     COMPLETED,
@@ -403,6 +405,9 @@ type FileOperation {
     processedBytes: Long!
     # Null for the same reason as totalFiles, and always null for a delete
     totalBytes: Long
+    # A smoothed bytes/second, measured server side. Null once the operation is no longer
+    # RUNNING, or before enough has moved to measure a rate
+    bytesPerSecond: Long
     # The requested paths that worked, and the ones that did not. A batch attempts all of
     # them, so a failure here does not undo the entries in successes
     successes: [String!]!

@@ -360,6 +360,57 @@ class ArchiveServiceTest {
     }
 
     @Test
+    fun `measures a zip extraction from its central directory, without unpacking anything`() {
+        // Given
+        val archive = zip("bundle.zip", "top.txt" to "top", "nested/deep.txt" to "deeper")
+
+        // When
+        val totals = archives().measureExtract(archive, entries = emptyList())
+
+        // Then
+        totals?.files shouldBe 2
+        totals?.bytes shouldBe 9
+        Files.exists(destination.resolve("top.txt")) shouldBe false
+    }
+
+    @Test
+    fun `measures only the entries a zip extraction was asked for`() {
+        // Given
+        val archive = zip("bundle.zip", "top.txt" to "top", "photos/one.jpg" to "one")
+
+        // When
+        val totals = archives().measureExtract(archive, entries = listOf("top.txt"))
+
+        // Then
+        totals?.files shouldBe 1
+        totals?.bytes shouldBe 3
+    }
+
+    @Test
+    fun `gives up measuring a zip with more entries than it is allowed to hold`() {
+        // Given
+        val archive = zip("many.zip", "a.txt" to "a", "b.txt" to "b", "c.txt" to "c")
+
+        // When
+        val totals = archives(maxArchiveEntries = 2).measureExtract(archive, entries = emptyList())
+
+        // Then
+        totals shouldBe null
+    }
+
+    @Test
+    fun `does not claim a total for a tar, which has no index to seek`() {
+        // Given
+        val archive = tar("bundle.tar", gzip = false, "top.txt" to "top")
+
+        // When
+        val totals = archives().measureExtract(archive, entries = emptyList())
+
+        // Then
+        totals shouldBe null
+    }
+
+    @Test
     fun `refuses an extraction that asks for entries the archive does not hold`() {
         // Given
         val archive = zip("bundle.zip", "top.txt" to "top")
