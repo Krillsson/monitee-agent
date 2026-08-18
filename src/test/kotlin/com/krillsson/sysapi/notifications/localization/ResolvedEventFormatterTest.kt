@@ -18,7 +18,7 @@ class ResolvedEventFormatterTest {
     private val formatter = ResolvedEventFormatter(
         MonitoredValueFormatter(mockk(), mockk()),
         DurationFormatter(),
-        checkService
+        CheckEventFormatter(checkService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -36,7 +36,7 @@ class ResolvedEventFormatterTest {
     )
 
     @Test
-    fun `uses the check's name in the description when it can still be resolved`() {
+    fun `delegates the webserver up description to the check event formatter`() {
         // Given
         every { checkService.getById(checkId) } returns TcpCheck(
             id = checkId,
@@ -53,17 +53,5 @@ class ResolvedEventFormatterTest {
 
         // Then
         description shouldBe "nas.lan is passing its check again after 5 minutes"
-    }
-
-    @Test
-    fun `falls back to the raw monitored item id when the check can no longer be resolved`() {
-        // Given
-        every { checkService.getById(checkId) } returns null
-
-        // When
-        val description = formatter.formatResolvedEventDescription(resolvedEvent(checkId.toString()))
-
-        // Then
-        description shouldBe "$checkId is passing its check again after 5 minutes"
     }
 }
