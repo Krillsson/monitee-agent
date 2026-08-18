@@ -1,7 +1,6 @@
 package com.krillsson.sysapi.notifications.localization
 
 import com.krillsson.sysapi.core.check.CheckService
-import com.krillsson.sysapi.core.check.CheckType
 import com.krillsson.sysapi.core.check.HttpCheck
 import com.krillsson.sysapi.core.check.HttpMethod
 import com.krillsson.sysapi.core.monitoring.Monitor
@@ -18,7 +17,10 @@ import java.util.UUID
 class OngoingEventFormatterTest {
 
     private val checkService: CheckService = mockk()
-    private val formatter = OngoingEventFormatter(MonitoredValueFormatter(mockk(), mockk()), checkService)
+    private val formatter = OngoingEventFormatter(
+        MonitoredValueFormatter(mockk(), mockk()),
+        CheckEventFormatter(checkService)
+    )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
 
@@ -34,7 +36,7 @@ class OngoingEventFormatterTest {
     )
 
     @Test
-    fun `uses the check's name in the description when it can still be resolved`() {
+    fun `delegates the webserver up description to the check event formatter`() {
         // Given
         every { checkService.getById(checkId) } returns HttpCheck(
             id = checkId,
@@ -57,17 +59,5 @@ class OngoingEventFormatterTest {
 
         // Then
         description shouldBe "example.com is failing its check"
-    }
-
-    @Test
-    fun `falls back to the raw monitored item id when the check can no longer be resolved`() {
-        // Given
-        every { checkService.getById(checkId) } returns null
-
-        // When
-        val description = formatter.formatOngoingEventDescription(ongoingEvent(checkId.toString()))
-
-        // Then
-        description shouldBe "$checkId is failing its check"
     }
 }

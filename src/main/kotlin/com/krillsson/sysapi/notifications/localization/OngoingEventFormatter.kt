@@ -1,23 +1,14 @@
 package com.krillsson.sysapi.notifications.localization
 
-import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.notifications.Notification
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 class OngoingEventFormatter(
     private val monitoredValueFormatter: MonitoredValueFormatter,
-    private val checkService: CheckService,
+    private val checkEventFormatter: CheckEventFormatter,
 ) {
-
-    private fun checkDisplayName(monitoredItemId: String?): String? =
-        monitoredItemId
-            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            ?.let { checkService.getById(it) }
-            ?.name
-            ?: monitoredItemId
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
         serverName: String,
@@ -108,8 +99,12 @@ class OngoingEventFormatter(
                     )
                 } CPU usage went above $formattedThreshold to $formattedValue"
 
-                Monitor.Type.WEBSERVER_UP -> "${checkDisplayName(monitoredItemId)} is failing its check"
-                Monitor.Type.CHECK_LATENCY -> "${checkDisplayName(monitoredItemId)} answered in $formattedValue, above $formattedThreshold"
+                Monitor.Type.WEBSERVER_UP -> checkEventFormatter.formatWebServerUpOngoingDescription(monitoredItemId)
+                Monitor.Type.CHECK_LATENCY -> checkEventFormatter.formatCheckLatencyOngoingDescription(
+                    monitoredItemId,
+                    formattedValue,
+                    formattedThreshold
+                )
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load went above $formattedThreshold to $formattedValue"

@@ -1,25 +1,16 @@
 package com.krillsson.sysapi.notifications.localization
 
-import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.notifications.Notification
 import org.springframework.stereotype.Component
 import java.time.Duration
-import java.util.UUID
 
 @Component
 class ResolvedEventFormatter(
     private val monitoredValueFormatter: MonitoredValueFormatter,
     private val durationFormatter: DurationFormatter,
-    private val checkService: CheckService,
+    private val checkEventFormatter: CheckEventFormatter,
 ) {
-
-    private fun checkDisplayName(monitoredItemId: String?): String? =
-        monitoredItemId
-            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            ?.let { checkService.getById(it) }
-            ?.name
-            ?: monitoredItemId
     fun formatResolvedEventTitle(
         notification: Notification.ResolvedEvent,
         serverName: String,
@@ -112,8 +103,17 @@ class ResolvedEventFormatter(
                     )
                 } CPU usage is back below $formattedThreshold at $formattedValue after $formattedDuration"
 
-                Monitor.Type.WEBSERVER_UP -> "${checkDisplayName(monitoredItemId)} is passing its check again after $formattedDuration"
-                Monitor.Type.CHECK_LATENCY -> "${checkDisplayName(monitoredItemId)} is back below $formattedThreshold at $formattedValue after $formattedDuration"
+                Monitor.Type.WEBSERVER_UP -> checkEventFormatter.formatWebServerUpResolvedDescription(
+                    monitoredItemId,
+                    formattedDuration
+                )
+
+                Monitor.Type.CHECK_LATENCY -> checkEventFormatter.formatCheckLatencyResolvedDescription(
+                    monitoredItemId,
+                    formattedThreshold,
+                    formattedValue,
+                    formattedDuration
+                )
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is operating normally again after $formattedDuration"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load is back below $formattedThreshold at $formattedValue after $formattedDuration"
