@@ -11,6 +11,7 @@
   - See `sample-queries/Checks.graphql`
 - Feature [Beta]: Browse, read, edit, download, upload and manage files in the directories listed under `fileBrowser` in `configuration.yml`
   - This feature is under development and the APIs may change.
+  - It is opt-in. Nothing is exposed unless you explicitly enable it and specify directories.
   - `access: READ` exposes browsing, searching, reading, downloading and thumbnails, 
   - `access: READ_WRITE` also allows saving, uploading, copying, moving, deleting, archives and the trash
   - Downloads and uploads are streamed over HTTP at `/files/download` and `/files/upload`
