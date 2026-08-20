@@ -1,51 +1,31 @@
 ### Unreleased
 
-- Fix: Check push notifications show the check's name instead of its id
-- Feature: A file operation on a directory now reports real totalFiles/totalBytes once it has walked the tree, with a MEASURING state while it does, and a smoothed bytesPerSecond while it runs
-- Fix: events left behind by a monitor that no longer exists are purged on startup, instead of staying stuck in the event history forever
 - Feature: Web server checks are now checks
   - A check has a name, can be turned off without being deleted, and runs on its own interval and timeout instead of sharing one 30 second schedule
-  - Up or down is decided by expected status codes, the request method, headers and an optional body keyword, rather than by a hardcoded 200
-  - `ignoreCertificateErrors` accepts a self signed certificate for one check without loosening anything else
   - Read them through the `Check` interface with `checks` and `checkById`, and change them with the create, update, delete, enable and run mutations
   - The `webServerChecks` queries, mutations and types still answer and are marked deprecated
+  - In addition to HTTP checks, there are now also TCP, DNS, and PING checks.
+  - New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
+  - Check results are aggregated into hourly and daily buckets once an hour
+  - `ignoreCertificateErrors` accepts a self signed certificate for one check without loosening anything else
   - See `sample-queries/Checks.graphql`
-- Feature: Check results are condensed into hourly and daily buckets once an hour, so two years of uptime history costs about 5,800 rows per check where two weeks used to cost 40,000
-  - `Check.history(from:to:resolution:)` serves raw, hourly or daily points of the same shape and reports which resolution it picked
-  - How long each tier is kept is configured under `metricsConfig.history.checks`, and the existing `purging` section no longer governs check results
-- Feature: Checks can now be a TCP connection to a host and port, or a ping
-  - A ping check runs the system `ping` command and takes the round trip time it reports as the latency
-  - Creating or updating a ping check is refused with a reason when this system has no ping the agent can use, which `PingCheck.pingAvailable` also reports
-  - The `pingAvailability` query answers whether ping checks can run here, and why not when they cannot, without having to create one first
-- Feature: A check can be a DNS lookup against a resolver of your choosing, asserting on the records that come back
-- Feature: New monitor type "Check latency", which raises an event when a check keeps answering but takes longer than its threshold
-- Feature: Browse, read, edit, download, upload and manage files in the directories listed under `fileBrowser` in `configuration.yml`
-  - `access: READ` exposes browsing, searching, reading, downloading and thumbnails, `access: READ_WRITE` also allows saving, uploading, copying, moving, deleting, archives and the trash
-  - Downloads and uploads are streamed over HTTP at `/files/download` and `/files/upload` rather than through GraphQL
-  - Every entry names an icon served from `/files/icons/{iconId}.svg`, and `GET /files/thumbnail?path=&size=` serves a downscaled image of one, cached under the data directory, on every build but the native one
+- Feature [Beta]: Browse, read, edit, download, upload and manage files in the directories listed under `fileBrowser` in `configuration.yml`
+  - This feature is under development and the APIs may change.
+  - `access: READ` exposes browsing, searching, reading, downloading and thumbnails, 
+  - `access: READ_WRITE` also allows saving, uploading, copying, moving, deleting, archives and the trash
+  - Downloads and uploads are streamed over HTTP at `/files/download` and `/files/upload`
   - A browsed log file can be opened in the log viewer and tailed like any configured one
-  - `search` finds a name anywhere under a path and `directorySize` adds a directory up recursively, both bounded by a depth, a result count and a wall clock budget that they report running into
+  - `search` finds a name anywhere under a path
   - `extractArchive` unpacks zip, tar, tar.gz and gz, and `createArchive` packs a zip
-  - `listArchive` looks inside a zip without unpacking it, one folder at a time, and `GET /files/archive/download` reads a single file out of one, both of which work in `READ` mode
-  - `extractArchive` takes an `entries` list, so one file or one folder can be unpacked instead of the whole archive
-  - Copying, moving and deleting take a whole selection in one call and report each path that failed without undoing the rest, and a copy or a move can be told to overwrite what is already at the destination
-  - Copy, move, delete and the archive mutations now start a `FileOperation` and answer immediately instead of holding the request open until they are done
-  - Follow one with the `fileOperationProgress` subscription, which reports the file being worked on, how much has moved and how it ended, and answers with the outcome even when it is asked after the operation already finished
-  - `FileOperation.state` can now be `QUEUED`, since only two operations run at once and a third otherwise looked exactly like one that had stalled
-  - `fileOperationProgress` completes without emitting instead of throwing when the id is no longer tracked, which is the ordinary outcome once `fileOperationRetentionMinutes` passes
-  - `fileBrowser.limits` exposes the byte, count and time ceilings a request can run into, so a client can refuse an oversized upload or edit before streaming a byte
-  - `cancelFileOperation` stops a copy or a delete part way through, which was previously only possible by restarting the agent
-  - `moveToTrash` puts a file in a `.monitee-trash` directory inside its root, which `restoreFromTrash` takes it back out of and `emptyTrash` empties
-  - `FileEntry` carries the POSIX metadata a properties sheet shows, and `listDirectoryConnection` pages a directory holding more entries than `listDirectory` returns
+  - Copy, move, delete and the archive mutations starts a `FileOperation`. Watch its progress using the subscription `fileOperationProgress`
   - See `sample-queries/FileBrowser.graphql`
 - Updating a container now removes the image it was running as a last step, when the update left it untagged and unused
-- The docker image gives jemalloc a thread to return freed memory to the system with, which takes about 50 MB off resident memory and stops it drifting upwards over a day
+- Fix: Check push notifications show the check's name instead of its id
+- Fix: events left behind by a monitor that no longer exists are purged on startup
 - Fix: a day with more than one outage counted only the last one towards its downtime
 - Fix: smartctl, upsc, systemctl and journalctl were treated as present on any host whose `/bin/sh` is dash, so the agent kept calling tools that were not installed
 - Fix: a network interface that no longer exists is dropped instead of being polled on every refresh, which stopped a docker host filling the log with errors about the veth interfaces of removed containers
 - Fix: `openLogFileConnection` and the `tailLogFile` subscription now only read files the `logReader` configuration exposes, instead of any path they are given
-- Fix: the fat jar, the dist zip, the deb and the Windows installer no longer fail to start on the first hostname lookup
-- Recreating a container now logs the host config it is about to submit at debug level, to help diagnose why the daemon rejected it
 
 ### 0.42.1
 
