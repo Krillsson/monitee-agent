@@ -44,6 +44,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement
 import oshi.SystemInfo
 import oshi.hardware.HardwareAbstractionLayer
 import oshi.software.os.OperatingSystem
+import oshi.spi.SystemInfoFactory
+import oshi.spi.SystemInfoProvider
 import oshi.util.GlobalConfig
 import oshi.util.PlatformEnum
 import retrofit2.Retrofit
@@ -169,23 +171,34 @@ class SysApiConfiguration : AsyncConfigurer {
     fun clock(): Clock = Clock.systemUTC()
 
     @Bean
-    fun systemInfo(): SystemInfo {
+    fun systemInfo(): SystemInfoProvider {
         GlobalConfig.set("oshi.os.windows.loadaverage", true)
-        return SystemInfo()
+        val provider = try {
+            SystemInfoFactory.create()
+        } catch (error: LinkageError) {
+            logger.warn(
+                "Falling back to the JNA backend, the FFM backend needs Java 25 or later but this is Java {}",
+                Runtime.version().feature(),
+                error
+            )
+            SystemInfo()
+        }
+        logger.info("Reading hardware through {} on Java {}", provider.javaClass.name, Runtime.version().feature())
+        return provider
     }
 
 
     @Bean
-    fun hal(systemInfo: SystemInfo) = systemInfo.hardware
+    fun hal(systemInfo: SystemInfoProvider) = systemInfo.hardware
 
     @Bean
-    fun os(systemInfo: SystemInfo) = systemInfo.operatingSystem
+    fun os(systemInfo: SystemInfoProvider) = systemInfo.operatingSystem
 
     @Bean
     fun centralProcessor(hal: HardwareAbstractionLayer) = hal.processor
 
     @Bean
-    fun operatingSystem(systemInfo: SystemInfo) = systemInfo.operatingSystem.asOperatingSystem()
+    fun operatingSystem(systemInfo: SystemInfoProvider) = systemInfo.operatingSystem.asOperatingSystem()
 
     @Bean
     fun platform() = PlatformEnum.getCurrentPlatform().asPlatform()

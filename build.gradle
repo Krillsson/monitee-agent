@@ -55,6 +55,7 @@ def jvmArgs = [
         "-XX:ReservedCodeCacheSize=96m",
         "-Xmx512m",
         "-Xms128m",
+        "--enable-native-access=ALL-UNNAMED",
 ]
 
 allOpen {
@@ -68,6 +69,10 @@ repositories {
     flatDir {
         dirs 'lib'
     }
+}
+
+configurations.nativeImageClasspath {
+    exclude group: 'com.github.oshi', module: 'oshi-core-ffm-7.4.4-gpuutilfix'
 }
 
 /**
@@ -110,17 +115,7 @@ task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
                 ]
             }
             from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
-                platforms {
-                    platform {
-                        architecture = 'amd64'
-                        os = 'linux'
-                    }
-                    platform {
-                        architecture = 'arm64'
-                        os = 'linux'
-                    }
-                }
+                image = 'krillsson/openjdk25-ubuntu-systemd:latest'
             }
             to {
                 def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
@@ -268,9 +263,18 @@ dependencies {
     implementation 'org.apache.commons:commons-exec:1.3'
     implementation 'commons-io:commons-io:2.18.0'
     implementation 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.1'
-    implementation('com.github.oshi:oshi-core:7.4.4') {
-        exclude group: "org.slf4j"
-    }
+    // TEMPORARY (#341): oshi-core and oshi-common are replaced by locally built jars carrying the fix from
+    // https://github.com/Krillsson/oshi/tree/fix/linux-nvidia-gpu-utilization
+    // The two are built as a matched pair, so both are vendored. Because file dependencies resolve nothing
+    // transitively, oshi-core's JNA dependencies are declared here; slf4j-api comes from Spring Boot.
+    // Revert to the plain oshi-core dependency once the fix is released upstream.
+    implementation files('lib/oshi-common-7.4.4-gpuutilfix.jar', 'lib/oshi-core-7.4.4-gpuutilfix.jar')
+    implementation 'net.java.dev.jna:jna-jpms:5.19.1'
+    implementation 'net.java.dev.jna:jna-platform-jpms:5.19.1'
+    // TEMPORARY (#341): the FFM backend, built from the same fork branch, so this build can be run on both providers.
+    // It is compiled for Java 25 and only ever loaded through the ServiceLoader, so it stays off the compile classpath.
+    // Declared through flatDir rather than files() so that it can be excluded from the native image classpath.
+    runtimeOnly name: 'oshi-core-ffm-7.4.4-gpuutilfix', group: 'com.github.oshi', version: '7.4.4'
     implementation name: 'jni4net.j-0.8.9.0', group: "net.sf.jni4net", version: "1"
     implementation name: 'OhmJniWrapper.j4n', group: "ohmwrapper", version: "1"
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
