@@ -21,6 +21,7 @@
   - Copy, move, delete and the archive mutations starts a `FileOperation`. Watch its progress using the subscription `fileOperationProgress`
   - See `sample-queries/FileBrowser.graphql`
 - Updating a container now removes the image it was running as a last step, when the update left it untagged and unused
+- Fix: Update OSHI to 7.6.0 to bring in fix for GPU utilization always being 0% on Linux
 - Fix: Check push notifications show the check's name instead of its id
 - Fix: events left behind by a monitor that no longer exists are purged on startup
 - Fix: a day with more than one outage counted only the last one towards its downtime
