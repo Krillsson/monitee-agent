@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.graphql.mutations
 
+import com.krillsson.sysapi.filebrowser.FileBrowserErrorType
 import com.krillsson.sysapi.filebrowser.FileEntry
 import com.krillsson.sysapi.filebrowser.FileOperation
 import com.krillsson.sysapi.filebrowser.TrashEntry
@@ -79,30 +80,35 @@ data class CancelFileOperationInput(
 
 data class SaveTextFileOutput(
     val success: Boolean,
-    val reason: String?
+    val reason: String?,
+    val errorType: FileBrowserErrorType?
 )
 
 data class CreateDirectoryOutput(
     val success: Boolean,
     val reason: String?,
+    val errorType: FileBrowserErrorType?,
     val entry: FileEntry?
 )
 
 data class FileOperationOutput(
     val success: Boolean,
     val reason: String?,
+    val errorType: FileBrowserErrorType?,
     val operation: FileOperation?
 )
 
 data class MoveToTrashOutput(
     val success: Boolean,
     val reason: String?,
+    val errorType: FileBrowserErrorType?,
     val entry: TrashEntry?
 )
 
 data class RestoreFromTrashOutput(
     val success: Boolean,
     val reason: String?,
+    val errorType: FileBrowserErrorType?,
     val entry: FileEntry?
 )
 

@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql
 
-import com.krillsson.sysapi.filebrowser.FileBrowserException
+import com.krillsson.sysapi.filebrowser.FileBrowserErrorType
+import com.krillsson.sysapi.filebrowser.FileBrowserErrors
 import com.krillsson.sysapi.filebrowser.FileBrowserManager
 import com.krillsson.sysapi.filebrowser.FileOperationService
 import com.krillsson.sysapi.filebrowser.TrashService
@@ -39,9 +40,9 @@ class FileBrowserMutationResolver(
 
     @MutationMapping
     fun saveTextFile(@Argument input: SaveTextFileInput): SaveTextFileOutput =
-        attempt("Saving ${input.path}", { SaveTextFileOutput(false, it) }) {
+        attempt("Saving ${input.path}", { reason, type -> SaveTextFileOutput(false, reason, type) }) {
             manager.saveTextFile(input.path, input.contents)
-            SaveTextFileOutput(true, null)
+            SaveTextFileOutput(true, null, null)
         }
 
     @MutationMapping
@@ -58,8 +59,8 @@ class FileBrowserMutationResolver(
 
     @MutationMapping
     fun createDirectory(@Argument input: CreateDirectoryInput): CreateDirectoryOutput =
-        attempt("Creating ${input.path}", { CreateDirectoryOutput(false, it, null) }) {
-            CreateDirectoryOutput(true, null, manager.createDirectory(input.path))
+        attempt("Creating ${input.path}", { reason, type -> CreateDirectoryOutput(false, reason, type, null) }) {
+            CreateDirectoryOutput(true, null, null, manager.createDirectory(input.path))
         }
 
     @MutationMapping
@@ -96,14 +97,14 @@ class FileBrowserMutationResolver(
 
     @MutationMapping
     fun moveToTrash(@Argument input: MoveToTrashInput): MoveToTrashOutput =
-        attempt("Trashing ${input.path}", { MoveToTrashOutput(false, it, null) }) {
-            MoveToTrashOutput(true, null, trashService.trash(input.path))
+        attempt("Trashing ${input.path}", { reason, type -> MoveToTrashOutput(false, reason, type, null) }) {
+            MoveToTrashOutput(true, null, null, trashService.trash(input.path))
         }
 
     @MutationMapping
     fun restoreFromTrash(@Argument input: RestoreFromTrashInput): RestoreFromTrashOutput =
-        attempt("Restoring ${input.id}", { RestoreFromTrashOutput(false, it, null) }) {
-            RestoreFromTrashOutput(true, null, trashService.restore(input.id, input.overwrite))
+        attempt("Restoring ${input.id}", { reason, type -> RestoreFromTrashOutput(false, reason, type, null) }) {
+            RestoreFromTrashOutput(true, null, null, trashService.restore(input.id, input.overwrite))
         }
 
     @MutationMapping
@@ -111,19 +112,25 @@ class FileBrowserMutationResolver(
         started("Emptying the trash") { operations.emptyTrash(input.id) }
 
     private fun started(operation: String, start: () -> com.krillsson.sysapi.filebrowser.FileOperation) =
-        attempt(operation, { FileOperationOutput(false, it, null) }) {
-            FileOperationOutput(true, null, start())
+        attempt(operation, { reason, type -> FileOperationOutput(false, reason, type, null) }) {
+            FileOperationOutput(true, null, null, start())
         }
 
-    private fun <T> attempt(operation: String, failed: (String) -> T, action: () -> T): T {
+    private fun <T> attempt(
+        operation: String,
+        failed: (String, FileBrowserErrorType) -> T,
+        action: () -> T
+    ): T {
         return try {
             action()
-        } catch (ex: FileBrowserException) {
-            logger.info("$operation was refused: ${ex.message}")
-            failed(ex.message.orEmpty())
         } catch (ex: Exception) {
-            logger.error("$operation failed", ex)
-            failed(ex.message ?: requireNotNull(ex::class.simpleName))
+            val failure = FileBrowserErrors.describe(ex)
+            when (failure.type) {
+                FileBrowserErrorType.REFUSED -> logger.info("$operation was refused: ${failure.message}")
+                FileBrowserErrorType.IO_ERROR -> logger.error("$operation failed", ex)
+                else -> logger.warn("$operation failed: ${failure.message}")
+            }
+            failed(failure.message.orEmpty(), failure.type)
         }
     }
 }

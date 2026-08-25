@@ -9,12 +9,6 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 
-open class FileBrowserException(message: String) : RuntimeException(message)
-
-class FileAlreadyThereException(message: String) : FileBrowserException(message)
-
-class UnsupportedThumbnailException(message: String) : FileBrowserException(message)
-
 @Service
 class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
 
@@ -62,7 +56,7 @@ class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
         requireEnabled()
         val real = realPathOf(parse(path))
         if (!Files.exists(real, LinkOption.NOFOLLOW_LINKS)) {
-            throw FileBrowserException("$path does not exist")
+            throw FileBrowserException("$path does not exist", FileBrowserErrorType.NOT_FOUND)
         }
         if (Files.isSymbolicLink(real)) {
             throw FileBrowserException("$path is a symbolic link, which the file browser does not follow")
@@ -141,9 +135,11 @@ class FileBrowserSandbox(configuration: FileBrowserConfiguration) {
     private fun realPathOf(normalized: Path): Path {
         val parent = normalized.parent
         val real = if (parent == null) {
-            realPath(normalized) ?: throw FileBrowserException("$normalized does not exist")
+            realPath(normalized)
+                ?: throw FileBrowserException("$normalized does not exist", FileBrowserErrorType.NOT_FOUND)
         } else {
-            val realParent = realPath(parent) ?: throw FileBrowserException("$parent does not exist")
+            val realParent = realPath(parent)
+                ?: throw FileBrowserException("$parent does not exist", FileBrowserErrorType.NOT_FOUND)
             realParent.resolve(normalized.fileName)
         }
         if (!contains(real)) {

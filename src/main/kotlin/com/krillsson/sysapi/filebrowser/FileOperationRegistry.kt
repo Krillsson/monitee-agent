@@ -5,6 +5,7 @@ import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Sinks
+import java.nio.file.Path
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
@@ -18,7 +19,8 @@ data class FileOperationRequest(
     val destination: String? = null,
     val totalFiles: Int? = null,
     val totalBytes: Long? = null,
-    val measure: ((FileOperationSink) -> PathTotals?)? = null
+    val measure: ((FileOperationSink) -> PathTotals?)? = null,
+    val checkRoom: ((Long) -> Unit)? = null
 )
 
 @Service
@@ -43,8 +45,9 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         sweep()
         val operation = RunningOperation(UUID.randomUUID().toString(), request)
         operations[operation.id] = operation
+        val accepted = operation.snapshot()
         workers.execute { operation.run(work) }
-        return operation.snapshot()
+        return accepted
     }
 
     fun all(): List<FileOperation> = operations.values
@@ -63,7 +66,8 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
     fun events(id: String): Flux<FileOperation> = operations[id]?.events() ?: Flux.empty()
 
     fun cancel(id: String): FileOperation {
-        val operation = operations[id] ?: throw FileBrowserException("$id is not a running operation")
+        val operation = operations[id]
+            ?: throw FileBrowserException("$id is not a running operation", FileBrowserErrorType.NOT_FOUND)
         operation.cancel()
         return operation.snapshot()
     }
@@ -107,6 +111,9 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
         private var reason: String? = null
 
         @Volatile
+        private var errorType: FileBrowserErrorType? = null
+
+        @Volatile
         private var cancelled = false
 
         @Volatile
@@ -131,20 +138,60 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
                     totalFiles = totals?.files
                     totalBytes = totals?.bytes
                 }
+                totalBytes?.let { bytes -> request.checkRoom?.invoke(bytes) }
                 state = FileOperationState.RUNNING
                 emit(force = true)
                 work(this)
-                finish(if (cancelled) FileOperationState.CANCELLED else FileOperationState.COMPLETED, null)
+                finishWithOutcome()
             } catch (ex: FileOperationCancelledException) {
-                finish(FileOperationState.CANCELLED, null)
-            } catch (ex: FileBrowserException) {
-                logger.info("${request.type} operation $id was refused: ${ex.message}")
-                finish(FileOperationState.FAILED, ex.message.orEmpty())
+                finish(FileOperationState.CANCELLED, null, null)
             } catch (ex: Exception) {
-                logger.error("${request.type} operation $id failed", ex)
-                finish(FileOperationState.FAILED, ex.message ?: requireNotNull(ex::class.simpleName))
+                val failure = FileBrowserErrors.describe(ex, destination())
+                log(failure, ex)
+                finish(FileOperationState.FAILED, failure.message.orEmpty(), failure.type)
             }
         }
+
+        /**
+         * A batch attempts every path, so some of them failing is still a completed operation. All
+         * of them failing is not, and reporting that as COMPLETED tells a client that nothing went
+         * wrong when nothing went right.
+         */
+        private fun finishWithOutcome() {
+            val failed = synchronized(this) { if (successes.isEmpty()) failures.toList() else emptyList() }
+            when {
+                cancelled -> finish(FileOperationState.CANCELLED, null, null)
+                failed.isEmpty() -> finish(FileOperationState.COMPLETED, null, null)
+                else -> {
+                    val reason = failed.map { it.reason }.distinct().singleOrNull()
+                        ?: "None of the ${failed.size} paths could be handled"
+                    logger.warn("${request.type} operation $id failed on every one of its paths: $reason")
+                    finish(
+                        FileOperationState.FAILED,
+                        reason,
+                        failed.map { it.type }.distinct().singleOrNull() ?: FileBrowserErrorType.IO_ERROR
+                    )
+                }
+            }
+        }
+
+        private fun log(failure: FileBrowserException, ex: Throwable) {
+            when (failure.type) {
+                FileBrowserErrorType.REFUSED ->
+                    logger.info("${request.type} operation $id was refused: ${failure.message}")
+
+                FileBrowserErrorType.IO_ERROR ->
+                    logger.error("${request.type} operation $id failed on ${asked()}", ex)
+
+                else ->
+                    logger.warn("${request.type} operation $id failed on ${asked()}: ${failure.message}")
+            }
+        }
+
+        private fun asked(): String = request.paths.singleOrNull() ?: "${request.paths.size} paths"
+
+        private fun destination(): Path? =
+            request.destination?.let { runCatching { Path.of(it) }.getOrNull() }
 
         fun cancel() {
             cancelled = true
@@ -175,7 +222,8 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
                 bytesPerSecond = bytesPerSecond,
                 successes = successes.toList(),
                 failures = failures.toList(),
-                reason = reason
+                reason = reason,
+                errorType = errorType
             )
         }
 
@@ -202,16 +250,18 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
             emit(force = true)
         }
 
-        override fun failed(path: String, reason: String) {
-            synchronized(this) { failures += FileOperationFailure(path, reason) }
+        override fun failed(path: String, reason: String, type: FileBrowserErrorType) {
+            synchronized(this) { failures += FileOperationFailure(path, reason, type) }
+            logger.warn("${request.type} operation $id could not handle $path: $reason")
             emit(force = true)
         }
 
         override fun isCancelled() = cancelled
 
-        private fun finish(state: FileOperationState, reason: String?) {
+        private fun finish(state: FileOperationState, reason: String?, errorType: FileBrowserErrorType?) {
             this.state = state
             this.reason = reason
+            this.errorType = errorType
             this.currentPath = null
             this.finishedAt = Instant.now()
             this.bytesPerSecond = null

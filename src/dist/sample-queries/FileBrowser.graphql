@@ -147,16 +147,20 @@ mutation SaveTextFile {
     saveTextFile(input: { path: "/storage/notes.txt", contents: "the new contents" }) {
         success
         reason
+        errorType
     }
 }
 
 # Copy, move, delete and the archive mutations start an operation and answer straight away.
 # Follow it with the fileOperationProgress subscription below, or read it back with
-# fileBrowser.fileOperation. success is false only when the request was refused outright
+# fileBrowser.fileOperation. success is false only when the request was refused outright,
+# which is where a destination the agent cannot write to, and a copy that will not fit on
+# the volume it is going to, come back as PERMISSION_DENIED and OUT_OF_SPACE
 mutation MoveFile {
     moveFile(input: { source: "/storage/notes.txt", destination: "/storage/archive/notes.txt", overwrite: false }) {
         success
         reason
+        errorType
         operation {
             id
             state
@@ -179,8 +183,10 @@ subscription FileOperationProgress {
         failures {
             path
             reason
+            type
         }
         reason
+        errorType
         finishedAt
     }
 }
@@ -205,13 +211,15 @@ mutation CancelFileOperation {
     cancelFileOperation(input: { id: "3c98243a-4dd7-40ed-9abc-ec7981d79897" }) {
         success
         reason
+        errorType
         operation {
             state
         }
     }
 }
 
-# A batch is not undone when one path fails, so read both lists
+# A batch is not undone when one path fails, so read both lists. It only ends up FAILED
+# when none of its paths worked, or when the volume filled up and the rest were given up on
 mutation CopyFiles {
     copyFiles(
         input: {

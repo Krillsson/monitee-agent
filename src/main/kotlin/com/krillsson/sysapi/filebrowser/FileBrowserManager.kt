@@ -13,6 +13,7 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.FileStore
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -155,7 +156,8 @@ class FileBrowserManager(
         if (bytes.size > configuration.maxEditableBytes) {
             throw FileBrowserException("The contents are larger than the ${configuration.maxEditableBytes} byte editing limit")
         }
-        writeAtomically(file) { temp -> Files.write(temp, bytes) }
+        requireWritableDirectory(requireNotNull(file.parent))
+        writingTo(file) { writeAtomically(file) { temp -> Files.write(temp, bytes) } }
         logger.info("Wrote ${bytes.size} bytes to $file")
     }
 
@@ -187,14 +189,25 @@ class FileBrowserManager(
     fun prepareCopy(source: String, destination: String, overwrite: Boolean): Pair<Path, Path> {
         sandbox.requireWritable()
         val from = sandbox.resolveExisting(source)
-        return from to destinationFor(from, destination, overwrite)
+        val to = destinationFor(from, destination, overwrite)
+        requireRoomFor(knownSizeOf(from), to)
+        return from to to
     }
 
+    /**
+     * A rename moves no bytes, so only a move that has to cross a volume is asked whether the
+     * bytes will fit on the other side.
+     */
     fun prepareMove(source: String, destination: String, overwrite: Boolean): Pair<Path, Path> {
         sandbox.requireWritable()
         val from = sandbox.resolveExisting(source)
         requireMovable(from, source)
-        return from to destinationFor(from, destination, overwrite)
+        requireWritableDirectory(requireNotNull(from.parent))
+        val to = destinationFor(from, destination, overwrite)
+        if (storeOf(from) != storeOf(to)) {
+            requireRoomFor(knownSizeOf(from), to)
+        }
+        return from to to
     }
 
     fun prepareDelete(path: String, recursive: Boolean): Path {
@@ -203,10 +216,14 @@ class FileBrowserManager(
         if (sandbox.isRoot(target)) {
             throw FileBrowserException("$path is one of the configured roots and cannot be deleted")
         }
+        requireWritableDirectory(requireNotNull(target.parent))
         if (Files.isDirectory(target)) {
             val empty = Files.newDirectoryStream(target).use { !it.iterator().hasNext() }
             if (!empty && !recursive) {
-                throw FileBrowserException("$path is not empty. Send recursive to delete it with everything in it")
+                throw FileBrowserException(
+                    "$path is not empty. Send recursive to delete it with everything in it",
+                    FileBrowserErrorType.NOT_EMPTY
+                )
             }
         }
         return target
@@ -223,12 +240,14 @@ class FileBrowserManager(
     }
 
     fun runDelete(target: Path, sink: FileOperationSink) {
-        if (Files.isDirectory(target)) {
-            deleteRecursively(target, sink)
-        } else {
-            sink.beginFile(target.toString(), 0)
-            Files.delete(target)
-            sink.fileDone()
+        writingTo(target) {
+            if (Files.isDirectory(target)) {
+                deleteRecursively(target, sink)
+            } else {
+                sink.beginFile(target.toString(), 0)
+                Files.delete(target)
+                sink.fileDone()
+            }
         }
         logger.info("Deleted $target")
     }
@@ -244,7 +263,8 @@ class FileBrowserManager(
         if (Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
             throw FileBrowserException("$path already exists")
         }
-        Files.createDirectory(directory)
+        requireWritableDirectory(requireNotNull(directory.parent))
+        writingTo(directory) { Files.createDirectory(directory) }
         logger.info("Created directory $directory")
         return entryOf(directory)
     }
@@ -260,8 +280,9 @@ class FileBrowserManager(
                 throw FileBrowserException("${target.name} is not a file and cannot be replaced by an upload")
             }
         }
+        requireWritableDirectory(requireNotNull(target.parent))
         removeAbandonedTempFilesIn(requireNotNull(target.parent))
-        val written = writeAtomically(target) { temp -> writeStream(source, temp) }
+        val written = writingTo(target) { writeAtomically(target) { temp -> writeStream(source, temp) } }
         logger.info("Uploaded $written bytes to $target")
         return entryOf(target)
     }
@@ -276,6 +297,41 @@ class FileBrowserManager(
 
     fun entryOf(path: Path): FileEntry = entryFactory.entryOf(path)
 
+    /**
+     * The file system names the temporary file a write went through rather than the destination,
+     * and says nothing at all about why an atomic move was refused, so what the caller asked for
+     * is remembered here and handed to the classifier along with the failure.
+     */
+    fun <T> writingTo(destination: Path, write: () -> T): T = try {
+        write()
+    } catch (ex: FileOperationCancelledException) {
+        throw ex
+    } catch (ex: Exception) {
+        throw FileBrowserErrors.describe(ex, destination)
+    }
+
+    fun requireWritableDirectory(directory: Path) {
+        if (!Files.isWritable(directory)) {
+            throw FileBrowserException(
+                "The agent is not allowed to write to $directory. It runs as ${FileBrowserErrors.runningAs}",
+                FileBrowserErrorType.PERMISSION_DENIED
+            )
+        }
+    }
+
+    fun requireRoomFor(bytes: Long, destination: Path) {
+        if (bytes <= 0) {
+            return
+        }
+        val free = FileBrowserErrors.freeBytesOn(destination) ?: return
+        if (bytes > free) {
+            throw FileBrowserException(
+                "$destination needs $bytes bytes, and only $free are free on the volume it goes to",
+                FileBrowserErrorType.OUT_OF_SPACE
+            )
+        }
+    }
+
     fun requireDirectory(path: String): Path {
         val directory = sandbox.resolveExisting(path)
         if (!Files.isDirectory(directory)) {
@@ -285,10 +341,12 @@ class FileBrowserManager(
     }
 
     fun copyInto(from: Path, to: Path, sink: FileOperationSink = NoFileOperationSink) {
-        if (Files.isDirectory(from)) {
-            copyRecursively(from, to, sink)
-        } else {
-            copyFile(from, to, sink)
+        writingTo(to) {
+            if (Files.isDirectory(from)) {
+                copyRecursively(from, to, sink)
+            } else {
+                copyFile(from, to, sink)
+            }
         }
     }
 
@@ -306,18 +364,20 @@ class FileBrowserManager(
         } else {
             emptyArray()
         }
-        try {
-            val size = if (Files.isRegularFile(from, LinkOption.NOFOLLOW_LINKS)) Files.size(from) else 0L
-            sink.beginFile(from.toString(), size)
-            Files.move(from, to, *options, StandardCopyOption.ATOMIC_MOVE)
-            sink.addBytes(size)
-            sink.fileDone()
-        } catch (ex: AtomicMoveNotSupportedException) {
-            copyInto(from, to, sink)
-            if (Files.isDirectory(from)) {
-                deleteRecursively(from, NoFileOperationSink)
-            } else {
-                Files.delete(from)
+        writingTo(to) {
+            try {
+                val size = if (Files.isRegularFile(from, LinkOption.NOFOLLOW_LINKS)) Files.size(from) else 0L
+                sink.beginFile(from.toString(), size)
+                Files.move(from, to, *options, StandardCopyOption.ATOMIC_MOVE)
+                sink.addBytes(size)
+                sink.fileDone()
+            } catch (ex: AtomicMoveNotSupportedException) {
+                copyInto(from, to, sink)
+                if (Files.isDirectory(from)) {
+                    deleteRecursively(from, NoFileOperationSink)
+                } else {
+                    Files.delete(from)
+                }
             }
         }
     }
@@ -446,9 +506,10 @@ class FileBrowserManager(
         if (to.startsWith(source)) {
             throw FileBrowserException("$destination is inside $source")
         }
+        requireWritableDirectory(requireNotNull(to.parent))
         if (Files.exists(to, LinkOption.NOFOLLOW_LINKS)) {
             if (!overwrite) {
-                throw FileBrowserException("$destination already exists")
+                throw FileAlreadyThereException("$destination already exists")
             }
             if (sandbox.isRoot(to)) {
                 throw FileBrowserException("$destination is one of the configured roots and cannot be replaced")
@@ -470,6 +531,17 @@ class FileBrowserManager(
             throw FileBrowserException("$path is in the trash. Restore it instead")
         }
     }
+
+    private fun knownSizeOf(path: Path): Long =
+        if (Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+            runCatching { Files.size(path) }.getOrDefault(0L)
+        } else {
+            0L
+        }
+
+    private fun storeOf(path: Path): FileStore? = runCatching {
+        Files.getFileStore(generateSequence(path) { it.parent }.first { Files.exists(it) })
+    }.getOrNull()
 
     private fun isDirectory(path: Path): Boolean = runCatching {
         Files.readAttributes(path, BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS).isDirectory

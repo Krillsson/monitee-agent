@@ -147,7 +147,7 @@ class FileTreeWalkerTest {
         override fun addBytes(bytes: Long) = Unit
         override fun fileDone() = Unit
         override fun succeeded(path: String) = Unit
-        override fun failed(path: String, reason: String) = Unit
+        override fun failed(path: String, reason: String, type: FileBrowserErrorType) = Unit
         override fun isCancelled() = true
     }
 

@@ -101,7 +101,8 @@ data class ArchiveListing(
 
 data class FileOperationFailure(
     val path: String,
-    val reason: String
+    val reason: String,
+    val type: FileBrowserErrorType
 )
 
 data class TrashEntry(
