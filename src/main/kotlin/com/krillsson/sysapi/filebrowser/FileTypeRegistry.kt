@@ -30,7 +30,7 @@ class FileTypeRegistry {
         const val UNKNOWN_ICON = "blank"
         private const val OCTET_STREAM = "application/octet-stream"
 
-        private val LOG_EXTENSIONS = setOf("log", "txt", "out", "")
+        private val LOG_EXTENSIONS = setOf("log", "out", "")
 
         private val THUMBNAIL_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
 

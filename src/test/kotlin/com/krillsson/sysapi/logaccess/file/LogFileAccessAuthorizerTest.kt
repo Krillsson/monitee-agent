@@ -119,7 +119,7 @@ class LogFileAccessAuthorizerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["notes.html", "archive.zip", "database.sqlite"])
+    @ValueSource(strings = ["notes.txt", "notes.html", "archive.zip", "database.sqlite"])
     fun `denies a browsed file the browser does not offer to open as a log`(name: String) {
         // Given
         browserRoot.resolve(name).writeText("contents")
@@ -130,7 +130,7 @@ class LogFileAccessAuthorizerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["nginx.log", "notes.txt", "stdout.out", "messages"])
+    @ValueSource(strings = ["nginx.log", "stdout.out", "messages"])
     fun `allows a browsed file that reads like a log`(name: String) {
         // Given
         browserRoot.resolve(name).writeText("contents")

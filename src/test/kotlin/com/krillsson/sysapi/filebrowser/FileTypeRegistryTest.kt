@@ -66,7 +66,7 @@ class FileTypeRegistryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["agent.log", "notes.txt", "cron.out", "syslog"])
+    @ValueSource(strings = ["agent.log", "cron.out", "syslog"])
     fun `recognises the files the log viewer can open`(name: String) {
         // Given
         val given = name
@@ -79,7 +79,7 @@ class FileTypeRegistryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["movie.mkv", "archive.zip", "photo.jpg"])
+    @ValueSource(strings = ["notes.txt", "movie.mkv", "archive.zip", "photo.jpg"])
     fun `does not offer the log viewer for anything else`(name: String) {
         // Given
         val given = name
