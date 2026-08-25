@@ -116,9 +116,12 @@ class FileBrowserUploadTest {
         }
 
         // When
-        shouldThrow<IOException> { manager.upload(root.toString(), "half.bin", false, failing) }
+        val thrown = shouldThrow<FileBrowserException> {
+            manager.upload(root.toString(), "half.bin", false, failing)
+        }
 
         // Then
+        thrown.type shouldBe FileBrowserErrorType.IO_ERROR
         namesIn(root) shouldBe emptyList()
     }
 

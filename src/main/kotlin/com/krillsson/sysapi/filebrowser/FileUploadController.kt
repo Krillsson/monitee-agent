@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 class UnsupportedUploadContentTypeException(contentType: String) :
-    FileBrowserException("An upload cannot be sent as $contentType. Send the file as the whole request body")
+    FileBrowserException(
+        "An upload cannot be sent as $contentType. Send the file as the whole request body",
+        FileBrowserErrorType.NOT_SUPPORTED
+    )
 
 @RestController
 @RequestMapping("/files")

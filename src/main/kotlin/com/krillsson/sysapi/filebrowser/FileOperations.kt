@@ -36,7 +36,8 @@ data class FileOperation(
     val bytesPerSecond: Long?,
     val successes: List<String>,
     val failures: List<FileOperationFailure>,
-    val reason: String?
+    val reason: String?,
+    val errorType: FileBrowserErrorType?
 )
 
 /**
@@ -46,7 +47,8 @@ data class FileOperation(
  */
 data class PathTotals(val files: Int, val bytes: Long?)
 
-class FileOperationCancelledException : FileBrowserException("The operation was cancelled")
+class FileOperationCancelledException :
+    FileBrowserException("The operation was cancelled", FileBrowserErrorType.CANCELLED)
 
 /**
  * What the working end of an operation reports back through. The no-op implementation is what
@@ -63,7 +65,7 @@ interface FileOperationSink {
 
     fun succeeded(path: String)
 
-    fun failed(path: String, reason: String)
+    fun failed(path: String, reason: String, type: FileBrowserErrorType)
 
     fun isCancelled(): Boolean
 
@@ -84,7 +86,7 @@ object NoFileOperationSink : FileOperationSink {
 
     override fun succeeded(path: String) = Unit
 
-    override fun failed(path: String, reason: String) = Unit
+    override fun failed(path: String, reason: String, type: FileBrowserErrorType) = Unit
 
     override fun isCancelled() = false
 }

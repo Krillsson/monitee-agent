@@ -5,7 +5,11 @@ import com.krillsson.sysapi.config.FileBrowserConfiguration
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -24,6 +28,11 @@ class FileBrowserManagerTest {
     @BeforeEach
     fun setUp() {
         root = Files.createDirectory(tempDir.resolve("storage"))
+    }
+
+    @AfterEach
+    fun unlock() {
+        unlockEverythingUnder(root)
     }
 
     private fun manager(
@@ -403,5 +412,63 @@ class FileBrowserManagerTest {
         // Then
         content.contents shouldBe "content"
         manager.listDirectory(root.toString()).entries.single().name shouldBe "notes.txt"
+    }
+
+    @Test
+    fun `refuses more bytes than the volume the destination lands on has free`() {
+        // Given
+        val manager = manager()
+        val destination = root.resolve("huge.bin")
+
+        // When
+        val refused = shouldThrow<FileBrowserException> { manager.requireRoomFor(Long.MAX_VALUE, destination) }
+
+        // Then
+        refused.type shouldBe FileBrowserErrorType.OUT_OF_SPACE
+    }
+
+    @Test
+    fun `asks for no room at all when the size is not known`() {
+        // Given
+        val manager = manager()
+
+        // When / Then
+        manager.requireRoomFor(0, root.resolve("unknown.bin"))
+    }
+
+    @Test
+    fun `describes a copy the file system refused rather than the temporary file it went through`() {
+        // Given
+        val manager = manager()
+        val file = root.resolve("notes.txt")
+        file.writeText("content")
+        val locked = lockDirectory(Files.createDirectory(root.resolve("locked")))
+
+        // When
+        val thrown = shouldThrow<FileBrowserException> { manager.copyInto(file, locked.resolve("notes.txt")) }
+
+        // Then
+        thrown.type shouldBe FileBrowserErrorType.PERMISSION_DENIED
+        thrown.message.shouldNotBeNull() shouldContain locked.toString()
+        thrown.message.shouldNotBeNull() shouldNotContain FileBrowserManager.TEMP_FILE_PREFIX
+    }
+
+    @Test
+    fun `describes a move the file system refused rather than the pair of paths java reports`() {
+        // Given
+        val manager = manager()
+        val file = root.resolve("notes.txt")
+        file.writeText("content")
+        val locked = lockDirectory(Files.createDirectory(root.resolve("locked")))
+
+        // When
+        val thrown = shouldThrow<FileBrowserException> {
+            manager.moveInto(file, locked.resolve("notes.txt"), overwrite = false)
+        }
+
+        // Then
+        thrown.type shouldBe FileBrowserErrorType.PERMISSION_DENIED
+        thrown.message.shouldNotBeNull() shouldNotContain "->"
+        file.readText() shouldBe "content"
     }
 }

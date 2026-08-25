@@ -2,7 +2,10 @@ package com.krillsson.sysapi.filebrowser
 
 import com.krillsson.sysapi.config.FileBrowserAccess
 import com.krillsson.sysapi.config.FileBrowserConfiguration
+import org.junit.jupiter.api.Assumptions
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.time.Duration
 import java.time.Instant
 
@@ -56,6 +59,24 @@ fun fileBrowser(
     ),
     cache
 )
+
+/**
+ * Running as root makes every permission bit advisory, so a test that needs a refusal has
+ * nothing to assert about. Skipping is honest where passing would not be.
+ */
+fun lockDirectory(directory: Path): Path {
+    Files.setPosixFilePermissions(directory, PosixFilePermissions.fromString("r-xr-xr-x"))
+    Assumptions.assumeFalse(Files.isWritable(directory), "This user can write anywhere, so nothing gets refused")
+    return directory
+}
+
+fun unlockEverythingUnder(directory: Path) {
+    Files.walk(directory).use { paths ->
+        paths.forEach { path ->
+            runCatching { Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rwxr-xr-x")) }
+        }
+    }
+}
 
 fun fileEntry(
     name: String,

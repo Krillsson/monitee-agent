@@ -6,6 +6,9 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -30,7 +33,111 @@ class FileOperationServiceTest {
         browser = fileBrowser(root)
     }
 
+    @AfterEach
+    fun unlock() {
+        unlockEverythingUnder(root)
+    }
+
     private fun readOnly() = fileBrowser(root, access = FileBrowserAccess.READ)
+
+    private fun lockedDirectory(): Path = lockDirectory(Files.createDirectory(root.resolve("locked")))
+
+    @Test
+    fun `refuses a move into a directory it is not allowed to write to, before touching anything`() {
+        // Given
+        val file = root.resolve("notes.txt")
+        file.writeText("content")
+        val locked = lockedDirectory()
+
+        // When
+        val refused = shouldThrow<FileBrowserException> {
+            browser.operations.move(file.toString(), locked.resolve("notes.txt").toString(), false)
+        }
+
+        // Then
+        refused.type shouldBe FileBrowserErrorType.PERMISSION_DENIED
+        refused.message.shouldNotBeNull() shouldContain locked.toString()
+        refused.message.shouldNotBeNull() shouldNotContain "->"
+        file.readText() shouldBe "content"
+    }
+
+    @Test
+    fun `refuses a copy into a directory it is not allowed to write to without naming its temporary file`() {
+        // Given
+        val file = root.resolve("notes.txt")
+        file.writeText("content")
+        val locked = lockedDirectory()
+
+        // When
+        val refused = shouldThrow<FileBrowserException> {
+            browser.operations.copy(file.toString(), locked.resolve("notes.txt").toString(), false)
+        }
+
+        // Then
+        refused.type shouldBe FileBrowserErrorType.PERMISSION_DENIED
+        refused.message.shouldNotBeNull() shouldNotContain FileBrowserManager.TEMP_FILE_PREFIX
+    }
+
+    @Test
+    fun `refuses a delete out of a directory it is not allowed to write to`() {
+        // Given
+        val locked = Files.createDirectory(root.resolve("locked"))
+        val file = locked.resolve("notes.txt")
+        file.writeText("content")
+        lockDirectory(locked)
+
+        // When
+        val refused = shouldThrow<FileBrowserException> { browser.operations.delete(file.toString(), false) }
+
+        // Then
+        refused.type shouldBe FileBrowserErrorType.PERMISSION_DENIED
+    }
+
+    @Test
+    fun `fails a batch in which every path was refused instead of calling it completed`() {
+        // Given
+        val first = root.resolve("first.txt")
+        val second = root.resolve("second.txt")
+        first.writeText("one")
+        second.writeText("two")
+        val locked = lockedDirectory()
+
+        // When
+        val finished = browser.await(
+            browser.operations.moveAll(listOf(first.toString(), second.toString()), locked.toString(), false)
+        )
+
+        // Then
+        finished.state shouldBe FileOperationState.FAILED
+        finished.errorType shouldBe FileBrowserErrorType.PERMISSION_DENIED
+        finished.successes.shouldBeEmpty()
+        finished.failures.map { it.type } shouldContainExactly
+            listOf(FileBrowserErrorType.PERMISSION_DENIED, FileBrowserErrorType.PERMISSION_DENIED)
+        finished.reason.shouldNotBeNull() shouldContain "not allowed to write"
+        first.readText() shouldBe "one"
+    }
+
+    @Test
+    fun `still completes a batch that only partly failed`() {
+        // Given
+        val moved = root.resolve("moved.txt")
+        val taken = root.resolve("taken.txt")
+        moved.writeText("one")
+        taken.writeText("two")
+        val destination = Files.createDirectory(root.resolve("destination"))
+        destination.resolve("taken.txt").writeText("already there")
+
+        // When
+        val finished = browser.await(
+            browser.operations.moveAll(listOf(moved.toString(), taken.toString()), destination.toString(), false)
+        )
+
+        // Then
+        finished.state shouldBe FileOperationState.COMPLETED
+        finished.errorType shouldBe null
+        finished.successes shouldContainExactly listOf(moved.toString())
+        finished.failures.map { it.type } shouldContainExactly listOf(FileBrowserErrorType.ALREADY_EXISTS)
+    }
 
     @Test
     fun `copies a file and reports it finished`() {

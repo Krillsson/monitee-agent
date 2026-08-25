@@ -348,18 +348,43 @@ type SaveTextFileOutput {
     success: Boolean!
     # What went wrong, when success is false
     reason: String
+    # Which kind of thing went wrong, when success is false
+    errorType: FileBrowserErrorType
 }
 
 type CreateDirectoryOutput {
     success: Boolean!
     reason: String
+    errorType: FileBrowserErrorType
     # The directory that was created, when success is true
     entry: FileEntry
+}
+
+# Why something did not work, so a client can tell the cases apart without reading the
+# message. reason always carries the human readable version of the same thing
+enum FileBrowserErrorType {
+    # The request itself was wrong, or the configuration does not allow it
+    REFUSED,
+    NOT_FOUND,
+    ALREADY_EXISTS,
+    # A directory still holds something, and recursive was not asked for
+    NOT_EMPTY,
+    # The user the agent runs as cannot read or write there. In a container that is
+    # usually a bind mount owned by someone else, or a missing PUID/PGID
+    PERMISSION_DENIED,
+    # The volume is full, or a quota on it is
+    OUT_OF_SPACE,
+    READ_ONLY_FILE_SYSTEM,
+    NOT_SUPPORTED,
+    CANCELLED,
+    # Something else the file system reported
+    IO_ERROR
 }
 
 type FileOperationFailure {
     path: String!
     reason: String!
+    type: FileBrowserErrorType!
 }
 
 enum FileOperationType {
@@ -377,9 +402,11 @@ enum FileOperationState {
     # Walking a directory source to find real totals before the work starts
     MEASURING,
     RUNNING,
-    # Finished. A batch can complete with entries in failures
+    # Finished. A batch can complete with entries in failures, as long as at least
+    # one of its paths worked
     COMPLETED,
-    # Gave up, and reason says why. What it had already done stays done
+    # Gave up, and reason says why. What it had already done stays done. A batch
+    # where every path failed ends up here too
     FAILED,
     CANCELLED
 }
@@ -414,13 +441,18 @@ type FileOperation {
     failures: [FileOperationFailure!]!
     # Why it stopped, when state is FAILED
     reason: String
+    # Which kind of thing stopped it, when state is FAILED
+    errorType: FileBrowserErrorType
 }
 
 # The operation was accepted and has started. Follow it with fileOperationProgress.
-# success is false when it was refused outright, which is checked before anything is touched
+# success is false when it was refused outright, which is checked before anything is
+# touched. A destination the agent cannot write to, and a copy whose bytes will not fit
+# on the volume it is going to, are both refused here rather than part way through
 type FileOperationOutput {
     success: Boolean!
     reason: String
+    errorType: FileBrowserErrorType
     operation: FileOperation
 }
 
@@ -431,12 +463,14 @@ input CancelFileOperationInput {
 type MoveToTrashOutput {
     success: Boolean!
     reason: String
+    errorType: FileBrowserErrorType
     entry: TrashEntry
 }
 
 type RestoreFromTrashOutput {
     success: Boolean!
     reason: String
+    errorType: FileBrowserErrorType
     # Where it was put back, when success is true
     entry: FileEntry
 }

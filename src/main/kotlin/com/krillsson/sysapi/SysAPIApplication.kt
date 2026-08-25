@@ -40,6 +40,7 @@ import com.krillsson.sysapi.filebrowser.FileEntry
 import com.krillsson.sysapi.filebrowser.FileEntryEdge
 import com.krillsson.sysapi.filebrowser.FileEntryType
 import com.krillsson.sysapi.filebrowser.FileOperation
+import com.krillsson.sysapi.filebrowser.FileBrowserErrorType
 import com.krillsson.sysapi.filebrowser.FileOperationFailure
 import com.krillsson.sysapi.filebrowser.FileOperationState
 import com.krillsson.sysapi.filebrowser.FileOperationType
@@ -316,6 +317,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     ArchiveEntry::class,
     ArchiveListing::class,
     FileOperationFailure::class,
+    FileBrowserErrorType::class,
     FileOperation::class,
     FileOperationType::class,
     FileOperationState::class,

@@ -82,7 +82,8 @@ class FileOperationService(
                 type = FileOperationType.EXTRACT_ARCHIVE,
                 paths = listOf(archive.toString()),
                 destination = destination.toString(),
-                measure = { archiveService.measureExtract(archive, entries) }
+                measure = { archiveService.measureExtract(archive, entries) },
+                checkRoom = { bytes -> manager.requireRoomFor(bytes, destination) }
             )
         ) { sink ->
             archiveService.extract(archive.toString(), destination.toString(), overwrite, entries, sink)
@@ -137,6 +138,9 @@ class FileOperationService(
      * because the 137th name is taken is exactly what having a batch is meant to avoid. Only what
      * is wrong with the request as a whole is checked up front, and only cancellation stops it
      * part way through.
+     *
+     * A full volume is the exception. Nothing about the remaining paths can succeed once the disk
+     * is out of room, so the batch stops there instead of failing every one of them in turn.
      */
     private fun many(
         type: FileOperationType,
@@ -152,6 +156,7 @@ class FileOperationService(
         if (paths.size > MAX_BATCH_SIZE) {
             throw FileBrowserException("A batch cannot hold more than $MAX_BATCH_SIZE paths")
         }
+        val into = destination?.let { runCatching { Path.of(it) }.getOrNull() }
         return registry.submit(request(type, paths, destination, countBytes)) { sink ->
             paths.forEach { path ->
                 sink.requireNotCancelled()
@@ -161,7 +166,11 @@ class FileOperationService(
                 } catch (ex: FileOperationCancelledException) {
                     throw ex
                 } catch (ex: Exception) {
-                    sink.failed(path, ex.message ?: requireNotNull(ex::class.simpleName))
+                    val failure = FileBrowserErrors.describe(ex, into)
+                    sink.failed(path, failure.message.orEmpty(), failure.type)
+                    if (failure.type.stopsABatch) {
+                        throw failure
+                    }
                 }
             }
         }
@@ -179,6 +188,7 @@ class FileOperationService(
         destination: String?,
         countBytes: Boolean
     ): FileOperationRequest {
+        val checkRoom = roomCheckFor(type, destination)
         val resolved = paths.mapNotNull { path -> runCatching { sandbox.resolveExisting(path) }.getOrNull() }
         if (resolved.size != paths.size) {
             return FileOperationRequest(type = type, paths = paths, destination = destination)
@@ -192,14 +202,29 @@ class FileOperationService(
                 paths = paths,
                 destination = destination,
                 totalFiles = sizes.size,
-                totalBytes = if (countBytes) sizes.filterNotNull().sum() else null
+                totalBytes = if (countBytes) sizes.filterNotNull().sum() else null,
+                checkRoom = checkRoom
             )
         }
         return FileOperationRequest(
             type = type,
             paths = paths,
             destination = destination,
-            measure = { sink -> treeWalker.measure(resolved, countBytes, countDirectories = false, sink) }
+            measure = { sink -> treeWalker.measure(resolved, countBytes, countDirectories = false, sink) },
+            checkRoom = checkRoom
         )
+    }
+
+    /**
+     * A directory only has a byte total once it has been walked, which is the last moment before
+     * the work starts at which a copy that was never going to fit can still be refused rather than
+     * abandoned halfway through.
+     */
+    private fun roomCheckFor(type: FileOperationType, destination: String?): ((Long) -> Unit)? {
+        if (type != FileOperationType.COPY || destination == null) {
+            return null
+        }
+        val into = runCatching { Path.of(destination) }.getOrNull() ?: return null
+        return { bytes -> manager.requireRoomFor(bytes, into) }
     }
 }
