@@ -46,6 +46,11 @@ import com.krillsson.sysapi.filebrowser.FileSearchInput
 import com.krillsson.sysapi.filebrowser.FileSearchResult
 import com.krillsson.sysapi.filebrowser.TextFileContent
 import com.krillsson.sysapi.filebrowser.TrashEntry
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerFinished
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSkipped
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerStarted
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateFinished
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
@@ -88,9 +93,15 @@ import com.krillsson.sysapi.graphql.mutations.SaveTextFileOutput
 import com.krillsson.sysapi.graphql.mutations.SetCheckEnabledInput
 import com.krillsson.sysapi.graphql.mutations.UpdateCheckFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateCheckSuccess
+import com.krillsson.sysapi.graphql.mutations.AbortDockerContainerBatchUpdateInput
+import com.krillsson.sysapi.graphql.mutations.AbortDockerContainerBatchUpdateOutputAccepted
+import com.krillsson.sysapi.graphql.mutations.AbortDockerContainerBatchUpdateOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputFailed
 import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainerOutputStarted
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainersInput
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainersOutputFailed
+import com.krillsson.sysapi.graphql.mutations.UpdateDockerContainersOutputStarted
 import com.krillsson.sysapi.graphql.mutations.UpdateHttpCheckInput
 import com.krillsson.sysapi.graphql.mutations.UpdateDnsCheckInput
 import com.krillsson.sysapi.graphql.mutations.UpdatePingCheckInput
@@ -207,6 +218,17 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerContainerUpdateImagePullProgress::class,
     DockerContainerUpdateSucceeded::class,
     DockerContainerUpdateFailed::class,
+    UpdateDockerContainersInput::class,
+    UpdateDockerContainersOutputStarted::class,
+    UpdateDockerContainersOutputFailed::class,
+    AbortDockerContainerBatchUpdateInput::class,
+    AbortDockerContainerBatchUpdateOutputAccepted::class,
+    AbortDockerContainerBatchUpdateOutputFailed::class,
+    DockerContainerBatchUpdateStarted::class,
+    DockerContainerBatchUpdateContainerStarted::class,
+    DockerContainerBatchUpdateContainerFinished::class,
+    DockerContainerBatchUpdateContainerSkipped::class,
+    DockerContainerBatchUpdateFinished::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,
