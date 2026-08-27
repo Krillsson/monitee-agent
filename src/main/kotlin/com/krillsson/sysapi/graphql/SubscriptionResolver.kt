@@ -12,7 +12,9 @@ import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.filebrowser.FileOperation
 import com.krillsson.sysapi.filebrowser.FileOperationService
+import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateEvent
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.InternetService
 import com.krillsson.sysapi.graphql.domain.Meta
@@ -34,6 +36,7 @@ class SubscriptionResolver(
     val logFileService: LogFileService,
     val containerService: ContainerService,
     val containerUpdateJobs: ContainerUpdateJobs,
+    val containerBatchUpdateJobs: ContainerBatchUpdateJobs,
     val serverIdService: ServerIdService,
     val upsService: UpsService,
     val systemDaemonManager: SystemDaemonManager,
@@ -142,4 +145,8 @@ class SubscriptionResolver(
     @SubscriptionMapping
     fun dockerContainerUpdate(@Argument jobId: UUID): Flux<DockerContainerUpdateEvent> =
         containerUpdateJobs.events(jobId)
+
+    @SubscriptionMapping
+    fun dockerContainerBatchUpdate(@Argument batchJobId: UUID): Flux<DockerContainerBatchUpdateEvent> =
+        containerBatchUpdateJobs.events(batchJobId)
 }

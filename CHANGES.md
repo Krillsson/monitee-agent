@@ -1,5 +1,7 @@
 ### Unreleased
 
+- `updateDockerContainers` updates a list of containers one at a time, tolerating a failed one and continuing with the rest, and can be stopped mid-way with `abortDockerContainerBatchUpdate`
+
 ### 0.43.0
 
 - Feature: Web server checks are now checks

@@ -34,4 +34,34 @@ data class UpdateDockerContainerInput(
         val pullImage: Boolean
 )
 
+interface UpdateDockerContainersOutput
+
+data class UpdateDockerContainersOutputStarted(
+        val batchJobId: UUID,
+        val containerIds: List<String>
+) : UpdateDockerContainersOutput
+
+data class UpdateDockerContainersOutputFailed(
+        val reason: String
+) : UpdateDockerContainersOutput
+
+data class UpdateDockerContainersInput(
+        val containerIds: List<String>,
+        val pullImage: Boolean
+)
+
+interface AbortDockerContainerBatchUpdateOutput
+
+data class AbortDockerContainerBatchUpdateOutputAccepted(
+        val batchJobId: UUID
+) : AbortDockerContainerBatchUpdateOutput
+
+data class AbortDockerContainerBatchUpdateOutputFailed(
+        val reason: String
+) : AbortDockerContainerBatchUpdateOutput
+
+data class AbortDockerContainerBatchUpdateInput(
+        val batchJobId: UUID
+)
+
 

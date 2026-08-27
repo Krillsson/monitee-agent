@@ -9,6 +9,17 @@ extend type Mutation {
     # Follow it with the dockerContainerUpdate subscription, passing the jobId that comes back
     # The container is replaced rather than changed, so it comes back with a different id
     updateDockerContainer(input: UpdateDockerContainerInput) : UpdateDockerContainerOutput
+
+    # Updates a list of containers one at a time, in the order given
+    # Returns as soon as the batch is accepted, the work carries on in the background
+    # Follow it with the dockerContainerBatchUpdate subscription, passing the batchJobId that
+    # comes back. A container failing does not stop the batch, it moves on to the next one
+    updateDockerContainers(input: UpdateDockerContainersInput) : UpdateDockerContainersOutput
+
+    # Stops a batch started with updateDockerContainers from starting its next container
+    # The container it is in the middle of updating, if any, is not cancelled and is left to
+    # finish, successfully or not
+    abortDockerContainerBatchUpdate(input: AbortDockerContainerBatchUpdateInput) : AbortDockerContainerBatchUpdateOutput
 }
 
 extend type Subscription {
@@ -33,6 +44,18 @@ extend type Subscription {
     # agent. Subscribing to a job that is not known yields an empty stream rather than an error,
     # which is indistinguishable from one that finished long ago.
     dockerContainerUpdate(jobId: UUID!): DockerContainerUpdateEvent!
+
+    # Follow a batch started with updateDockerContainers
+    #
+    # Everything the batch has emitted so far is replayed on subscribe, the same as
+    # dockerContainerUpdate, and the same 30 minute forget window and restart behaviour apply.
+    # The stream completes after DockerContainerBatchUpdateFinished.
+    #
+    # This stream only reports which container the batch is on and whether it succeeded. A
+    # container's own step-by-step progress, including image pull progress, is on the
+    # dockerContainerUpdate subscription using the jobId carried on its
+    # DockerContainerBatchUpdateContainerStarted event.
+    dockerContainerBatchUpdate(batchJobId: UUID!): DockerContainerBatchUpdateEvent!
 }
 
 input PerformDockerContainerCommandInput{
@@ -196,6 +219,95 @@ type DockerContainerUpdateFailed implements DockerContainerUpdateEvent {
     # Whether the original container was put back the way it was. False means it needs attention:
     # it may be stopped, renamed to <name>-old, or missing networks
     rolledBack: Boolean!
+}
+
+input UpdateDockerContainersInput {
+    containerIds: [String!]!
+    # Pull the image before recreating each container. Same meaning as on updateDockerContainer,
+    # applied to every container in the batch
+    pullImage: Boolean! = true
+}
+
+# The batch was accepted and is now running
+type UpdateDockerContainersOutputStarted {
+    # Pass this to the dockerContainerBatchUpdate subscription to follow the batch
+    batchJobId: UUID!
+    # The order the batch will attempt them in. A container id repeated in the input is only
+    # attempted once
+    containerIds: [String!]!
+}
+
+# The batch was refused before anything happened: the container list was empty
+type UpdateDockerContainersOutputFailed {
+    reason: String!
+}
+
+union UpdateDockerContainersOutput = UpdateDockerContainersOutputStarted | UpdateDockerContainersOutputFailed
+
+input AbortDockerContainerBatchUpdateInput {
+    batchJobId: UUID!
+}
+
+type AbortDockerContainerBatchUpdateOutputAccepted {
+    batchJobId: UUID!
+}
+
+# The batch was refused: no such batch, or it had already finished
+type AbortDockerContainerBatchUpdateOutputFailed {
+    reason: String!
+}
+
+union AbortDockerContainerBatchUpdateOutput = AbortDockerContainerBatchUpdateOutputAccepted | AbortDockerContainerBatchUpdateOutputFailed
+
+interface DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+}
+
+# First event of the job. Containers are attempted in this order, one at a time
+type DockerContainerBatchUpdateStarted implements DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+    containerIds: [String!]!
+}
+
+# The batch moved on to updating this container
+# jobId follows the dockerContainerUpdate subscription for its step-by-step progress
+type DockerContainerBatchUpdateContainerStarted implements DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+    containerId: String!
+    jobId: UUID!
+}
+
+# A container's update reached a terminal outcome. The batch moves on to the next container
+# regardless of succeeded
+type DockerContainerBatchUpdateContainerFinished implements DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+    containerId: String!
+    # Null when the container's update was refused before a job could be started for it, for
+    # example because it was already being updated outside this batch. Otherwise the same jobId
+    # carried on this container's DockerContainerBatchUpdateContainerStarted event
+    jobId: UUID
+    succeeded: Boolean!
+    # Set when succeeded is false
+    reason: String
+}
+
+# The container was never attempted because the batch had already been aborted
+type DockerContainerBatchUpdateContainerSkipped implements DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+    containerId: String!
+}
+
+# Last event of the job
+type DockerContainerBatchUpdateFinished implements DockerContainerBatchUpdateEvent {
+    batchJobId: UUID!
+    timestamp: Instant!
+    # True when abortDockerContainerBatchUpdate cut the batch short
+    aborted: Boolean!
 }
 
 type ReadLogsForContainerOutputFailed {

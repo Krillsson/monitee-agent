@@ -22,6 +22,7 @@ import com.krillsson.sysapi.core.check.PingCheckSpec
 import com.krillsson.sysapi.core.check.RunCheckResult
 import com.krillsson.sysapi.core.check.TcpCheckSpec
 import com.krillsson.sysapi.core.check.UpdateCheckResult
+import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.graphql.mutations.*
@@ -41,6 +42,7 @@ class MutationResolver(
     private val genericEventRepository: GenericEventRepository,
     private val containerService: ContainerService,
     private val containerUpdateJobs: ContainerUpdateJobs,
+    private val containerBatchUpdateJobs: ContainerBatchUpdateJobs,
     private val systemDaemonManager: SystemDaemonManager,
     private val windowsManager: WindowsManager,
     private val processKiller: ProcessKillerService,
@@ -72,6 +74,26 @@ class MutationResolver(
             )
 
             is ContainerUpdateJobs.StartResult.Rejected -> UpdateDockerContainerOutputFailed(result.reason)
+        }
+    }
+
+    @MutationMapping
+    fun updateDockerContainers(@Argument input: UpdateDockerContainersInput): UpdateDockerContainersOutput {
+        return when (val result = containerBatchUpdateJobs.start(input.containerIds, input.pullImage)) {
+            is ContainerBatchUpdateJobs.StartResult.Started -> UpdateDockerContainersOutputStarted(
+                result.batchJobId,
+                result.containerIds
+            )
+
+            is ContainerBatchUpdateJobs.StartResult.Rejected -> UpdateDockerContainersOutputFailed(result.reason)
+        }
+    }
+
+    @MutationMapping
+    fun abortDockerContainerBatchUpdate(@Argument input: AbortDockerContainerBatchUpdateInput): AbortDockerContainerBatchUpdateOutput {
+        return when (val result = containerBatchUpdateJobs.abort(input.batchJobId)) {
+            is ContainerBatchUpdateJobs.AbortResult.Accepted -> AbortDockerContainerBatchUpdateOutputAccepted(result.batchJobId)
+            is ContainerBatchUpdateJobs.AbortResult.Rejected -> AbortDockerContainerBatchUpdateOutputFailed(result.reason)
         }
     }
 
