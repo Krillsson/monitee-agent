@@ -6,6 +6,7 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSk
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateEvent
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateFinished
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
@@ -169,6 +170,88 @@ class ContainerBatchUpdateJobsTest {
 
         // Then
         result shouldBe ContainerBatchUpdateJobs.AbortResult.Rejected("Batch update has already finished")
+    }
+
+    @Test
+    fun `has nothing current or findable before anything is started`() {
+        batchUpdateJobs.current() shouldBe null
+        batchUpdateJobs.find(UUID.randomUUID()) shouldBe null
+    }
+
+    @Test
+    fun `current reports the batch while it is running, without needing its id`() {
+        // Given
+        val jobIdA = UUID.randomUUID()
+        val containerAEvents = Sinks.many().multicast().onBackpressureBuffer<DockerContainerUpdateEvent>()
+        every { containerUpdateJobs.start("a", true) } returns ContainerUpdateJobs.StartResult.Started(jobIdA, "a")
+        every { containerUpdateJobs.events(jobIdA) } returns containerAEvents.asFlux()
+
+        val queue = LinkedBlockingQueue<DockerContainerBatchUpdateEvent>()
+        val started = batchUpdateJobs.start(listOf("a"), true)
+            .shouldBeInstanceOf<ContainerBatchUpdateJobs.StartResult.Started>()
+        batchUpdateJobs.events(started.batchJobId).subscribe { queue.put(it) }
+        queue.takeAs<DockerContainerBatchUpdateStarted>()
+        queue.takeAs<DockerContainerBatchUpdateContainerStarted>()
+
+        // When
+        val current = batchUpdateJobs.current()
+
+        // Then
+        current?.batchJobId shouldBe started.batchJobId
+        current?.state shouldBe DockerContainerBatchUpdateJobState.RUNNING
+        current?.lastEvent.shouldBeInstanceOf<DockerContainerBatchUpdateContainerStarted>()
+
+        // let it finish so it doesn't linger into the next test
+        containerAEvents.tryEmitNext(DockerContainerUpdateSucceeded(jobIdA, "a", Instant.now(), "new-a", null))
+        queue.takeAs<DockerContainerBatchUpdateContainerFinished>()
+        queue.takeAs<DockerContainerBatchUpdateFinished>()
+    }
+
+    @Test
+    fun `find reports the outcome of a batch that already finished, for a client that missed it`() {
+        // Given
+        jobSucceeds("a")
+        val started = batchUpdateJobs.start(listOf("a"), true)
+            .shouldBeInstanceOf<ContainerBatchUpdateJobs.StartResult.Started>()
+
+        // When
+        batchUpdateJobs.events(started.batchJobId).collectList().block(Duration.ofSeconds(5))
+
+        // Then
+        val finished = batchUpdateJobs.find(started.batchJobId)
+        finished?.state shouldBe DockerContainerBatchUpdateJobState.FINISHED
+        finished?.lastEvent.shouldBeInstanceOf<DockerContainerBatchUpdateFinished>()
+        batchUpdateJobs.current() shouldBe null
+    }
+
+    @Test
+    fun `current favours the batch actually running over one still queued behind it`() {
+        // Given
+        val jobIdA = UUID.randomUUID()
+        val containerAEvents = Sinks.many().multicast().onBackpressureBuffer<DockerContainerUpdateEvent>()
+        every { containerUpdateJobs.start("a", true) } returns ContainerUpdateJobs.StartResult.Started(jobIdA, "a")
+        every { containerUpdateJobs.events(jobIdA) } returns containerAEvents.asFlux()
+        jobSucceeds("b")
+
+        val queue = LinkedBlockingQueue<DockerContainerBatchUpdateEvent>()
+        val startedFirst = batchUpdateJobs.start(listOf("a"), true)
+            .shouldBeInstanceOf<ContainerBatchUpdateJobs.StartResult.Started>()
+        batchUpdateJobs.events(startedFirst.batchJobId).subscribe { queue.put(it) }
+        queue.takeAs<DockerContainerBatchUpdateStarted>()
+        queue.takeAs<DockerContainerBatchUpdateContainerStarted>()
+
+        // When: a second batch is started while the first is still occupying the worker thread
+        val startedSecond = batchUpdateJobs.start(listOf("b"), true)
+            .shouldBeInstanceOf<ContainerBatchUpdateJobs.StartResult.Started>()
+
+        // Then
+        batchUpdateJobs.current()?.batchJobId shouldBe startedFirst.batchJobId
+        batchUpdateJobs.find(startedSecond.batchJobId)?.state shouldBe DockerContainerBatchUpdateJobState.QUEUED
+
+        // let both finish
+        containerAEvents.tryEmitNext(DockerContainerUpdateSucceeded(jobIdA, "a", Instant.now(), "new-a", null))
+        batchUpdateJobs.events(startedFirst.batchJobId).collectList().block(Duration.ofSeconds(5))
+        batchUpdateJobs.events(startedSecond.batchJobId).collectList().block(Duration.ofSeconds(5))
     }
 
     private fun runToCompletion(containerIds: List<String>): List<DockerContainerBatchUpdateEvent> {

@@ -5,6 +5,8 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSk
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateEvent
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateFinished
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateJob
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
@@ -41,6 +43,10 @@ class ContainerBatchUpdateJobs(
 
     private class Batch(val containerIds: List<String>) {
         val events: Sinks.Many<DockerContainerBatchUpdateEvent> = Sinks.many().replay().all()
+        val startedAt: Instant = Instant.now()
+
+        @Volatile
+        var lastEvent: DockerContainerBatchUpdateEvent? = null
 
         @Volatile
         var aborted: Boolean = false
@@ -83,6 +89,33 @@ class ContainerBatchUpdateJobs(
 
     fun events(batchJobId: UUID): Flux<DockerContainerBatchUpdateEvent> {
         return batches[batchJobId]?.events?.asFlux() ?: Flux.empty()
+    }
+
+    // Batches run one at a time on a single-thread executor, in the order they were submitted, so
+    // the earliest not-yet-finished batch is always the one currently executing, if any
+    fun current(): DockerContainerBatchUpdateJob? {
+        return batches.entries
+            .filter { it.value.finishedAt == null }
+            .minByOrNull { it.value.startedAt }
+            ?.let { (batchJobId, batch) -> batch.toSnapshot(batchJobId) }
+    }
+
+    fun find(batchJobId: UUID): DockerContainerBatchUpdateJob? = batches[batchJobId]?.toSnapshot(batchJobId)
+
+    private fun Batch.toSnapshot(batchJobId: UUID): DockerContainerBatchUpdateJob {
+        val state = when {
+            finishedAt == null && lastEvent == null -> DockerContainerBatchUpdateJobState.QUEUED
+            finishedAt == null -> DockerContainerBatchUpdateJobState.RUNNING
+            else -> DockerContainerBatchUpdateJobState.FINISHED
+        }
+        return DockerContainerBatchUpdateJob(
+            batchJobId = batchJobId,
+            containerIds = containerIds,
+            state = state,
+            startedAt = startedAt,
+            finishedAt = finishedAt,
+            lastEvent = lastEvent
+        )
     }
 
     private fun run(batchJobId: UUID, batch: Batch, pullImage: Boolean) {
@@ -165,6 +198,7 @@ class ContainerBatchUpdateJobs(
     }
 
     private fun Batch.emit(event: DockerContainerBatchUpdateEvent) {
+        lastEvent = event
         events.tryEmitNext(event)
     }
 }

@@ -221,6 +221,28 @@ type DockerContainerUpdateFailed implements DockerContainerUpdateEvent {
     rolledBack: Boolean!
 }
 
+enum DockerContainerUpdateJobState {
+    # Accepted, waiting for an earlier update to finish first. Updates run one at a time
+    QUEUED,
+    RUNNING,
+    SUCCEEDED,
+    FAILED
+}
+
+# The state of a job started with updateDockerContainer, for a client that was not there to see
+# it start. Returned by containerUpdateJob, which this mirrors the subscription behaviour of:
+# the same 30 minute forget window and restart behaviour apply
+type DockerContainerUpdateJob {
+    jobId: UUID!
+    containerId: String!
+    state: DockerContainerUpdateJobState!
+    startedAt: Instant!
+    finishedAt: Instant
+    # The last event the dockerContainerUpdate subscription would have delivered. Null only
+    # while QUEUED
+    lastEvent: DockerContainerUpdateEvent
+}
+
 input UpdateDockerContainersInput {
     containerIds: [String!]!
     # Pull the image before recreating each container. Same meaning as on updateDockerContainer,
@@ -310,6 +332,27 @@ type DockerContainerBatchUpdateFinished implements DockerContainerBatchUpdateEve
     aborted: Boolean!
 }
 
+enum DockerContainerBatchUpdateJobState {
+    # Accepted, waiting for an earlier batch to finish first. Batches run one at a time
+    QUEUED,
+    RUNNING,
+    FINISHED
+}
+
+# The state of a batch started with updateDockerContainers, for a client that was not there to
+# see it start. Returned by containerBatchUpdateJob, which mirrors the subscription behaviour of:
+# the same 30 minute forget window and restart behaviour apply
+type DockerContainerBatchUpdateJob {
+    batchJobId: UUID!
+    containerIds: [String!]!
+    state: DockerContainerBatchUpdateJobState!
+    startedAt: Instant!
+    finishedAt: Instant
+    # The last event the dockerContainerBatchUpdate subscription would have delivered. Null only
+    # while QUEUED
+    lastEvent: DockerContainerBatchUpdateEvent
+}
+
 type ReadLogsForContainerOutputFailed {
     reason: String!
 }
@@ -332,6 +375,14 @@ type DockerAvailable {
     metricsForContainer(containerId: String!): DockerContainerMetrics
     containerMetricsHistoryBetweenTimestamps(containerId: String!, from: Instant!, to: Instant!): [DockerContainerMetricsHistoryEntry!]!
     openDockerLogMessageConnection(containerId: String! after: String, before: String, first: Int, last: Int, reverse: Boolean): DockerLogMessageConnection!
+    # The update currently running or queued, if any, without needing the jobId a mutation
+    # returned. Pass jobId to look up a specific job instead, including one that already
+    # finished, under the same rules as the dockerContainerUpdate subscription
+    containerUpdateJob(jobId: UUID): DockerContainerUpdateJob
+    # The batch currently running or queued, if any, without needing the batchJobId a mutation
+    # returned. Pass batchJobId to look up a specific batch instead, including one that already
+    # finished, under the same rules as the dockerContainerBatchUpdate subscription
+    containerBatchUpdateJob(batchJobId: UUID): DockerContainerBatchUpdateJob
 }
 
 type DockerUnavailable{

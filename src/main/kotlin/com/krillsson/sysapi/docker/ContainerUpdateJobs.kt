@@ -5,6 +5,8 @@ import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJob
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.util.logger
@@ -35,6 +37,10 @@ class ContainerUpdateJobs(
 
     private class Job(val containerId: String) {
         val events: Sinks.Many<DockerContainerUpdateEvent> = Sinks.many().replay().all()
+        val startedAt: Instant = Instant.now()
+
+        @Volatile
+        var lastEvent: DockerContainerUpdateEvent? = null
 
         @Volatile
         var finishedAt: Instant? = null
@@ -68,6 +74,34 @@ class ContainerUpdateJobs(
 
     fun events(jobId: UUID): Flux<DockerContainerUpdateEvent> {
         return jobs[jobId]?.events?.asFlux() ?: Flux.empty()
+    }
+
+    // Jobs run one at a time on a single-thread executor, in the order they were submitted, so
+    // the earliest not-yet-finished job is always the one currently executing, if any
+    fun current(): DockerContainerUpdateJob? {
+        return jobs.entries
+            .filter { it.value.finishedAt == null }
+            .minByOrNull { it.value.startedAt }
+            ?.let { (jobId, job) -> job.toSnapshot(jobId) }
+    }
+
+    fun find(jobId: UUID): DockerContainerUpdateJob? = jobs[jobId]?.toSnapshot(jobId)
+
+    private fun Job.toSnapshot(jobId: UUID): DockerContainerUpdateJob {
+        val state = when {
+            finishedAt == null && lastEvent == null -> DockerContainerUpdateJobState.QUEUED
+            finishedAt == null -> DockerContainerUpdateJobState.RUNNING
+            lastEvent is DockerContainerUpdateSucceeded -> DockerContainerUpdateJobState.SUCCEEDED
+            else -> DockerContainerUpdateJobState.FAILED
+        }
+        return DockerContainerUpdateJob(
+            jobId = jobId,
+            containerId = containerId,
+            state = state,
+            startedAt = startedAt,
+            finishedAt = finishedAt,
+            lastEvent = lastEvent
+        )
     }
 
     private fun run(jobId: UUID, job: Job, prepared: ContainerRecreateService.Preparation.Ready) {
@@ -115,6 +149,7 @@ class ContainerUpdateJobs(
     }
 
     private fun Job.emit(event: DockerContainerUpdateEvent) {
+        lastEvent = event
         events.tryEmitNext(event)
     }
 

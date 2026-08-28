@@ -51,8 +51,12 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSk
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateFinished
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateStarted
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateJob
+import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateImagePullProgress
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJob
+import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.graphql.mutations.CopyFileInput
@@ -218,6 +222,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerContainerUpdateImagePullProgress::class,
     DockerContainerUpdateSucceeded::class,
     DockerContainerUpdateFailed::class,
+    DockerContainerUpdateJob::class,
+    DockerContainerUpdateJobState::class,
     UpdateDockerContainersInput::class,
     UpdateDockerContainersOutputStarted::class,
     UpdateDockerContainersOutputFailed::class,
@@ -229,6 +235,8 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerContainerBatchUpdateContainerFinished::class,
     DockerContainerBatchUpdateContainerSkipped::class,
     DockerContainerBatchUpdateFinished::class,
+    DockerContainerBatchUpdateJob::class,
+    DockerContainerBatchUpdateJobState::class,
     EventStore.StoredEvent::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,
