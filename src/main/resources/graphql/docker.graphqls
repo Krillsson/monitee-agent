@@ -431,6 +431,7 @@ type DockerContainer {
     health: DockerContainerHealth
     status: String!
     imageUpdate: DockerContainerImageUpdate!
+    updateEligibility: DockerContainerUpdateEligibility!
 }
 
 enum DockerImageUpdateStatus {
@@ -448,6 +449,15 @@ type DockerContainerImageUpdate {
     # why the image was skipped or why the check failed
     reason: String
     checkedAt: Instant
+}
+
+# Whether updateDockerContainer would be allowed to try, and why not if it would refuse.
+# Independent of imageUpdate: a container can be up to date and not updatable, or outdated and
+# updatable
+type DockerContainerUpdateEligibility {
+    updatable: Boolean!
+    # Set when updatable is false
+    reason: String
 }
 
 type DockerContainerMetrics{
