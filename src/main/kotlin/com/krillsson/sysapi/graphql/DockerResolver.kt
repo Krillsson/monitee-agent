@@ -4,7 +4,9 @@ import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.docker.State
+import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.docker.ReadLogsCommandResult
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.graphql.domain.*
@@ -13,12 +15,15 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
 import java.time.Instant
 import java.time.OffsetDateTime
+import java.util.UUID
 
 @Controller
 @SchemaMapping(typeName = "DockerAvailable")
 class DockerResolver(
     val containerService: ContainerService,
-    val containerUpdateChecker: ContainerUpdateChecker
+    val containerUpdateChecker: ContainerUpdateChecker,
+    val containerUpdateJobs: ContainerUpdateJobs,
+    val containerBatchUpdateJobs: ContainerBatchUpdateJobs
 ) {
 
     @SchemaMapping
@@ -111,4 +116,12 @@ class DockerResolver(
             containerId, from, to
         )
     }
+
+    @SchemaMapping
+    fun containerUpdateJob(@Argument jobId: UUID?): DockerContainerUpdateJob? =
+        jobId?.let { containerUpdateJobs.find(it) } ?: containerUpdateJobs.current()
+
+    @SchemaMapping
+    fun containerBatchUpdateJob(@Argument batchJobId: UUID?): DockerContainerBatchUpdateJob? =
+        batchJobId?.let { containerBatchUpdateJobs.find(it) } ?: containerBatchUpdateJobs.current()
 }

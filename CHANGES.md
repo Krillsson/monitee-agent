@@ -1,6 +1,7 @@
 ### Unreleased
 
 - `updateDockerContainers` updates a list of containers one at a time, tolerating a failed one and continuing with the rest, and can be stopped mid-way with `abortDockerContainerBatchUpdate`
+- `containerUpdateJob` and `containerBatchUpdateJob` let a client discover a container update or batch already in progress, or check on one it lost track of, without needing the id from the mutation that started it
 
 ### 0.43.0
 
