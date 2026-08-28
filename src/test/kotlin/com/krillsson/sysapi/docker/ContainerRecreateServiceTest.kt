@@ -1,6 +1,11 @@
 package com.krillsson.sysapi.docker
 
+import com.krillsson.sysapi.core.domain.docker.Config
+import com.krillsson.sysapi.core.domain.docker.Container
+import com.krillsson.sysapi.core.domain.docker.ContainerUpdateEligibility
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
+import com.krillsson.sysapi.core.domain.docker.HostConfig
+import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
@@ -20,6 +25,7 @@ class ContainerRecreateServiceTest {
 
     private val containerService = mockk<ContainerService>(relaxed = true)
     private val dockerClient = mockk<DockerClient>(relaxed = true)
+    private val selfContainer = mockk<SelfContainer>(relaxed = true)
     private val listener = mockk<ContainerRecreator.Listener>(relaxed = true)
 
     private val service = ContainerRecreateService(
@@ -27,7 +33,7 @@ class ContainerRecreateServiceTest {
         dockerClient = dockerClient,
         registryClient = mockk<RegistryClient>(relaxed = true),
         containerUpdateChecker = mockk<ContainerUpdateChecker>(relaxed = true),
-        selfContainer = mockk<SelfContainer>(relaxed = true),
+        selfContainer = selfContainer,
         containersHistoryRepository = mockk<ContainersHistoryRepository>(relaxed = true),
         monitorManager = mockk<MonitorManager>(relaxed = true),
         eventManager = mockk<EventManager>(relaxed = true)
@@ -109,9 +115,111 @@ class ContainerRecreateServiceTest {
         verify(exactly = 0) { dockerClient.removeImage(any()) }
     }
 
+    @Test
+    fun `updateEligibility allows a container nothing else depends on`() {
+        // Given
+        val gluetun = container(id = "gluet0n", name = "gluetun")
+
+        // When
+        val eligibility = service.updateEligibility(gluetun)
+
+        // Then
+        eligibility shouldBe ContainerUpdateEligibility(updatable = true, reason = null)
+    }
+
+    @Test
+    fun `updateEligibility refuses the container monitee-agent itself runs in`() {
+        // Given
+        val self = container(id = "s3lf", name = "monitee-agent")
+        every { selfContainer.isSelf("s3lf") } returns true
+
+        // When
+        val eligibility = service.updateEligibility(self)
+
+        // Then
+        eligibility shouldBe ContainerUpdateEligibility(
+            updatable = false,
+            reason = "monitee-agent is running monitee-agent itself, which cannot survive being replaced mid-update. Update it from the host instead"
+        )
+    }
+
+    @Test
+    fun `updateEligibility refuses a container managed by Swarm`() {
+        // Given
+        val swarmed = container(id = "sw4rm", name = "nginx", labels = mapOf("com.docker.swarm.service.id" to "abc"))
+
+        // When
+        val eligibility = service.updateEligibility(swarmed)
+
+        // Then
+        eligibility shouldBe ContainerUpdateEligibility(
+            updatable = false,
+            reason = "nginx is managed by Swarm, update its service instead"
+        )
+    }
+
+    @Test
+    fun `updateEligibility refuses a container whose network other containers depend on`() {
+        // Given
+        val gluetun = container(id = "gluet0n", name = "gluetun")
+        val qbittorrent = container(id = "qb1t", name = "qbittorrent", networkMode = "container:gluet0n")
+        every { containerService.containers() } returns listOf(gluetun, qbittorrent)
+
+        // When
+        val eligibility = service.updateEligibility(gluetun)
+
+        // Then
+        eligibility shouldBe ContainerUpdateEligibility(
+            updatable = false,
+            reason = "gluetun's network is used by qbittorrent, which cannot follow it to a new container"
+        )
+    }
+
+    @Test
+    fun `prepare refuses a container it is not eligible to update, with the same reason updateEligibility gives`() {
+        // Given
+        every { containerService.status } returns Status.Available
+        every { containerService.container(replacedContainerId) } returns container(id = replacedContainerId, name = "monitee-agent")
+        every { selfContainer.isSelf(replacedContainerId) } returns true
+
+        // When
+        val result = service.prepare(replacedContainerId, pullImage = true)
+
+        // Then
+        result shouldBe ContainerRecreateService.Preparation.Rejected(
+            "monitee-agent is running monitee-agent itself, which cannot survive being replaced mid-update. Update it from the host instead"
+        )
+    }
+
     private fun recreateSucceeds(imageId: String? = replacedImageId) {
         every { containerService.container(any()) } returns null
         every { dockerClient.recreateContainer(any(), any(), any()) } returns
             ContainerRecreator.Result.Success(replacementContainerId, imageId)
     }
+
+    private fun container(
+        id: String,
+        name: String,
+        labels: Map<String, String> = emptyMap(),
+        networkMode: String = "bridge",
+        image: String = "nginx:1.25"
+    ): Container = Container(
+        command = "nginx",
+        created = 0L,
+        hostConfig = HostConfig(networkMode = networkMode),
+        config = Config(env = emptyList(), volumeBindings = emptyList(), cmd = emptyList(), exposedPorts = emptyList()),
+        id = id,
+        image = image,
+        imageID = "sha256:$id",
+        labels = labels,
+        mounts = emptyList(),
+        names = listOf("/$name"),
+        networkSettings = emptyList(),
+        ports = emptyList(),
+        sizeRootFs = 0L,
+        sizeRw = 0L,
+        state = State.RUNNING,
+        health = null,
+        status = "Up"
+    )
 }

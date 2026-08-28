@@ -2,6 +2,7 @@
 
 - `updateDockerContainers` updates a list of containers one at a time, tolerating a failed one and continuing with the rest, and can be stopped mid-way with `abortDockerContainerBatchUpdate`
 - `containerUpdateJob` and `containerBatchUpdateJob` let a client discover a container update or batch already in progress, or check on one it lost track of, without needing the id from the mutation that started it
+- `DockerContainer.updateEligibility` says up front whether a container can be updated and why not, covering the container monitee-agent itself runs in the same way it already covered Swarm-managed containers and ones another container's network depends on
 
 ### 0.43.0
 

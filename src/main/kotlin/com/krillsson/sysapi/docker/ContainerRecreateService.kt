@@ -1,6 +1,8 @@
 package com.krillsson.sysapi.docker
 
 import com.github.dockerjava.api.model.AuthConfig
+import com.krillsson.sysapi.core.domain.docker.Container
+import com.krillsson.sysapi.core.domain.docker.ContainerUpdateEligibility
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
@@ -51,31 +53,15 @@ class ContainerRecreateService(
             ?: return Preparation.Rejected("No container with id $containerId")
         val name = container.names.firstOrNull()?.removePrefix("/") ?: containerId
 
-        if (selfContainer.isSelf(container.id)) {
-            logger.warn(
-                "Refusing to update {} ({}): monitee-agent runs in it and would be stopped before it could finish",
-                name,
-                containerId
-            )
-            return Preparation.Rejected(
-                "$name is running monitee-agent itself, which cannot survive being replaced mid-update. Update it from the host instead"
-            )
-        }
-
-        if (container.labels.containsKey(SWARM_SERVICE_LABEL)) {
-            return Preparation.Rejected("$name is managed by Swarm, update its service instead")
-        }
-
-        // A container's network mode names the container providing its network by id, so the
-        // containers on this one's network cannot be moved over to the replacement and would be
-        // left without a network for as long as they exist.
-        val dependents = containerService.containers()
-            .filter { it.hostConfig.networkMode == "$SHARED_NETWORK_NAMESPACE_MODE_PREFIX${container.id}" }
-            .map { it.names.firstOrNull()?.removePrefix("/") ?: it.id }
-        if (dependents.isNotEmpty()) {
-            return Preparation.Rejected(
-                "$name's network is used by ${dependents.joinToString()}, which cannot follow it to a new container"
-            )
+        ineligibleReason(container)?.let { reason ->
+            if (selfContainer.isSelf(container.id)) {
+                logger.warn(
+                    "Refusing to update {} ({}): monitee-agent runs in it and would be stopped before it could finish",
+                    name,
+                    containerId
+                )
+            }
+            return Preparation.Rejected(reason)
         }
 
         val pull = if (pullImage) {
@@ -93,6 +79,35 @@ class ContainerRecreateService(
             composeProject = container.labels[COMPOSE_PROJECT_LABEL],
             pull = pull
         )
+    }
+
+    fun updateEligibility(container: Container): ContainerUpdateEligibility {
+        val reason = ineligibleReason(container)
+        return ContainerUpdateEligibility(updatable = reason == null, reason = reason)
+    }
+
+    private fun ineligibleReason(container: Container): String? {
+        val name = container.names.firstOrNull()?.removePrefix("/") ?: container.id
+
+        if (selfContainer.isSelf(container.id)) {
+            return "$name is running monitee-agent itself, which cannot survive being replaced mid-update. Update it from the host instead"
+        }
+
+        if (container.labels.containsKey(SWARM_SERVICE_LABEL)) {
+            return "$name is managed by Swarm, update its service instead"
+        }
+
+        // A container's network mode names the container providing its network by id, so the
+        // containers on this one's network cannot be moved over to the replacement and would be
+        // left without a network for as long as they exist.
+        val dependents = containerService.containers()
+            .filter { it.hostConfig.networkMode == "$SHARED_NETWORK_NAMESPACE_MODE_PREFIX${container.id}" }
+            .map { it.names.firstOrNull()?.removePrefix("/") ?: it.id }
+        if (dependents.isNotEmpty()) {
+            return "$name's network is used by ${dependents.joinToString()}, which cannot follow it to a new container"
+        }
+
+        return null
     }
 
     fun recreate(prepared: Preparation.Ready, listener: ContainerRecreator.Listener): RecreateContainerResult {

@@ -22,6 +22,7 @@ import com.krillsson.sysapi.core.check.UptimeDay
 import com.krillsson.sysapi.core.check.UptimeMetrics
 import com.krillsson.sysapi.core.check.UptimePeriod
 import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
+import com.krillsson.sysapi.core.domain.docker.ContainerUpdateEligibility
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
@@ -212,6 +213,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     Notification.GenericEvent.ContainerImageUpdateDigest::class,
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
+    ContainerUpdateEligibility::class,
     UpdateDockerContainerInput::class,
     UpdateDockerContainerOutputStarted::class,
     UpdateDockerContainerOutputFailed::class,
