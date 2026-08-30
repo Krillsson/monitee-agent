@@ -1,13 +1,13 @@
 ### Unreleased
 
-- `updateDockerContainers` updates a list of containers one at a time, tolerating a failed one and continuing with the rest, and can be stopped mid-way with `abortDockerContainerBatchUpdate`
-- `containerUpdateJob` and `containerBatchUpdateJob` let a client discover a container update or batch already in progress, or check on one it lost track of, without needing the id from the mutation that started it
-- `DockerContainer.updateEligibility` says up front whether a container can be updated and why not, covering the container monitee-agent itself runs in the same way it already covered Swarm-managed containers and ones another container's network depends on
-- Fix: File operations say what went wrong when a copy runs out of disk space or a destination cannot be written, instead of reporting `No space left on device`, a `/source -> /destination` pair or an internal temporary file name
-  - `FileOperation`, `FileOperationFailure` and the file browser mutation results carry a `FileBrowserErrorType`
-  - A destination the agent cannot write to, and a copy that will not fit on the volume it is going to, are refused before the operation starts
-  - A batch reports FAILED rather than COMPLETED when none of its paths worked, and stops early once the volume is full
-- Fix: `fileSystems { metrics { totalSpaceBytes } }` no longer re-enumerates every filesystem once per filesystem, which could time out the app's setup query on hosts with hundreds of mounts
+### 0.44.0
+
+- Updates to container updates:
+  - `updateDockerContainers` update several containers in a batch. Cancel with `abortDockerContainerBatchUpdate`
+  - `containerUpdateJob` and `containerBatchUpdateJob` lets a client discover ongoing updates without any context about them.
+  - `DockerContainer.updateEligibility` explains the update gating. For example when attempting to update a container that exposes a network.
+- Fix: More clear errors when file operations fail with no space left or permission error.
+- Fix: `fileSystems { metrics { totalSpaceBytes } }` no longer re-enumerates every filesystem once per filesystem.
 
 ### 0.43.0
 
