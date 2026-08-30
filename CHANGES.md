@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: File downloads no longer stall after 30 seconds regardless of transfer progress.
+
 ### 0.44.0
 
 - Updates to container updates:
