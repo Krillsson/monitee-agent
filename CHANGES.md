@@ -7,6 +7,7 @@
   - `FileOperation`, `FileOperationFailure` and the file browser mutation results carry a `FileBrowserErrorType`
   - A destination the agent cannot write to, and a copy that will not fit on the volume it is going to, are refused before the operation starts
   - A batch reports FAILED rather than COMPLETED when none of its paths worked, and stops early once the volume is full
+- Fix: `fileSystems { metrics { totalSpaceBytes } }` no longer re-enumerates every filesystem once per filesystem, which could time out the app's setup query on hosts with hundreds of mounts
 
 ### 0.43.0
 
