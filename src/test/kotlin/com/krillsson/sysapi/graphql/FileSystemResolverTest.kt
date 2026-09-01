@@ -2,6 +2,7 @@ package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
 import com.krillsson.sysapi.core.forecast.FileSystemSpaceForecastDAO
 import com.krillsson.sysapi.core.forecast.FileSystemSpaceForecastEntity
 import com.krillsson.sysapi.core.metrics.FileSystemMetrics
@@ -93,6 +94,7 @@ class FileSystemResolverTest {
     private fun forecastEntity(filesystemId: String) = FileSystemSpaceForecastEntity(
         filesystemId = filesystemId,
         computedAt = Instant.parse("2026-01-15T00:00:00Z"),
+        trend = FileSystemSpaceTrend.GROWING,
         growthBytesPerDay = 1_000.0,
         daysUntilFull = 81.0,
         daysUntilFullLow = 70.0,

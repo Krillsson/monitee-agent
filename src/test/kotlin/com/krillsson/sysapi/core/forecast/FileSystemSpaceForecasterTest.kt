@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.forecast
 
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
@@ -29,16 +30,18 @@ class FileSystemSpaceForecasterTest {
 
         // Then
         forecast.shouldNotBeNull()
+        forecast.trend shouldBe FileSystemSpaceTrend.GROWING
         forecast.growthBytesPerDay shouldBe 1_000.0
         // last recorded used = 10_000 + 9*1_000 = 19_000, remaining = 81_000, at 1_000/day = 81 days
         forecast.daysUntilFull shouldBe 81.0
         forecast.daysUntilFullLow shouldBe 81.0
         forecast.daysUntilFullHigh shouldBe 81.0
+        forecast.projectedFullDate.shouldNotBeNull()
         forecast.daysOfHistoryUsed shouldBe 9.0
     }
 
     @Test
-    fun `returns null when usage is flat`() {
+    fun `reports STABLE with no days-until-full when usage is flat`() {
         // Given
         val points = dailyPoints(days = 10, startBytes = 10_000, bytesPerDay = 0)
 
@@ -46,11 +49,17 @@ class FileSystemSpaceForecasterTest {
         val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
 
         // Then
-        forecast.shouldBeNull()
+        forecast.shouldNotBeNull()
+        forecast.trend shouldBe FileSystemSpaceTrend.STABLE
+        forecast.growthBytesPerDay shouldBe 0.0
+        forecast.daysUntilFull.shouldBeNull()
+        forecast.daysUntilFullLow.shouldBeNull()
+        forecast.daysUntilFullHigh.shouldBeNull()
+        forecast.projectedFullDate.shouldBeNull()
     }
 
     @Test
-    fun `returns null when usage is shrinking`() {
+    fun `reports SHRINKING with no days-until-full when usage is decreasing`() {
         // Given
         val points = dailyPoints(days = 10, startBytes = 50_000, bytesPerDay = -1_000)
 
@@ -58,7 +67,13 @@ class FileSystemSpaceForecasterTest {
         val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
 
         // Then
-        forecast.shouldBeNull()
+        forecast.shouldNotBeNull()
+        forecast.trend shouldBe FileSystemSpaceTrend.SHRINKING
+        forecast.growthBytesPerDay shouldBe -1_000.0
+        forecast.daysUntilFull.shouldBeNull()
+        forecast.daysUntilFullLow.shouldBeNull()
+        forecast.daysUntilFullHigh.shouldBeNull()
+        forecast.projectedFullDate.shouldBeNull()
     }
 
     @Test
@@ -89,7 +104,7 @@ class FileSystemSpaceForecasterTest {
     }
 
     @Test
-    fun `returns a forecast even when the projected fill date is decades away, as long as growth is real`() {
+    fun `returns a GROWING forecast even when the projected fill date is decades away, as long as growth is real`() {
         // Given: a huge volume with a small but perfectly steady (noise-free) daily growth -
         // real signal, just a slow one relative to capacity. This is the shape of a large NAS
         // array: reproduces a real case where an earlier day-count ceiling wrongly hid it.
@@ -100,11 +115,13 @@ class FileSystemSpaceForecasterTest {
 
         // Then
         forecast.shouldNotBeNull()
-        forecast.daysUntilFull shouldBeGreaterThan 365.0 * 10
+        forecast.trend shouldBe FileSystemSpaceTrend.GROWING
+        val daysUntilFull = forecast.daysUntilFull.shouldNotBeNull()
+        daysUntilFull shouldBeGreaterThan 365.0 * 10
     }
 
     @Test
-    fun `returns null when growth is positive but not distinguishable from noise`() {
+    fun `reports STABLE when a positive drift is not distinguishable from noise`() {
         // Given: a real zigzag pattern with a small upward drift (200 bytes/day) that's
         // dwarfed by the swing (+-2000 bytes) between samples - a human eye might call this
         // "kind of going up", but it isn't statistically distinguishable from flat.
@@ -119,7 +136,9 @@ class FileSystemSpaceForecasterTest {
         val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
 
         // Then
-        forecast.shouldBeNull()
+        forecast.shouldNotBeNull()
+        forecast.trend shouldBe FileSystemSpaceTrend.STABLE
+        forecast.daysUntilFull.shouldBeNull()
     }
 
     @Test
@@ -137,15 +156,31 @@ class FileSystemSpaceForecasterTest {
 
         // Then
         forecast.shouldNotBeNull()
-        forecast.daysUntilFullLow shouldBeLessThan forecast.daysUntilFull
-        forecast.daysUntilFull shouldBeLessThan forecast.daysUntilFullHigh
-        forecast.daysUntilFullLow shouldBeGreaterThan 0.0
+        val daysUntilFull = forecast.daysUntilFull.shouldNotBeNull()
+        val daysUntilFullLow = forecast.daysUntilFullLow.shouldNotBeNull()
+        val daysUntilFullHigh = forecast.daysUntilFullHigh.shouldNotBeNull()
+        daysUntilFullLow shouldBeLessThan daysUntilFull
+        daysUntilFull shouldBeLessThan daysUntilFullHigh
+        daysUntilFullLow shouldBeGreaterThan 0.0
     }
 
     @Test
     fun `includes a non-empty daily history when a forecast is returned`() {
         // Given
         val points = dailyPoints(days = 10, startBytes = 10_000, bytesPerDay = 1_000)
+
+        // When
+        val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
+
+        // Then
+        forecast.shouldNotBeNull()
+        forecast.history shouldHaveSize 10
+    }
+
+    @Test
+    fun `includes daily history even when the trend is STABLE, for the app to still chart`() {
+        // Given
+        val points = dailyPoints(days = 10, startBytes = 10_000, bytesPerDay = 0)
 
         // When
         val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)

@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.forecast
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
 import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
 import com.krillsson.sysapi.core.domain.history.SystemHistoryEntry
 import com.krillsson.sysapi.core.history.HistoryRepository
@@ -33,7 +34,7 @@ class FileSystemSpaceForecastRecorderTest {
     private val recorder = FileSystemSpaceForecastRecorder(metrics, historyRepository, forecastDAO, clock)
 
     @Test
-    fun `computes and saves a forecast per growing filesystem, skipping ones with no real trend`() {
+    fun `computes and saves a forecast for every filesystem with enough history, growing or not`() {
         // Given
         val growing = fileSystem("growing")
         val flat = fileSystem("flat")
@@ -56,21 +57,23 @@ class FileSystemSpaceForecastRecorderTest {
         recorder.run()
 
         // Then
-        saved.captured shouldHaveSize 1
-        saved.captured.single().filesystemId shouldBe "growing"
-        saved.captured.single().computedAt shouldBe now
+        saved.captured shouldHaveSize 2
+        val byId = saved.captured.associateBy { it.filesystemId }
+        byId.getValue("growing").trend shouldBe FileSystemSpaceTrend.GROWING
+        byId.getValue("flat").trend shouldBe FileSystemSpaceTrend.STABLE
+        byId.getValue("growing").computedAt shouldBe now
         verify(exactly = 1) { forecastDAO.deleteAllByFilesystemIdIn(listOf("growing", "flat")) }
     }
 
     @Test
-    fun `saves nothing when no filesystem has a real trend`() {
+    fun `saves nothing for a filesystem without enough history yet`() {
         // Given
-        val flat = fileSystem("flat")
-        every { fileSystemMetrics.fileSystems() } returns listOf(flat)
-        val history = (0..9).map { day ->
+        val tooNew = fileSystem("tooNew")
+        every { fileSystemMetrics.fileSystems() } returns listOf(tooNew)
+        val history = (0..2).map { day ->
             historyEntry(
-                date = now.minus(Duration.ofDays((9 - day).toLong())),
-                fileSystemLoads = listOf(FileSystemLoad("flat", "flat", 90_000, 0, 100_000))
+                date = now.minus(Duration.ofDays((2 - day).toLong())),
+                fileSystemLoads = listOf(FileSystemLoad("tooNew", "tooNew", 90_000 - day * 1_000L, 0, 100_000))
             )
         }
         every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history

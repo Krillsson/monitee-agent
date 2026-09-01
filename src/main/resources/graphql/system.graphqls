@@ -177,12 +177,20 @@ type FileSystem{
     spaceForecast: FileSystemSpaceForecast
 }
 
+enum FileSystemSpaceTrend {
+    GROWING
+    SHRINKING
+    STABLE
+}
+
 type FileSystemSpaceForecast {
+    trend: FileSystemSpaceTrend!
     growthBytesPerDay: Float!
-    daysUntilFull: Float!
-    daysUntilFullLow: Float!
-    daysUntilFullHigh: Float!
-    projectedFullDate: Instant!
+    # Only set when trend is GROWING - shrinking or stable usage has nothing to project.
+    daysUntilFull: Float
+    daysUntilFullLow: Float
+    daysUntilFullHigh: Float
+    projectedFullDate: Instant
     daysOfHistoryUsed: Float!
     # One point per calendar day (last sample of the day) over the same window the regression used.
     history: [FileSystemSpaceForecastHistoryPoint!]!
