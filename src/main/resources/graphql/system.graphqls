@@ -173,6 +173,17 @@ type FileSystem{
     volume: String!
     mount: String!
     metrics: FileSystemMetrics!
+    # Null when there isn't enough history yet, or usage isn't trending toward full.
+    spaceForecast: FileSystemSpaceForecast
+}
+
+type FileSystemSpaceForecast {
+    growthBytesPerDay: Float!
+    daysUntilFull: Float!
+    daysUntilFullLow: Float!
+    daysUntilFullHigh: Float!
+    projectedFullDate: Instant!
+    daysOfHistoryUsed: Float!
 }
 
 type FileSystemMetrics {

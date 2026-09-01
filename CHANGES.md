@@ -1,5 +1,6 @@
 ### Unreleased
 
+- `FileSystem.spaceForecast` estimates when a filesystem will fill up from its usage trend, with a low/high day range.
 - Fix: File downloads no longer stall after 30 seconds regardless of transfer progress.
 
 ### 0.44.0
