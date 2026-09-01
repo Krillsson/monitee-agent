@@ -2,13 +2,11 @@ package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
-import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
-import com.krillsson.sysapi.core.domain.history.SystemHistoryEntry
-import com.krillsson.sysapi.core.history.HistoryRepository
+import com.krillsson.sysapi.core.forecast.FileSystemSpaceForecastDAO
+import com.krillsson.sysapi.core.forecast.FileSystemSpaceForecastEntity
 import com.krillsson.sysapi.core.metrics.FileSystemMetrics
 import com.krillsson.sysapi.core.metrics.Metrics
 import io.kotest.matchers.maps.shouldContain
-import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -16,10 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
 
 class FileSystemResolverTest {
 
@@ -27,10 +22,8 @@ class FileSystemResolverTest {
     private val metrics: Metrics = mockk {
         every { fileSystemMetrics() } returns fileSystemMetrics
     }
-    private val historyRepository: HistoryRepository = mockk()
-    private val now: Instant = Instant.parse("2026-01-15T00:00:00Z")
-    private val clock: Clock = Clock.fixed(now, ZoneOffset.UTC)
-    private val resolver = FileSystemResolver(metrics, historyRepository, clock)
+    private val forecastDAO: FileSystemSpaceForecastDAO = mockk()
+    private val resolver = FileSystemResolver(metrics, forecastDAO)
 
     @Test
     fun `resolves metrics for every filesystem with a single loads lookup`() {
@@ -67,63 +60,28 @@ class FileSystemResolverTest {
     }
 
     @Test
-    fun `fetches history once for the whole batch and forecasts each filesystem independently`() {
+    fun `resolves the precomputed forecast for every filesystem with a single lookup`() {
         // Given
-        val growing = fileSystem("growing", totalSpaceBytes = 100_000)
-        val flat = fileSystem("flat", totalSpaceBytes = 100_000)
-        val history = (0..9).map { day ->
-            historyEntry(
-                date = now.minus(Duration.ofDays((9 - day).toLong())),
-                fileSystemLoads = listOf(
-                    FileSystemLoad("growing", "growing", 90_000 - day * 1_000L, 0, 100_000),
-                    FileSystemLoad("flat", "flat", 90_000, 0, 100_000)
-                )
-            )
-        }
-        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history
+        val growing = fileSystem("growing")
+        val flat = fileSystem("flat")
+        val entity = forecastEntity("growing")
+        every { forecastDAO.findAllById(listOf("growing", "flat")) } returns listOf(entity)
 
         // When
         val result = resolver.spaceForecast(listOf(growing, flat))
 
         // Then
-        val growingForecast = result[growing]
-        growingForecast.shouldNotBeNull()
-        growingForecast.history shouldHaveSize 10
+        result[growing].shouldNotBeNull()
         result[flat].shouldBeNull()
-        verify(exactly = 1) { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) }
+        verify(exactly = 1) { forecastDAO.findAllById(listOf("growing", "flat")) }
     }
 
     @Test
-    fun `thins the forecast history to one point per day even when history is recorded several times a day`() {
-        // Given: 4 samples per day (one every 6 hours) for 10 days
-        val samplesPerDay = 4
-        val growing = fileSystem("growing", totalSpaceBytes = 100_000)
-        val history = (0 until 10 * samplesPerDay).map { sample ->
-            historyEntry(
-                date = now.minus(Duration.ofDays(9)).plus(Duration.ofHours((sample * 6).toLong())),
-                fileSystemLoads = listOf(
-                    FileSystemLoad("growing", "growing", 90_000 - sample * 250L, 0, 100_000)
-                )
-            )
-        }
-        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history
-
-        // When
-        val forecast = resolver.spaceForecast(listOf(growing))[growing]
-
-        // Then
-        forecast.shouldNotBeNull()
-        (forecast.history.size < history.size) shouldBe true
-    }
-
-    @Test
-    fun `maps a filesystem with no matching history entries to null instead of dropping it`() {
+    fun `maps a filesystem with no precomputed forecast to null instead of dropping it`() {
         // Given
         val known = fileSystem("known")
         val unknown = fileSystem("unknown")
-        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns listOf(
-            historyEntry(now, listOf(FileSystemLoad("known", "known", 1, 2, 3)))
-        )
+        every { forecastDAO.findAllById(listOf("known", "unknown")) } returns listOf(forecastEntity("known"))
 
         // When
         val result = resolver.spaceForecast(listOf(known, unknown))
@@ -132,15 +90,17 @@ class FileSystemResolverTest {
         result[unknown] shouldBe null
     }
 
-    private fun historyEntry(date: Instant, fileSystemLoads: List<FileSystemLoad>): SystemHistoryEntry {
-        val historySystemLoad: HistorySystemLoad = mockk {
-            every { this@mockk.fileSystemLoads } returns fileSystemLoads
-        }
-        return mockk {
-            every { this@mockk.date } returns date
-            every { this@mockk.value } returns historySystemLoad
-        }
-    }
+    private fun forecastEntity(filesystemId: String) = FileSystemSpaceForecastEntity(
+        filesystemId = filesystemId,
+        computedAt = Instant.parse("2026-01-15T00:00:00Z"),
+        growthBytesPerDay = 1_000.0,
+        daysUntilFull = 81.0,
+        daysUntilFullLow = 70.0,
+        daysUntilFullHigh = 95.0,
+        projectedFullDate = Instant.parse("2026-04-06T00:00:00Z"),
+        daysOfHistoryUsed = 9.0,
+        history = emptyList()
+    )
 
     private fun fileSystem(id: String, totalSpaceBytes: Long = 0) = FileSystem(
         name = id,
