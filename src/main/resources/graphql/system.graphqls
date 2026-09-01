@@ -184,6 +184,13 @@ type FileSystemSpaceForecast {
     daysUntilFullHigh: Float!
     projectedFullDate: Instant!
     daysOfHistoryUsed: Float!
+    # One point per calendar day (last sample of the day) over the same window the regression used.
+    history: [FileSystemSpaceForecastHistoryPoint!]!
+}
+
+type FileSystemSpaceForecastHistoryPoint {
+    date: Instant!
+    usedBytes: Long!
 }
 
 type FileSystemMetrics {

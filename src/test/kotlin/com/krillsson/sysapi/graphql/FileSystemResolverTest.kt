@@ -8,6 +8,7 @@ import com.krillsson.sysapi.core.history.HistoryRepository
 import com.krillsson.sysapi.core.metrics.FileSystemMetrics
 import com.krillsson.sysapi.core.metrics.Metrics
 import io.kotest.matchers.maps.shouldContain
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -85,9 +86,34 @@ class FileSystemResolverTest {
         val result = resolver.spaceForecast(listOf(growing, flat))
 
         // Then
-        result[growing].shouldNotBeNull()
+        val growingForecast = result[growing]
+        growingForecast.shouldNotBeNull()
+        growingForecast.history shouldHaveSize 10
         result[flat].shouldBeNull()
         verify(exactly = 1) { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) }
+    }
+
+    @Test
+    fun `thins the forecast history to one point per day even when history is recorded several times a day`() {
+        // Given: 4 samples per day (one every 6 hours) for 10 days
+        val samplesPerDay = 4
+        val growing = fileSystem("growing", totalSpaceBytes = 100_000)
+        val history = (0 until 10 * samplesPerDay).map { sample ->
+            historyEntry(
+                date = now.minus(Duration.ofDays(9)).plus(Duration.ofHours((sample * 6).toLong())),
+                fileSystemLoads = listOf(
+                    FileSystemLoad("growing", "growing", 90_000 - sample * 250L, 0, 100_000)
+                )
+            )
+        }
+        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history
+
+        // When
+        val forecast = resolver.spaceForecast(listOf(growing))[growing]
+
+        // Then
+        forecast.shouldNotBeNull()
+        (forecast.history.size < history.size) shouldBe true
     }
 
     @Test
