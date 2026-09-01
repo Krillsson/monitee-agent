@@ -28,6 +28,7 @@ import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayerPhase
 import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecast
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecastHistoryPoint
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
 import com.krillsson.sysapi.filebrowser.ArchiveEntry
@@ -216,6 +217,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     ContainerImageUpdate::class,
     ImageUpdateStatus::class,
     FileSystemSpaceForecast::class,
+    FileSystemSpaceForecastHistoryPoint::class,
     ContainerUpdateEligibility::class,
     UpdateDockerContainerInput::class,
     UpdateDockerContainerOutputStarted::class,

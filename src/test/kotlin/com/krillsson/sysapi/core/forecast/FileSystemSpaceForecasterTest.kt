@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.forecast
 
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.nulls.shouldBeNull
@@ -117,5 +118,36 @@ class FileSystemSpaceForecasterTest {
         forecast.daysUntilFullLow shouldBeLessThan forecast.daysUntilFull
         forecast.daysUntilFull shouldBeLessThan forecast.daysUntilFullHigh
         forecast.daysUntilFullLow shouldBeGreaterThan 0.0
+    }
+
+    @Test
+    fun `includes a non-empty daily history when a forecast is returned`() {
+        // Given
+        val points = dailyPoints(days = 10, startBytes = 10_000, bytesPerDay = 1_000)
+
+        // When
+        val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
+
+        // Then
+        forecast.shouldNotBeNull()
+        forecast.history shouldHaveSize 10
+    }
+
+    @Test
+    fun `thins multiple samples per day down to the last sample of each day`() {
+        // Given: 4 samples per day (one every 6 hours) for 10 days
+        val samplesPerDay = 4
+        val points = (0 until 10 * samplesPerDay).map { sample ->
+            baseTimestamp.plus(Duration.ofHours((sample * 6).toLong())) to (10_000L + sample * 250L)
+        }
+
+        // When
+        val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
+
+        // Then
+        forecast.shouldNotBeNull()
+        (forecast.history.size < points.size) shouldBe true
+        (forecast.history.size <= 10) shouldBe true
+        forecast.history.last().usedBytes shouldBe points.last().second
     }
 }

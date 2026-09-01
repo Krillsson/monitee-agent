@@ -8,5 +8,8 @@ data class FileSystemSpaceForecast(
     val daysUntilFullLow: Double,
     val daysUntilFullHigh: Double,
     val projectedFullDate: Instant,
-    val daysOfHistoryUsed: Double
+    val daysOfHistoryUsed: Double,
+    val history: List<FileSystemSpaceForecastHistoryPoint>
 )
+
+data class FileSystemSpaceForecastHistoryPoint(val date: Instant, val usedBytes: Long)

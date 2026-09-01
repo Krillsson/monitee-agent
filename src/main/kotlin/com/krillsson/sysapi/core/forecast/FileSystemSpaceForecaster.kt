@@ -1,8 +1,10 @@
 package com.krillsson.sysapi.core.forecast
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecast
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecastHistoryPoint
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 
 object FileSystemSpaceForecaster {
 
@@ -53,9 +55,17 @@ object FileSystemSpaceForecaster {
             daysUntilFullLow = daysUntilFullLow,
             daysUntilFullHigh = daysUntilFullHigh,
             projectedFullDate = now.plusSeconds((daysUntilFull * 86400).toLong()),
-            daysOfHistoryUsed = daysOfHistoryUsed
+            daysOfHistoryUsed = daysOfHistoryUsed,
+            history = thinToOnePerDay(sorted)
         )
     }
+
+    private fun thinToOnePerDay(sorted: List<Pair<Instant, Long>>): List<FileSystemSpaceForecastHistoryPoint> =
+        sorted
+            .groupBy { it.first.atZone(ZoneId.systemDefault()).toLocalDate() }
+            .values
+            .map { it.last() }
+            .map { (date, usedBytes) -> FileSystemSpaceForecastHistoryPoint(date, usedBytes) }
 
     private data class Regression(val slope: Double, val intercept: Double, val slopeStandardError: Double)
 
