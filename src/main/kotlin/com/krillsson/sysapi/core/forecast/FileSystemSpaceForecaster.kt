@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.forecast
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecast
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecastHistoryPoint
+import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -27,12 +28,29 @@ object FileSystemSpaceForecaster {
         val ys = sorted.map { it.second.toDouble() }
 
         val regression = ordinaryLeastSquares(xs, ys) ?: return null
+        val history = thinToOnePerDay(sorted)
 
-        // "Growth is ~0" means the slope isn't distinguishable from noise, not that the
-        // resulting days-until-full is far away - a huge, slowly-filling volume can have a
-        // real, steady trend that just takes decades to play out, and that's still worth
-        // reporting. A day-count ceiling here would silently hide exactly that case.
-        if (regression.slope <= regression.slopeStandardError) return null
+        // A slope isn't "real" growth (or shrinkage) unless it clears its own standard error -
+        // otherwise it's noise, and the app should say "stable" rather than trust a direction
+        // that a slightly different sample of the same history could easily flip.
+        val trend = when {
+            regression.slope > regression.slopeStandardError -> FileSystemSpaceTrend.GROWING
+            regression.slope < -regression.slopeStandardError -> FileSystemSpaceTrend.SHRINKING
+            else -> FileSystemSpaceTrend.STABLE
+        }
+
+        if (trend != FileSystemSpaceTrend.GROWING) {
+            return FileSystemSpaceForecast(
+                trend = trend,
+                growthBytesPerDay = regression.slope,
+                daysUntilFull = null,
+                daysUntilFullLow = null,
+                daysUntilFullHigh = null,
+                projectedFullDate = null,
+                daysOfHistoryUsed = daysOfHistoryUsed,
+                history = history
+            )
+        }
 
         val currentUsedBytes = ys.last()
         val remainingBytes = (totalSpaceBytes - currentUsedBytes).coerceAtLeast(0.0)
@@ -49,13 +67,14 @@ object FileSystemSpaceForecaster {
         val daysUntilFullHigh = remainingBytes / slowSlope
 
         return FileSystemSpaceForecast(
+            trend = FileSystemSpaceTrend.GROWING,
             growthBytesPerDay = regression.slope,
             daysUntilFull = daysUntilFull,
             daysUntilFullLow = daysUntilFullLow,
             daysUntilFullHigh = daysUntilFullHigh,
             projectedFullDate = now.plusSeconds((daysUntilFull * 86400).toLong()),
             daysOfHistoryUsed = daysOfHistoryUsed,
-            history = thinToOnePerDay(sorted)
+            history = history
         )
     }
 
