@@ -89,12 +89,34 @@ class FileSystemSpaceForecasterTest {
     }
 
     @Test
-    fun `returns null when the projected fill date is beyond the sanity ceiling`() {
-        // Given: total space dwarfs the growth rate, so it would take centuries to fill
+    fun `returns a forecast even when the projected fill date is decades away, as long as growth is real`() {
+        // Given: a huge volume with a small but perfectly steady (noise-free) daily growth -
+        // real signal, just a slow one relative to capacity. This is the shape of a large NAS
+        // array: reproduces a real case where an earlier day-count ceiling wrongly hid it.
         val points = dailyPoints(days = 10, startBytes = 10_000, bytesPerDay = 1)
 
         // When
         val forecast = FileSystemSpaceForecaster.forecast(points, 100_000_000_000, points.last().first)
+
+        // Then
+        forecast.shouldNotBeNull()
+        forecast.daysUntilFull shouldBeGreaterThan 365.0 * 10
+    }
+
+    @Test
+    fun `returns null when growth is positive but not distinguishable from noise`() {
+        // Given: a real zigzag pattern with a small upward drift (200 bytes/day) that's
+        // dwarfed by the swing (+-2000 bytes) between samples - a human eye might call this
+        // "kind of going up", but it isn't statistically distinguishable from flat.
+        val amplitude = 2_000L
+        val driftPerDay = 200L
+        val points = (0 until 10).map { day ->
+            val zigzag = if (day % 2 == 0) amplitude else -amplitude
+            baseTimestamp.plus(Duration.ofDays(day.toLong())) to (10_000L + zigzag + driftPerDay * day)
+        }
+
+        // When
+        val forecast = FileSystemSpaceForecaster.forecast(points, 100_000, points.last().first)
 
         // Then
         forecast.shouldBeNull()

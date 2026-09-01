@@ -10,7 +10,6 @@ object FileSystemSpaceForecaster {
 
     private const val MIN_POINTS = 3
     private const val MIN_HISTORY_DAYS = 7.0
-    private const val MAX_FORECAST_DAYS = 365.0 * 10
 
     fun forecast(
         points: List<Pair<Instant, Long>>,
@@ -28,13 +27,17 @@ object FileSystemSpaceForecaster {
         val ys = sorted.map { it.second.toDouble() }
 
         val regression = ordinaryLeastSquares(xs, ys) ?: return null
-        if (regression.slope <= 0.0) return null
+
+        // "Growth is ~0" means the slope isn't distinguishable from noise, not that the
+        // resulting days-until-full is far away - a huge, slowly-filling volume can have a
+        // real, steady trend that just takes decades to play out, and that's still worth
+        // reporting. A day-count ceiling here would silently hide exactly that case.
+        if (regression.slope <= regression.slopeStandardError) return null
 
         val currentUsedBytes = ys.last()
         val remainingBytes = (totalSpaceBytes - currentUsedBytes).coerceAtLeast(0.0)
 
         val daysUntilFull = remainingBytes / regression.slope
-        if (daysUntilFull > MAX_FORECAST_DAYS) return null
 
         // One standard error, not a 95% CI - this is a rough range for a phone notification,
         // not a statistical claim, and widening it to 1.96 SE reads as more precise than the
@@ -43,11 +46,7 @@ object FileSystemSpaceForecaster {
         val slowSlope = regression.slope - regression.slopeStandardError
 
         val daysUntilFullLow = remainingBytes / fastSlope
-        val daysUntilFullHigh = if (slowSlope <= 0.0) {
-            MAX_FORECAST_DAYS
-        } else {
-            (remainingBytes / slowSlope).coerceAtMost(MAX_FORECAST_DAYS)
-        }
+        val daysUntilFullHigh = remainingBytes / slowSlope
 
         return FileSystemSpaceForecast(
             growthBytesPerDay = regression.slope,
