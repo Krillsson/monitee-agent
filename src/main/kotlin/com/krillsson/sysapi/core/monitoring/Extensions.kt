@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import kotlin.enums.EnumEntries
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -26,6 +27,7 @@ fun <E : Enum<E>> String.toEnumValueFromString(entries: EnumEntries<E>): Monitor
 fun <E : Enum<E>> MonitoredValue.EnumValue<E>.asMonitorType(): Monitor.Type {
     return when (value::class) {
         HealthStatus::class -> Monitor.Type.DISK_SMART_HEALTH
+        StoragePoolState::class -> Monitor.Type.STORAGE_POOL_HEALTH
         else -> throw IllegalStateException("Unknown monitor enum type ${value::class}")
     }
 }
@@ -36,6 +38,7 @@ fun <E : Enum<E>> E.toEnumValue(): MonitoredValue.EnumValue<E> =
 fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
     when (this) {
         Monitor.Type.DISK_SMART_HEALTH -> HealthStatus.entries as EnumEntries<E>
+        Monitor.Type.STORAGE_POOL_HEALTH -> StoragePoolState.entries as EnumEntries<E>
         Monitor.Type.CPU_LOAD,
         Monitor.Type.LOAD_AVERAGE_ONE_MINUTE,
         Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES,
