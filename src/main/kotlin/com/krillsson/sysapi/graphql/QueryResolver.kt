@@ -26,6 +26,7 @@ import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
+import com.krillsson.sysapi.storagepool.StoragePoolService
 import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.EnvironmentUtils
 import com.krillsson.sysapi.windows.WindowsManager
@@ -52,7 +53,8 @@ class QueryResolver(
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
-    private val upsService: UpsService
+    private val upsService: UpsService,
+    private val storagePoolService: StoragePoolService
 ) {
 
     @QueryMapping
@@ -225,6 +227,22 @@ class QueryResolver(
             is UpsService.Status.Unavailable -> UpsInfoUnavailable(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = true
+            )
+        }
+    }
+
+    @QueryMapping
+    fun storagePools(): StoragePoolInfo {
+        return when (val status = storagePoolService.status()) {
+            StoragePoolService.Status.Available -> StoragePoolInfoAvailable
+            StoragePoolService.Status.Disabled -> StoragePoolInfoUnavailable(
+                "Storage pool support is currently disabled. You can change this in the configuration.yml",
+                isDisabled = true
+            )
+
+            is StoragePoolService.Status.Unavailable -> StoragePoolInfoUnavailable(
+                "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
+                isDisabled = false
             )
         }
     }

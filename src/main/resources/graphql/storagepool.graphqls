@@ -1,0 +1,111 @@
+extend type Query {
+    storagePools: StoragePoolInfo!
+}
+
+union StoragePoolInfo = StoragePoolInfoAvailable | StoragePoolInfoUnavailable
+
+type StoragePoolInfoAvailable {
+    pools: [StoragePool!]!
+    poolById(id: ID!): StoragePool
+}
+
+type StoragePoolInfoUnavailable {
+    reason: String!
+    isDisabled: Boolean
+}
+
+type StoragePool {
+    id: ID!
+    name: String!
+    kind: StoragePoolKind!
+    state: StoragePoolState!
+    # zpool's human-readable status line, when we have it
+    statusMessage: String
+    # e.g. "raidz2", "raid6", "raid1", "parity"
+    redundancy: String
+    sizeBytes: Long
+    allocatedBytes: Long
+    freeBytes: Long
+    devices: [StoragePoolDevice!]!
+    scan: StoragePoolScan
+    dataSource: StoragePoolDataSource!
+}
+
+enum StoragePoolKind {
+    ZFS,
+    MDADM,
+    BTRFS,
+    UNRAID_ARRAY
+}
+
+# Ordered by severity rather than alphabetically: anything after ONLINE means attention is needed
+enum StoragePoolState {
+    ONLINE,
+    UNKNOWN,
+    DEGRADED,
+    FAULTED,
+    UNAVAIL
+}
+
+type StoragePoolDevice {
+    id: ID!
+    name: String!
+    path: String
+    role: StoragePoolDeviceRole!
+    state: StoragePoolDeviceState!
+    readErrors: Long
+    writeErrors: Long
+    checksumErrors: Long
+    sizeBytes: Long
+}
+
+enum StoragePoolDeviceRole {
+    DATA,
+    PARITY,
+    SPARE,
+    CACHE,
+    LOG,
+    SPECIAL
+}
+
+enum StoragePoolDeviceState {
+    ONLINE,
+    REBUILDING,
+    SPARE,
+    FAULTY,
+    MISSING,
+    UNKNOWN
+}
+
+type StoragePoolScan {
+    kind: StoragePoolScanKind!
+    state: StoragePoolScanState!
+    percentComplete: Float
+    bytesProcessed: Long
+    bytesTotal: Long
+    startedAt: Instant
+    endedAt: Instant
+    estimatedSecondsRemaining: Long
+    errors: Long
+}
+
+enum StoragePoolScanKind {
+    SCRUB,
+    RESILVER,
+    PARITY_CHECK,
+    REBUILD,
+    BALANCE
+}
+
+enum StoragePoolScanState {
+    SCANNING,
+    FINISHED,
+    CANCELED,
+    PAUSED
+}
+
+# Whether pool detail came from the kernel (always available, no privileges) or a host command
+enum StoragePoolDataSource {
+    KERNEL_INTERFACE,
+    COMMAND
+}

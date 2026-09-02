@@ -30,6 +30,17 @@ import com.krillsson.sysapi.core.domain.docker.ImageUpdateStatus
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecast
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceForecastHistoryPoint
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
+import com.krillsson.sysapi.storagepool.StoragePool
+import com.krillsson.sysapi.storagepool.StoragePoolDataSource
+import com.krillsson.sysapi.storagepool.StoragePoolDevice
+import com.krillsson.sysapi.storagepool.StoragePoolDeviceRole
+import com.krillsson.sysapi.storagepool.StoragePoolDeviceState
+import com.krillsson.sysapi.storagepool.StoragePoolKind
+import com.krillsson.sysapi.storagepool.StoragePoolScan
+import com.krillsson.sysapi.storagepool.StoragePoolScanKind
+import com.krillsson.sysapi.storagepool.StoragePoolScanState
+import com.krillsson.sysapi.storagepool.StoragePoolState
+import com.krillsson.sysapi.graphql.domain.StoragePoolInfoUnavailable
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
 import com.krillsson.sysapi.core.genericevents.GenericEventStore
 import com.krillsson.sysapi.filebrowser.ArchiveEntry
@@ -201,6 +212,18 @@ import org.springframework.context.annotation.ImportRuntimeHints
     MetricsConfiguration::class,
     MonitorConfiguration::class,
     UpsConfiguration::class,
+    StoragePoolConfiguration::class,
+    StoragePool::class,
+    StoragePoolDevice::class,
+    StoragePoolScan::class,
+    StoragePoolKind::class,
+    StoragePoolState::class,
+    StoragePoolDeviceRole::class,
+    StoragePoolDeviceState::class,
+    StoragePoolScanKind::class,
+    StoragePoolScanState::class,
+    StoragePoolDataSource::class,
+    StoragePoolInfoUnavailable::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,
     UpdateCheckConfiguration::class,

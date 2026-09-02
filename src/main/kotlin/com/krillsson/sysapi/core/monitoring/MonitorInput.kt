@@ -5,6 +5,7 @@ import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.storagepool.StoragePool
 import com.krillsson.sysapi.ups.UpsDevice
 
 class MonitorInput(
@@ -14,4 +15,5 @@ class MonitorInput(
     val containerImageUpdates: List<ContainerImageUpdate>,
     val checkResults: List<CheckResult>,
     val upsDeviceMetrics: List<UpsDevice.Metrics>,
+    val storagePools: List<StoragePool>,
 )

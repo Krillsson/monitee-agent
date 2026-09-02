@@ -82,6 +82,9 @@ ups:
 #  additionalDeviceFlags:
 #    - device: "/dev/sda"
 #      flags: "-d sntasmedia"
+# md/mdadm arrays and the Unraid array, read from /proc and /sys. No extra privileges needed
+storagePools:
+  enabled: true
 docker:
   enabled: true
   # keep the interfaces docker makes for itself (docker0, br-<network id>, veth*) out of the
