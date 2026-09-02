@@ -34,6 +34,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CHECK_LATENCY(ValueType.Numerical),
         EXTERNAL_IP_CHANGED(ValueType.Conditional),
         DISK_SMART_HEALTH(ValueType.Enum),
+        STORAGE_POOL_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),
         UPS_LOAD_PERCENTAGE(ValueType.Numerical),
         UPS_LOAD_WATT(ValueType.Numerical),

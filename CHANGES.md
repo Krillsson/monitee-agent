@@ -1,5 +1,7 @@
 ### Unreleased
 
+- `storagePools` reports md/mdadm and Unraid array state, member devices and parity/resync progress, plus a `STORAGE_POOL_HEALTH` monitor for a degraded pool. Read straight from /proc and /sys, no extra privileges needed.
+
 ### 0.48.0
 
 - Major changes: native image by default

@@ -88,6 +88,7 @@ class GenericEventFormatter {
             Monitor.Type.CHECK_LATENCY -> "Check — Latency"
             Monitor.Type.DISK_TEMPERATURE -> "Drive — Temperature"
             Monitor.Type.DISK_SMART_HEALTH -> "Drive — S.M.A.R.T health"
+            Monitor.Type.STORAGE_POOL_HEALTH -> "Storage pool — Health"
             Monitor.Type.MEMORY_USED -> "Memory — Usage"
             Monitor.Type.PROCESS_CPU_LOAD -> "Process — CPU usage"
             Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS — Operating normally"

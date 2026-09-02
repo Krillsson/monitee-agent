@@ -3,6 +3,7 @@ package com.krillsson.sysapi.notifications.localization
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import org.springframework.stereotype.Component
 
 @Component
@@ -64,6 +65,10 @@ class MonitoredValueFormatter(
 
             Monitor.Type.DISK_SMART_HEALTH -> {
                 (value as MonitoredValue.EnumValue<HealthStatus>).value.name.lowercase()
+            }
+
+            Monitor.Type.STORAGE_POOL_HEALTH -> {
+                (value as MonitoredValue.EnumValue<StoragePoolState>).value.name.lowercase()
             }
 
             Monitor.Type.UPS_LOAD_WATT -> "${(value as MonitoredValue.NumericalValue).value}W"

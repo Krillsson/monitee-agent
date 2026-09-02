@@ -12,6 +12,7 @@ class MonitorMetricsTest {
 
     private val unsampled = setOf(
         Monitor.Type.DISK_SMART_HEALTH,
+        Monitor.Type.STORAGE_POOL_HEALTH,
         Monitor.Type.WEBSERVER_UP,
         Monitor.Type.CHECK_LATENCY,
         Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
