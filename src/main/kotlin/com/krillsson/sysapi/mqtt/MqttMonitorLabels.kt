@@ -24,6 +24,7 @@ object MqttMonitorLabels {
         Monitor.Type.DISK_TEMPERATURE -> "Disk temperature"
         Monitor.Type.DISK_WRITE_RATE -> "Write rate on"
         Monitor.Type.DISK_SMART_HEALTH -> "SMART health"
+        Monitor.Type.STORAGE_POOL_HEALTH -> "Storage pool"
         Monitor.Type.MEMORY_SPACE -> "Memory space"
         Monitor.Type.MEMORY_USED -> "Memory used"
         Monitor.Type.NETWORK_UP -> "Network"

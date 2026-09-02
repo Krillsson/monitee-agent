@@ -12,6 +12,7 @@
 - New `CHECK_CERTIFICATE_EXPIRY` monitor type alerts when an HTTPS check's certificate has fewer days left than its warning and critical thresholds.
 - Fix: Warning notifications show the warning threshold that was crossed and the critical threshold, and the title says high/low or critical.
 - Fix: The `EXTERNAL_IP_CHANGED` monitor fires on a changed external IP also when its inertia is 5 minutes or longer.
+- `storagePools` reports md/mdadm and Unraid array state, member devices and parity/resync progress, plus a `STORAGE_POOL_HEALTH` monitor for a degraded pool. Read straight from /proc and /sys, no extra privileges needed.
 
 ### 0.48.0
 
