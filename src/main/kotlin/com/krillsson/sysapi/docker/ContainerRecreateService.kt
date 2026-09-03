@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.docker
 
 import com.github.dockerjava.api.model.AuthConfig
+import com.krillsson.sysapi.core.domain.docker.ComposeLabels
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateEligibility
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
@@ -25,7 +26,6 @@ class ContainerRecreateService(
 ) {
     companion object {
         private const val SWARM_SERVICE_LABEL = "com.docker.swarm.service.id"
-        private const val COMPOSE_PROJECT_LABEL = "com.docker.compose.project"
         private const val SHARED_NETWORK_NAMESPACE_MODE_PREFIX = "container:"
     }
 
@@ -76,7 +76,7 @@ class ContainerRecreateService(
             containerId = containerId,
             name = name,
             imageRef = container.image,
-            composeProject = container.labels[COMPOSE_PROJECT_LABEL],
+            composeProject = container.labels[ComposeLabels.PROJECT],
             pull = pull
         )
     }

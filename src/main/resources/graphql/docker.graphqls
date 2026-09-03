@@ -370,6 +370,10 @@ type DockerAvailable {
     containers: [DockerContainer!]!
     runningContainers: [DockerContainer!]!
     containersWithImageUpdates: [DockerContainer!]!
+    # Containers grouped by their com.docker.compose.project label. Containers without that
+    # label are collected into one group with a null composeProject, present only when there
+    # is at least one such container. Groups are otherwise sorted by composeProject
+    containerGroups: [DockerContainerGroup!]!
     readLogsForContainer(containerId: String!, from: OffsetDateTime, to: OffsetDateTime): ReadLogsForContainerOutput @deprecated(reason: "Replaced by readLogsForContainerBetweenTimestamps")
     readLogsForContainerBetweenTimestamps(containerId: String!, from: Instant, to: Instant): ReadLogsForContainerOutput
     metricsForContainer(containerId: String!): DockerContainerMetrics
@@ -388,6 +392,12 @@ type DockerAvailable {
 type DockerUnavailable{
     reason: String!
     isDisabled: Boolean
+}
+
+type DockerContainerGroup {
+    # Null for the group holding containers with no com.docker.compose.project label
+    composeProject: String
+    containers: [DockerContainer!]!
 }
 
 type DockerLogLine {
@@ -432,6 +442,13 @@ type DockerContainer {
     status: String!
     imageUpdate: DockerContainerImageUpdate!
     updateEligibility: DockerContainerUpdateEligibility!
+    """Docker's labels for this container. Modeled as a list because GraphQL has no Map type."""
+    labels: [DockerLabel!]!
+}
+
+type DockerLabel {
+    key: String!
+    value: String!
 }
 
 enum DockerImageUpdateStatus {
