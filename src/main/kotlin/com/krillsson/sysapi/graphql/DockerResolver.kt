@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.core.domain.docker.Container
+import com.krillsson.sysapi.core.domain.docker.ContainerGroup
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.docker.State
@@ -8,6 +9,7 @@ import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.docker.ReadLogsCommandResult
+import com.krillsson.sysapi.docker.groupByComposeProject
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.graphql.domain.*
 import org.springframework.graphql.data.method.annotation.Argument
@@ -40,6 +42,9 @@ class DockerResolver(
         val outdated = containerUpdateChecker.outdatedContainerIds()
         return containerService.containers().filter { outdated.contains(it.id) }
     }
+
+    @SchemaMapping
+    fun containerGroups(): List<ContainerGroup> = containerService.containers().groupByComposeProject()
 
     @SchemaMapping
     fun readLogsForContainer(

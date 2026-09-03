@@ -27,4 +27,15 @@ class ContainerResolver(
     @SchemaMapping(typeName = "DockerContainer", field = "updateEligibility")
     fun updateEligibility(container: Container): ContainerUpdateEligibility =
         containerRecreateService.updateEligibility(container)
+
+    @SchemaMapping(typeName = "DockerContainer", field = "labels")
+    fun labels(container: Container): List<DockerLabel> = container.labels.toDockerLabels()
 }
+
+fun Map<String, String>.toDockerLabels(): List<DockerLabel> =
+    toSortedMap().map { (key, value) -> DockerLabel(key, value) }
+
+data class DockerLabel(
+    val key: String,
+    val value: String
+)
