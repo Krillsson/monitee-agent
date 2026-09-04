@@ -1,5 +1,7 @@
 ### Unreleased
 
+### 0.45.0
+
 - `FileSystem.spaceForecast` estimates when a filesystem will fill up from its usage trend, with a low/high day range and the daily history points behind it. Also reports a `trend` of GROWING, SHRINKING or STABLE, so a non-growing filesystem still gets a result instead of nothing.
 - Fix: File downloads no longer stall after 30 seconds regardless of transfer progress.
 - `DockerContainer.labels` exposes a container's Docker labels.
