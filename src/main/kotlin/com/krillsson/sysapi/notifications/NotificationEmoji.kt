@@ -54,6 +54,8 @@ object NotificationEmoji {
 
         Monitor.Type.DISK_SMART_HEALTH -> Emoji("🩺", "stethoscope")
 
+        Monitor.Type.STORAGE_POOL_HEALTH -> Emoji("🗄️", "file_cabinet")
+
         Monitor.Type.MEMORY_SPACE,
         Monitor.Type.MEMORY_USED,
         Monitor.Type.CONTAINER_MEMORY_SPACE,

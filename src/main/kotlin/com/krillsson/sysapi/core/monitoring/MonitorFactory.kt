@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.monitoring
 
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import org.springframework.stereotype.Component
 import java.util.*
 
@@ -133,6 +134,11 @@ class MonitorFactory {
             Monitor.Type.DISK_SMART_HEALTH -> DiskSmartHealthMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.EnumValue<HealthStatus>>
+            )
+
+            Monitor.Type.STORAGE_POOL_HEALTH -> StoragePoolHealthMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.EnumValue<StoragePoolState>>
             )
 
             Monitor.Type.GPU_VRAM_USAGE -> GpuVramUsageMonitor(

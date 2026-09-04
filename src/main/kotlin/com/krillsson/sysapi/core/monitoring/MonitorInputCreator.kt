@@ -27,6 +27,9 @@ import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.notifications.localization.ByteFormatter
 import com.krillsson.sysapi.smart.HealthStatus
+import com.krillsson.sysapi.storagepool.StoragePool
+import com.krillsson.sysapi.storagepool.StoragePoolService
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.logger
@@ -43,6 +46,7 @@ class MonitorInputCreator(
     private val byteFormatter: ByteFormatter,
     private val upsService: UpsService,
     private val containerUpdateChecker: ContainerUpdateChecker,
+    private val storagePoolService: StoragePoolService,
 ) {
 
     companion object {
@@ -156,13 +160,15 @@ class MonitorInputCreator(
         ).values.toList()
 
         val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
+        val storagePools = storagePoolService.pools()
         return MonitorInput(
             load,
             containers,
             containersStats,
             containerImageUpdates,
             checkResults,
-            upsDeviceMetrics
+            upsDeviceMetrics,
+            storagePools
         )
     }
 
@@ -314,6 +320,11 @@ class MonitorInputCreator(
                 Monitor.Type.UPS_LOAD_WATT -> {
                     val device = upsService.upsDevices().first { it.id == monitor.config.monitoredItemId }
                     createUpsLoadWattMonitoredItem(device)
+                }
+
+                Monitor.Type.STORAGE_POOL_HEALTH -> {
+                    val pool = storagePoolService.pools().first { it.id == monitor.config.monitoredItemId }
+                    createStoragePoolHealthMonitorableItem(pool)
                 }
 
                 Monitor.Type.GPU_VRAM_USAGE -> {
@@ -572,6 +583,10 @@ class MonitorInputCreator(
                 createUpsLoadWattMonitoredItem(it)
             }
 
+            Monitor.Type.STORAGE_POOL_HEALTH -> storagePoolService.pools().map {
+                createStoragePoolHealthMonitorableItem(it)
+            }
+
             Monitor.Type.GPU_VRAM_USAGE -> {
                 val gpuLoads = metrics.gpuMetrics().gpuLoads().associateBy { it.id }
                 metrics.gpuMetrics().gpus().mapNotNull {
@@ -687,6 +702,15 @@ class MonitorInputCreator(
         maxValue = HealthStatus.CRITICAL.toEnumValue(),
         currentValue = load.health?.status?.toEnumValue() ?: HealthStatus.HEALTHY.toEnumValue(),
         type = Monitor.Type.DISK_SMART_HEALTH
+    )
+
+    private fun createStoragePoolHealthMonitorableItem(pool: StoragePool) = MonitorableItem(
+        id = pool.id,
+        name = pool.name,
+        description = pool.statusMessage,
+        maxValue = StoragePoolState.UNAVAIL.toEnumValue(),
+        currentValue = pool.state.toEnumValue(),
+        type = Monitor.Type.STORAGE_POOL_HEALTH
     )
 
     private fun createCheckUpMonitorableItem(it: Check) = MonitorableItem(
