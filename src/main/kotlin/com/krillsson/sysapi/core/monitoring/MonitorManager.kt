@@ -52,16 +52,17 @@ class MonitorManager(
         activeMonitors.values.forEach { (mechanism, monitor) ->
             val value = monitor.selectValue(metricQueryEvent)
             if (value != null) {
-                val isOverThreshold = monitor.isPastThreshold(value)
-                val event = mechanism.check(
+                val outcome = mechanism.check(
                     monitor,
                     monitor.config,
                     value,
-                    isOverThreshold
+                    monitor.levelFor(value)
                 )
-                event?.let {
-                    notificationManager.notify(it.asNotification(monitor.config.inertia))
-                    eventManager.add(it)
+                outcome?.let {
+                    if (it.notify) {
+                        notificationManager.notify(it.event.asNotification(monitor.config.inertia))
+                    }
+                    eventManager.add(it.event)
                 }
             }
             reportItemMissingForMonitor(monitor, value)
@@ -113,10 +114,17 @@ class MonitorManager(
             .map { it.second }
     }
 
-    fun add(inertia: Duration, type: Monitor.Type, threshold: MonitoredValue, itemId: String?): UUID {
+    fun add(
+        inertia: Duration,
+        type: Monitor.Type,
+        threshold: MonitoredValue,
+        itemId: String?,
+        warningThreshold: MonitoredValue? = null
+    ): UUID {
         logger.info("Adding monitoring for {} {} with grace period of {}", type.name, itemId.orEmpty(), inertia)
-        val config = MonitorConfig(itemId, threshold, inertia)
+        val config = MonitorConfig(itemId, threshold, inertia, warningThreshold)
         val monitor = monitorFactory.createMonitor(type, UUID.randomUUID(), config)
+        validateWarningThreshold(monitor)
         return if (validate(monitor)) {
             register(monitor)
             persist()
@@ -126,22 +134,48 @@ class MonitorManager(
         }
     }
 
-    fun update(monitorId: UUID, inertia: Duration?, threshold: MonitoredValue?): UUID {
+    fun update(
+        monitorId: UUID,
+        inertia: Duration?,
+        threshold: MonitoredValue?,
+        warningThreshold: MonitoredValue? = null,
+        clearWarningThreshold: Boolean = false
+    ): UUID {
         val oldMonitor = getById(monitorId)
         checkNotNull(oldMonitor) { "No monitor with id $monitorId was found" }
-        check(inertia != null || threshold != null) { "Either inertia or threshold has to be provided" }
+        check(inertia != null || threshold != null || warningThreshold != null || clearWarningThreshold) {
+            "Either inertia, threshold or a warning threshold change has to be provided"
+        }
+        require(!(clearWarningThreshold && warningThreshold != null)) {
+            "warningThreshold and clearWarningThreshold cannot be combined"
+        }
         val updatedConfig = MonitorConfig(
             oldMonitor.config.monitoredItemId,
             threshold ?: oldMonitor.config.threshold,
-            inertia ?: oldMonitor.config.inertia
+            inertia ?: oldMonitor.config.inertia,
+            if (clearWarningThreshold) null else warningThreshold ?: oldMonitor.config.warningThreshold
         )
         val updatedMonitor = monitorFactory.createMonitor(oldMonitor.type, oldMonitor.id, updatedConfig)
+        validateWarningThreshold(updatedMonitor)
         return if (validate(updatedMonitor)) {
             register(updatedMonitor)
             persist()
             updatedMonitor.id
         } else {
             throw IllegalArgumentException("Not mappable to device: ${oldMonitor.type} with ${oldMonitor.config.monitoredItemId}")
+        }
+    }
+
+    // Which side of the threshold is the calm one depends on the direction the monitor compares in,
+    // so ask the monitor itself: the threshold has to read as past the warning threshold, which
+    // holds for both an "above 90%" and a "below 10 GB left" monitor.
+    private fun validateWarningThreshold(monitor: Monitor<MonitoredValue>) {
+        val warningThreshold = monitor.config.warningThreshold ?: return
+        require(monitor.supportsWarningThreshold()) {
+            "${monitor.type} does not support a warning threshold"
+        }
+        require(monitor.isPastThreshold(monitor.config.threshold, warningThreshold)) {
+            "Warning threshold $warningThreshold would trigger no earlier than threshold ${monitor.config.threshold}"
         }
     }
 
@@ -177,7 +211,8 @@ class MonitorManager(
             val config = MonitorConfig<MonitoredValue>(
                 monitoredItemId = newItemId,
                 threshold = monitor.config.threshold,
-                inertia = monitor.config.inertia
+                inertia = monitor.config.inertia,
+                warningThreshold = monitor.config.warningThreshold
             )
             val mechanism = activeMonitors.getValue(monitor.id).first
             activeMonitors[monitor.id] = mechanism to monitorFactory.createMonitor(monitor.type, monitor.id, config)
@@ -246,7 +281,8 @@ class MonitorManager(
                 startTime = startTime,
                 threshold = threshold,
                 inertia = inertia,
-                value = value
+                value = value,
+                severity = severity
             )
         }
     }

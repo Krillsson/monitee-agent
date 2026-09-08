@@ -49,7 +49,24 @@ abstract class Monitor<out T : MonitoredValue> {
         Enum
     }
 
+    enum class Level {
+        NORMAL,
+        WARNING,
+        CRITICAL
+    }
+
     abstract fun selectValue(event: MonitorInput): T?
     abstract fun maxValue(input: MonitorMaxValueInput): T?
-    abstract fun isPastThreshold(value: @UnsafeVariance T): Boolean
+    abstract fun isPastThreshold(value: @UnsafeVariance T, threshold: @UnsafeVariance T): Boolean
+
+    fun levelFor(value: @UnsafeVariance T): Level {
+        val warningThreshold = config.warningThreshold
+        return when {
+            isPastThreshold(value, config.threshold) -> Level.CRITICAL
+            warningThreshold != null && isPastThreshold(value, warningThreshold) -> Level.WARNING
+            else -> Level.NORMAL
+        }
+    }
+
+    fun supportsWarningThreshold() = type.valueType == ValueType.Numerical || type.valueType == ValueType.Fractional
 }

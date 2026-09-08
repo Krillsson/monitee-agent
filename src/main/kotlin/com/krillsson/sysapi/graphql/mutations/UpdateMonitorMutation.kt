@@ -7,12 +7,16 @@ data class UpdateNumericalMonitorInput(
         val monitorId: UUID,
         val inertiaInSeconds: Int?,
         val threshold: Long?,
+        val warningThreshold: Long? = null,
+        val clearWarningThreshold: Boolean? = null,
 )
 
 data class UpdateFractionMonitorInput(
         val monitorId: UUID,
         val inertiaInSeconds: Int?,
         val threshold: Float?,
+        val warningThreshold: Float? = null,
+        val clearWarningThreshold: Boolean? = null,
 )
 
 data class UpdateConditionalMonitorInput(

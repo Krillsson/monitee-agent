@@ -30,7 +30,7 @@ class ProcessCpuMonitor(override val id: UUID, override val config: MonitorConfi
         return maxValueSelector(input, null)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.FractionalValue, threshold: MonitoredValue.FractionalValue): Boolean {
+        return value > threshold
     }
 }

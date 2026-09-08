@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.core.monitoring.event
 
 import com.krillsson.sysapi.core.domain.event.Event
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
@@ -33,7 +34,8 @@ class EventRepository(private val store: EventStore) {
                 monitorType = monitorType,
                 startTime = startTime.toInstant(),
                 threshold = mapValueToMonitorValue { it.threshold },
-                value = mapValueToMonitorValue { it.value }
+                value = mapValueToMonitorValue { it.value },
+                severity = severity ?: EventSeverity.CRITICAL
             )
 
             EventStore.StoredEvent.Type.PAST -> PastEvent(
@@ -45,7 +47,8 @@ class EventRepository(private val store: EventStore) {
                 type = monitorType,
                 threshold = mapValueToMonitorValue { it.threshold },
                 endValue = mapValueToMonitorValue { it.value },
-                startValue = mapValueToMonitorValue { it.startValue ?: 0.0 }
+                startValue = mapValueToMonitorValue { it.startValue ?: 0.0 },
+                severity = severity ?: EventSeverity.CRITICAL
             )
         }
     }
@@ -77,6 +80,7 @@ class EventRepository(private val store: EventStore) {
                 value = value.asDouble(),
                 startValue = startValue.asDouble(),
                 type = EventStore.StoredEvent.Type.PAST,
+                severity = severity
             )
 
             is OngoingEvent -> EventStore.StoredEvent(
@@ -89,7 +93,8 @@ class EventRepository(private val store: EventStore) {
                 threshold = threshold.asDouble(),
                 value = value.asDouble(),
                 startValue = null,
-                type = EventStore.StoredEvent.Type.ONGOING
+                type = EventStore.StoredEvent.Type.ONGOING,
+                severity = severity
             )
 
             else -> throw IllegalArgumentException("Unknown event type encountered $this")

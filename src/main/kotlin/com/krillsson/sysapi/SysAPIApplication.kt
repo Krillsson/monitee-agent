@@ -121,6 +121,7 @@ import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.notifications.WebhookInfo
 import com.krillsson.sysapi.notifications.webhook.WebhookPayload
 import com.krillsson.sysapi.core.monitoring.MonitorStore
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.event.EventStore
 import com.krillsson.sysapi.tls.CertificateNamesCreator
 import com.krillsson.sysapi.tls.SelfSignedCertificateManager
@@ -246,6 +247,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     DockerContainerBatchUpdateJob::class,
     DockerContainerBatchUpdateJobState::class,
     EventStore.StoredEvent::class,
+    EventSeverity::class,
     MonitorStore.StoredMonitor::class,
     AuthConfig::class,
     SlowResolverWarningInstrumentation::class,

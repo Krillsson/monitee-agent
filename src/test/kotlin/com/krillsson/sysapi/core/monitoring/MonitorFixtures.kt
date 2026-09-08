@@ -32,7 +32,7 @@ class TestMonitor(
 
     override fun maxValue(input: MonitorMaxValueInput): MonitoredValue? = null
 
-    override fun isPastThreshold(value: MonitoredValue): Boolean = value != config.threshold
+    override fun isPastThreshold(value: MonitoredValue, threshold: MonitoredValue): Boolean = value != threshold
 }
 
 fun testMonitor(
@@ -40,8 +40,9 @@ fun testMonitor(
     inertia: Duration = Duration.ofMinutes(5),
     type: Monitor.Type = Monitor.Type.CPU_TEMP,
     monitoredItemId: String? = MONITORED_ITEM_ID,
+    warningThreshold: MonitoredValue? = null,
     id: UUID = MONITOR_ID
-) = TestMonitor(id, type, MonitorConfig(monitoredItemId, threshold, inertia))
+) = TestMonitor(id, type, MonitorConfig(monitoredItemId, threshold, inertia, warningThreshold))
 
 data class ValuesForKind(
     val monitorType: Monitor.Type,

@@ -35,7 +35,7 @@ class GpuVramUsageMonitor(override val id: UUID, override val config: MonitorCon
         return maxValueSelector(input, config.monitoredItemId)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.NumericalValue, threshold: MonitoredValue.NumericalValue): Boolean {
+        return value > threshold
     }
 }

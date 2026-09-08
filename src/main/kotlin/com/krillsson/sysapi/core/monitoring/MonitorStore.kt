@@ -25,7 +25,8 @@ class MonitorStore(objectMapper: ObjectMapper) :
         data class Config(
             val monitoredItemId: String? = null,
             val threshold: Double,
-            val inertia: Duration
+            val inertia: Duration,
+            val warningThreshold: Double? = null
         )
 
     }

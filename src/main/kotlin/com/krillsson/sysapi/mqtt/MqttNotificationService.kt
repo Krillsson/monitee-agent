@@ -41,6 +41,7 @@ class MqttNotificationService(
         clickUrl = clickUrl,
         eventType = eventType.name,
         monitorType = monitorType?.name,
+        severity = severity?.name,
         timestamp = timestamp.toString(),
         serverName = serverName,
         serverId = serverId

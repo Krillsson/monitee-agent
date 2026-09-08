@@ -23,7 +23,7 @@ class WebServerUpMonitor(
         return MonitoredValue.ConditionalValue(true)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.ConditionalValue): Boolean {
+    override fun isPastThreshold(value: MonitoredValue.ConditionalValue, threshold: MonitoredValue.ConditionalValue): Boolean {
         return !value.value
     }
 }

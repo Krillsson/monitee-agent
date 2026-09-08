@@ -6,14 +6,16 @@ data class CreateNumericalMonitorInput(
         val inertiaInSeconds: Int,
         val type: Monitor.Type,
         val threshold: Long,
-        val monitoredItemId: String?
+        val monitoredItemId: String?,
+        val warningThreshold: Long? = null
 )
 
 data class CreateFractionMonitorInput(
         val inertiaInSeconds: Int,
         val type: Monitor.Type,
         val threshold: Float,
-        val monitoredItemId: String?
+        val monitoredItemId: String?,
+        val warningThreshold: Float? = null
 )
 
 data class CreateConditionalMonitorInput(

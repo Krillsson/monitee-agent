@@ -3,6 +3,7 @@ package com.krillsson.sysapi.notifications.localization
 import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.check.HttpCheck
 import com.krillsson.sysapi.core.check.HttpMethod
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
@@ -32,7 +33,8 @@ class OngoingEventFormatterTest {
         startTime = Instant.now(),
         threshold = MonitoredValue.ConditionalValue(true),
         value = MonitoredValue.ConditionalValue(false),
-        inertia = Duration.ZERO
+        inertia = Duration.ZERO,
+        severity = EventSeverity.CRITICAL
     )
 
     @Test

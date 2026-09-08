@@ -38,6 +38,9 @@ input CreateNumericalMonitorInput {
     inertiaInSeconds: Int!
     type: MonitorType!
     threshold: Long!
+    # Optional earlier threshold. Has to sit on the calm side of threshold, so above it for
+    # a monitor that alerts on a value going below. Omit for a monitor with one level
+    warningThreshold: Long
     # Drives: serial or name (ignoring case)
     # NIC's: name or MAC address (ignoring case)
     # Process: process ID
@@ -57,6 +60,9 @@ input CreateFractionMonitorInput {
     inertiaInSeconds: Int!
     type: MonitorType!
     threshold: Float!
+    # Optional earlier threshold. Has to sit on the calm side of threshold, so above it for
+    # a monitor that alerts on a value going below. Omit for a monitor with one level
+    warningThreshold: Float
     # Drives: serial or name (ignoring case)
     # NIC's: name or MAC address (ignoring case)
     # Process: process ID
@@ -86,12 +92,18 @@ input UpdateNumericalValueMonitorInput {
     monitorId: UUID!
     inertiaInSeconds: Int
     threshold: Long
+    warningThreshold: Long
+    # Removes the warning threshold. Cannot be combined with warningThreshold
+    clearWarningThreshold: Boolean
 }
 
 input UpdateFractionalValueMonitorInput {
     monitorId: UUID!
     inertiaInSeconds: Int
     threshold: Float
+    warningThreshold: Float
+    # Removes the warning threshold. Cannot be combined with warningThreshold
+    clearWarningThreshold: Boolean
 }
 
 input UpdateConditionalValueMonitorInput {
@@ -209,6 +221,9 @@ type Monitor {
     inertiaInSeconds: Int!
     type: MonitorType!
     threshold: MonitoredValue!
+    # Optional earlier threshold. Crossing it raises a WARNING event that escalates to
+    # CRITICAL if threshold is crossed too. Null when the monitor has one level
+    warningThreshold: MonitoredValue
     currentValue: MonitoredValue
     # estimated max value of monitored value. Useful while building UI's
     maxValue: MonitoredValue!
@@ -265,11 +280,18 @@ type MonitorableItem {
     type: MonitorType!
 }
 
+# How bad the incident is. Agents before 0.46.0 only ever reported CRITICAL
+enum EventSeverity {
+    WARNING,
+    CRITICAL
+}
+
 interface Event {
     id: UUID!
     monitor: Monitor!
     startTime: String!
     startTimestamp: Instant!
+    severity: EventSeverity!
 }
 
 type OngoingEvent implements Event {
@@ -278,6 +300,9 @@ type OngoingEvent implements Event {
     startTime: String!
     startTimestamp: Instant!
     startValue: MonitoredValue!
+    # The level the incident sits at right now. An incident that escalates from WARNING to
+    # CRITICAL keeps its id and changes this instead of opening a second event
+    severity: EventSeverity!
 }
 
 type PastEvent implements Event {
@@ -289,6 +314,8 @@ type PastEvent implements Event {
     endTime: String!
     endValue: MonitoredValue!
     startValue: MonitoredValue!
+    # The highest level the incident reached before it resolved
+    severity: EventSeverity!
 }
 
 interface GenericEvent {

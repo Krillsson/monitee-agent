@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.notifications
 
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.Monitor
 import java.time.Duration
@@ -15,7 +16,8 @@ sealed interface Notification {
         val startTime: Instant,
         val threshold: MonitoredValue,
         val value: MonitoredValue,
-        val inertia: Duration
+        val inertia: Duration,
+        val severity: EventSeverity
     ) : Notification
 
     data class ResolvedEvent(
