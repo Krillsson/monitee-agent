@@ -20,13 +20,19 @@ jobs:
           set-java-home: 'true'
           native-image-job-reports: 'true'
       - name: Run tests
-        run: ./gradlew test
+        run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification
       - name: Store test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: build/reports/tests/test
+      - name: Store coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results
+          path: build/reports/jacoco/test/html
   build-docker:
     name: Build nightly sys-API docker image
     runs-on: ubuntu-latest

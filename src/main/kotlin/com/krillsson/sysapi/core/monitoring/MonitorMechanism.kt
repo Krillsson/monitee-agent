@@ -15,6 +15,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
     private var stateChangedAt: Instant? = null
 
     var state = State.INSIDE
+        private set
     private var eventId: UUID? = null
     private var ongoingEvent: OngoingEvent? = null
 
@@ -83,8 +84,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
         val now = clock.instant()
         val pastInertia =
             stateChangedAt != null && Duration.between(stateChangedAt,  /* and */now).compareTo(config.inertia) > 0
-        var event: Event? = null
-        when (state) {
+        return when (state) {
             State.INSIDE -> {
                 if (outsideThreshold) { //Inside -> Outside before inertia
                     stateChangedAt = now
@@ -104,6 +104,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                         value
                     )
                 }
+                null
             }
 
             State.OUTSIDE_BEFORE_INERTIA -> {
@@ -128,7 +129,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                             threshold = config.threshold,
                             value = value
                         )
-                        event = ongoingEvent
+                        ongoingEvent
                     } else { //Outside before inertia -> Outside before inertia
                         LOGGER.trace(
                             "{} is still outside threshold of {} but inside grace period of {}",
@@ -136,6 +137,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                             config.threshold,
                             config.inertia
                         )
+                        null
                     }
                 } else { //Outside before inertia -> inside
                     LOGGER.trace(
@@ -146,6 +148,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                     )
                     stateChangedAt = null
                     state = State.INSIDE
+                    null
                 }
             }
 
@@ -162,6 +165,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                     state = State.INSIDE_BEFORE_INERTIA
                     LOGGER.trace("{} went inside threshold of {} at {}", config.monitoredItemId, config.threshold, now)
                 }
+                null
             }
 
             State.INSIDE_BEFORE_INERTIA -> {
@@ -175,7 +179,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                         )
                         state = State.INSIDE
                         stateChangedAt = null
-                        event = PastEvent(
+                        PastEvent(
                             id = eventId!!,
                             monitorId = monitor.id,
                             monitoredItemId = config.monitoredItemId,
@@ -194,6 +198,7 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                             value,
                             config.inertia
                         )
+                        null
                     }
                 } else { //Inside before inertia -> outside
                     LOGGER.trace(
@@ -205,10 +210,10 @@ class MonitorMechanism @VisibleForTesting constructor(private val clock: Clock) 
                     )
                     stateChangedAt = null
                     state = State.OUTSIDE
+                    null
                 }
             }
         }
-        return event
     }
 
     companion object {
