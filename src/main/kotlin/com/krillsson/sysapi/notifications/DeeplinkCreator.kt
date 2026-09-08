@@ -45,6 +45,12 @@ class DeeplinkCreator(
         }
     }
 
+    fun snooze(): String {
+        return createMoniteeDeeplink {
+            addPathSegment("snooze")
+        }
+    }
+
     fun githubRelease(): String {
         return "https://github.com/${updateCheckConfiguration.user}/${updateCheckConfiguration.repo}/releases/latest"
     }

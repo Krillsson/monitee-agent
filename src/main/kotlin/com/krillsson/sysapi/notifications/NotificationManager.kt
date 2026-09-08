@@ -76,7 +76,8 @@ class NotificationManager(
             severity = severity(),
             timestamp = timestamp(),
             serverName = serverName,
-            serverId = serverIdService.serverId.toString()
+            serverId = serverIdService.serverId.toString(),
+            actions = actions()
         )
     }
 
@@ -89,6 +90,14 @@ class NotificationManager(
     private fun Notification.severity() = when (this) {
         is Notification.OngoingEvent -> severity
         else -> null
+    }
+
+    private fun Notification.actions(): List<NotificationAction> = when (this) {
+        is Notification.OngoingEvent -> listOf(
+            NotificationAction.View(label = "Snooze", url = deeplinkCreator.snooze(), clear = true)
+        )
+
+        else -> emptyList()
     }
 
     private fun Notification.eventType() = when (this) {

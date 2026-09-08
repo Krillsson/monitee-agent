@@ -14,5 +14,6 @@ data class NotificationParameters(
     val severity: EventSeverity?,
     val timestamp: Instant,
     val serverName: String,
-    val serverId: String
+    val serverId: String,
+    val actions: List<NotificationAction> = emptyList()
 )

@@ -37,7 +37,8 @@ interface NtfyApi {
             val label: String,
             val url: String? = null,
             val method: String? = null, // "GET", "POST", etc.
-            val body: String? = null
+            val body: String? = null,
+            val clear: Boolean? = null
         )
     }
 }
