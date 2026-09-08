@@ -7,24 +7,28 @@ import com.krillsson.sysapi.config.DockerConfiguration
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.config.FormattingConfiguration
 import com.krillsson.sysapi.config.HistoryConfiguration
-import com.krillsson.sysapi.config.LinuxConfiguration
 import com.krillsson.sysapi.config.MqttConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.ProcessesConfiguration
 import com.krillsson.sysapi.config.UpsConfiguration
 import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.notifications.localization.TemperatureFormatter
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.stereotype.Controller
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import com.krillsson.sysapi.config.TemperatureUnit as ConfiguredTemperatureUnit
+import com.krillsson.sysapi.notifications.localization.TemperatureUnit as ResolvedTemperatureUnit
 
 @Controller
-class SettingsResolver(private val configFile: YAMLConfigFile) {
+class SettingsResolver(
+    private val configFile: YAMLConfigFile,
+    private val temperatureFormatter: TemperatureFormatter
+) {
 
     @QueryMapping
-    fun settings(): Settings = configFile.toSettings()
+    fun settings(): Settings = configFile.toSettings(temperatureFormatter.preferredTemperatureUnit.toSettings())
 }
 
 data class Settings(
@@ -35,7 +39,6 @@ data class Settings(
     val containerUpdateCheck: ContainerUpdateCheckSettings,
     val connectivity: ConnectivitySettings,
     val discovery: DiscoverySettings,
-    val platform: PlatformSettings,
     val docker: DockerSettings,
     val ups: UpsSettings,
     val systemDaemon: SystemDaemonSettings,
@@ -47,9 +50,11 @@ data class Settings(
 
 data class ProcessesSettings(val enabled: Boolean)
 
-data class FormattingSettings(val temperatureUnit: TemperatureUnit)
+data class FormattingSettings(val temperatureUnit: TemperatureUnit, val activeUnit: ActiveTemperatureUnit)
 
 enum class TemperatureUnit { SYSTEM, CELSIUS, FAHRENHEIT }
+
+enum class ActiveTemperatureUnit { CELSIUS, FAHRENHEIT }
 
 data class HistorySettings(
     val intervalSeconds: Long,
@@ -77,8 +82,6 @@ data class ConnectivitySettings(
 
 data class DiscoverySettings(val mdnsEnabled: Boolean, val upnpEnabled: Boolean)
 
-data class PlatformSettings(val cpuTempSensorOverride: String?)
-
 data class DockerSettings(val enabled: Boolean)
 
 data class UpsSettings(val enabled: Boolean)
@@ -93,9 +96,9 @@ data class NotificationsSettings(val ntfyEnabled: Boolean, val webhooksConfigure
 
 data class MqttSettings(val enabled: Boolean)
 
-fun YAMLConfigFile.toSettings(): Settings = Settings(
+fun YAMLConfigFile.toSettings(activeUnit: ActiveTemperatureUnit): Settings = Settings(
     processes = processes.toSettings(),
-    formatting = formatting.toSettings(),
+    formatting = formatting.toSettings(activeUnit),
     history = metricsConfig.history.toSettings(),
     cache = metricsConfig.cache.toSettings(),
     containerUpdateCheck = docker.updateCheck.toSettings(),
@@ -104,7 +107,6 @@ fun YAMLConfigFile.toSettings(): Settings = Settings(
         internetServicesCheckEnabled = internetServicesCheck.enabled
     ),
     discovery = DiscoverySettings(mdnsEnabled = mDNS.enabled, upnpEnabled = upnp.enabled),
-    platform = linux.toSettings(),
     docker = docker.toSettings(),
     ups = ups.toSettings(),
     systemDaemon = SystemDaemonSettings(enabled = linux.systemDaemonServiceManagement.enabled),
@@ -116,12 +118,20 @@ fun YAMLConfigFile.toSettings(): Settings = Settings(
 
 fun ProcessesConfiguration.toSettings() = ProcessesSettings(enabled = enabled)
 
-fun FormattingConfiguration.toSettings() = FormattingSettings(temperatureUnit = temperatureUnit.toSettings())
+fun FormattingConfiguration.toSettings(activeUnit: ActiveTemperatureUnit) = FormattingSettings(
+    temperatureUnit = temperatureUnit.toSettings(),
+    activeUnit = activeUnit
+)
 
 fun ConfiguredTemperatureUnit.toSettings(): TemperatureUnit = when (this) {
     ConfiguredTemperatureUnit.system -> TemperatureUnit.SYSTEM
     ConfiguredTemperatureUnit.celsius -> TemperatureUnit.CELSIUS
     ConfiguredTemperatureUnit.fahrenheit -> TemperatureUnit.FAHRENHEIT
+}
+
+fun ResolvedTemperatureUnit.toSettings(): ActiveTemperatureUnit = when (this) {
+    ResolvedTemperatureUnit.Celsius -> ActiveTemperatureUnit.CELSIUS
+    ResolvedTemperatureUnit.Fahrenheit -> ActiveTemperatureUnit.FAHRENHEIT
 }
 
 fun HistoryConfiguration.toSettings() = HistorySettings(
@@ -144,8 +154,6 @@ fun ContainerUpdateCheckConfiguration.toSettings() = ContainerUpdateCheckSetting
     intervalMinutes = intervalMinutes,
     excludeContainers = excludeContainers
 )
-
-fun LinuxConfiguration.toSettings() = PlatformSettings(cpuTempSensorOverride = overrideCpuTempSensor)
 
 fun DockerConfiguration.toSettings() = DockerSettings(enabled = enabled)
 

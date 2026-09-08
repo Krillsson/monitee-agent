@@ -11,7 +11,6 @@ import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.config.HistoryConfiguration
 import com.krillsson.sysapi.config.HistoryPurgingConfiguration
 import com.krillsson.sysapi.config.InternetServicesCheckConfiguration
-import com.krillsson.sysapi.config.LinuxConfiguration
 import com.krillsson.sysapi.config.LogReaderConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.RegistryConfiguration
@@ -33,6 +32,7 @@ import org.junit.jupiter.params.provider.EnumSource
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import com.krillsson.sysapi.config.TemperatureUnit as ConfiguredTemperatureUnit
+import com.krillsson.sysapi.notifications.localization.TemperatureUnit as ResolvedTemperatureUnit
 
 class SettingsResolverTest {
 
@@ -93,28 +93,14 @@ class SettingsResolverTest {
         result.name shouldBe unit.name.uppercase()
     }
 
-    @Test
-    fun `cpuTempSensorOverride is null when none is configured`() {
-        // Given
-        val linux = LinuxConfiguration(overrideCpuTempSensor = null)
-
+    @ParameterizedTest
+    @EnumSource(ResolvedTemperatureUnit::class)
+    fun `maps every resolved temperature unit to a settings active unit`(unit: ResolvedTemperatureUnit) {
         // When
-        val result = linux.toSettings()
+        val result = unit.toSettings()
 
         // Then
-        result.cpuTempSensorOverride shouldBe null
-    }
-
-    @Test
-    fun `cpuTempSensorOverride carries the configured sensor identifier`() {
-        // Given
-        val linux = LinuxConfiguration(overrideCpuTempSensor = "hwmon:coretemp")
-
-        // When
-        val result = linux.toSettings()
-
-        // Then
-        result.cpuTempSensorOverride shouldBe "hwmon:coretemp"
+        result.name shouldBe unit.name.uppercase()
     }
 
     @Test
@@ -222,7 +208,7 @@ class SettingsResolverTest {
         )
 
         // When
-        val serialized = ObjectMapper().writeValueAsString(config.toSettings())
+        val serialized = ObjectMapper().writeValueAsString(config.toSettings(ActiveTemperatureUnit.CELSIUS))
 
         // Then
         secrets.forEach { secret -> serialized shouldNotContain secret }
