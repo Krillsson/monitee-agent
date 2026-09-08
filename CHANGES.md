@@ -1,8 +1,6 @@
 ### Unreleased
 
-- `settings` exposes the non-sensitive settings the agent is running with: process and cache toggles, temperature unit, history retention, container update check options, the discovery toggles, and whether Docker, UPS, systemd management, Windows service management, the file browser, ntfy and MQTT are switched on.
-- Fix: `metricsConfig.history.interval` now actually controls how often a history point is recorded, instead of being silently overridden by a hardcoded 30 minutes.
-- Removed `metricsConfig.monitor`, which was never wired to anything.
+- `settings` exposes the non-sensitive settings the agent is running with. Covers process, cache and discovery toggles, temperature unit, history retention, container update check options, and whether Docker, UPS, systemd management, Windows service management, the file browser, ntfy and MQTT are switched on.
 
 ### 0.45.0
 
