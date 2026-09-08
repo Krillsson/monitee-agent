@@ -20,7 +20,8 @@ class NotificationManager(
     private val mqttNotificationService: MqttNotificationService,
     private val notificationFormatter: NotificationFormatter,
     private val configFile: YAMLConfigFile,
-    private val deeplinkCreator: DeeplinkCreator
+    private val deeplinkCreator: DeeplinkCreator,
+    private val snoozeNotificationsService: SnoozeNotificationsService
 ) {
     private val logger by logger()
 
@@ -40,11 +41,21 @@ class NotificationManager(
             serverId = serverIdService.serverId.toString(),
             ntfy = ntfyService.ntfyInfo(),
             webhooks = webhookService.webhookInfo(),
-            mqtt = mqttNotificationService.mqttInfo()
+            mqtt = mqttNotificationService.mqttInfo(),
+            snooze = snoozeNotificationsService.info()
         )
     }
 
     fun notify(notification: Notification) {
+        if (snoozeNotificationsService.isSnoozed()) {
+            snoozeNotificationsService.recordSuppressed()
+            logger.info(
+                "Dropping {} - notifications snoozed until {}",
+                notification,
+                snoozeNotificationsService.info().snoozedUntil
+            )
+            return
+        }
         for (service in notificationServices) {
             if (service.enabled) {
                 logger.info("Sending {} to {}", notification, service::class.simpleName)

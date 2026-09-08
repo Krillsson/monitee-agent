@@ -2,6 +2,7 @@
 
 - `settings` exposes the non-sensitive settings the agent is running with. Covers process, cache and discovery toggles, temperature unit, history retention, container update check options, and whether Docker, UPS, systemd management, Windows service management, the file browser, ntfy and MQTT are switched on.
 - Numerical and fractional monitors take an optional `warningThreshold` that raises the event as WARNING and escalates the same event to CRITICAL when `threshold` is crossed too, reported through the new `Event.severity`.
+- `snoozeNotifications`/`resumeNotifications` suppress outgoing notifications for a duration or until resumed, with the state exposed under `notificationServices { snooze }`.
 
 ### 0.45.0
 
