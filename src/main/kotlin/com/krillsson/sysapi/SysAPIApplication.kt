@@ -199,7 +199,6 @@ import org.springframework.context.annotation.ImportRuntimeHints
     LogReaderConfiguration::class,
     MdnsConfiguration::class,
     MetricsConfiguration::class,
-    MonitorConfiguration::class,
     UpsConfiguration::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,

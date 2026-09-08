@@ -3,20 +3,27 @@ package com.krillsson.sysapi.core.history
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
-import org.springframework.scheduling.annotation.Scheduled
+import jakarta.annotation.PostConstruct
+import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Component
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 
 @Component
 class HistoryRecorder(
         yamlConfigFile: YAMLConfigFile,
         private val metrics: Metrics,
-        private val history: HistoryRepository
+        private val history: HistoryRepository,
+        private val taskScheduler: TaskScheduler
 ) {
 
     private val historyConfig = yamlConfigFile.metricsConfig.history
 
-    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
+    @PostConstruct
+    fun start() {
+        val interval = Duration.ofSeconds(historyConfig.unit.toSeconds(historyConfig.interval))
+        taskScheduler.scheduleAtFixedRate(this::run, interval)
+    }
+
     fun run() {
         history.record(currentSystemLoad())
         history.purge(historyConfig.purging.olderThan, historyConfig.purging.unit)
