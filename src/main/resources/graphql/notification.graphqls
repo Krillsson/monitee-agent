@@ -2,6 +2,13 @@ extend type Query {
     notificationServices: NotificationServicesInfo!
 }
 
+extend type Mutation {
+    "Suppresses every outgoing notification until `until`, or until resumeNotifications when omitted"
+    snoozeNotifications(input: SnoozeNotificationsInput!): SnoozeNotificationsInfo!
+    "Ends an active snooze immediately. A no-op when nothing is snoozed"
+    resumeNotifications: SnoozeNotificationsInfo!
+}
+
 type NotificationServicesInfo{
     serverId: String,
     ntfy: NtfyInfo!
@@ -9,6 +16,28 @@ type NotificationServicesInfo{
     webhooks: [WebhookInfo!]!
     "The MQTT broker the agent publishes metrics and events to, configured under mqtt in configuration.yml"
     mqtt: MqttInfo!
+    "Notification suppression state. Never null - check `snoozed`"
+    snooze: SnoozeNotificationsInfo!
+}
+
+input SnoozeNotificationsInput {
+    "When the snooze lifts by itself. Omit for an open-ended snooze"
+    until: Instant
+    "Optional free text shown by clients, e.g. 'Upgrading unRAID'"
+    reason: String
+}
+
+type SnoozeNotificationsInfo {
+    "True while outgoing notifications are being dropped"
+    snoozed: Boolean!
+    "When the current snooze began. Null when not snoozed"
+    snoozedAt: Instant
+    "When the current snooze lifts. Null when not snoozed, or when it is open-ended"
+    snoozedUntil: Instant
+    "Reason supplied by whoever snoozed"
+    reason: String
+    "Notifications dropped since this snooze began. Resets when the agent restarts"
+    suppressedNotificationCount: Int!
 }
 
 
