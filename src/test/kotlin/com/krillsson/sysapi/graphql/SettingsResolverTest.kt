@@ -17,11 +17,13 @@ import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.RegistryConfiguration
 import com.krillsson.sysapi.config.RetentionConfiguration
 import com.krillsson.sysapi.config.SelfSignedCertificateConfiguration
+import com.krillsson.sysapi.config.ServiceManagement
 import com.krillsson.sysapi.config.SmartConfig
 import com.krillsson.sysapi.config.MetricsConfiguration
 import com.krillsson.sysapi.config.MqttConfiguration
 import com.krillsson.sysapi.config.UserConfiguration
 import com.krillsson.sysapi.config.WindowsConfiguration
+import com.krillsson.sysapi.config.WindowsEventLogConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotContain
@@ -113,6 +115,40 @@ class SettingsResolverTest {
 
         // Then
         result.cpuTempSensorOverride shouldBe "hwmon:coretemp"
+    }
+
+    @Test
+    fun `windowsManagement mirrors serviceManagement enabled, not the unrelated eventLog toggle`() {
+        // Given
+        val windows = WindowsConfiguration(
+            serviceManagement = ServiceManagement(enabled = true),
+            eventLog = WindowsEventLogConfiguration(enabled = false)
+        )
+
+        // When
+        val result = windows.toSettings()
+
+        // Then
+        result.serviceManagementEnabled shouldBe true
+    }
+
+    @Test
+    fun `notifications reports how many webhooks are configured, not their names`() {
+        // Given
+        val notifications = NotificationsConfiguration(
+            ntfy = NotificationsConfiguration.NtfyConfiguration(enabled = true),
+            webhooks = listOf(
+                NotificationsConfiguration.WebhookConfiguration(name = "Discord"),
+                NotificationsConfiguration.WebhookConfiguration(name = "Gotify")
+            )
+        )
+
+        // When
+        val result = notifications.toSettings()
+
+        // Then
+        result.ntfyEnabled shouldBe true
+        result.webhooksConfigured shouldBe 2
     }
 
     @Test

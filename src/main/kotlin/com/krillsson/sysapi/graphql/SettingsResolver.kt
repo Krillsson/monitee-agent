@@ -3,10 +3,16 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.config.CacheConfiguration
 import com.krillsson.sysapi.config.ContainerUpdateCheckConfiguration
 import com.krillsson.sysapi.config.ContainerUpdateNotifyStyle
+import com.krillsson.sysapi.config.DockerConfiguration
+import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.config.FormattingConfiguration
 import com.krillsson.sysapi.config.HistoryConfiguration
 import com.krillsson.sysapi.config.LinuxConfiguration
+import com.krillsson.sysapi.config.MqttConfiguration
+import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.ProcessesConfiguration
+import com.krillsson.sysapi.config.UpsConfiguration
+import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.stereotype.Controller
@@ -29,7 +35,14 @@ data class Settings(
     val containerUpdateCheck: ContainerUpdateCheckSettings,
     val connectivity: ConnectivitySettings,
     val discovery: DiscoverySettings,
-    val platform: PlatformSettings
+    val platform: PlatformSettings,
+    val docker: DockerSettings,
+    val ups: UpsSettings,
+    val systemDaemon: SystemDaemonSettings,
+    val windowsManagement: WindowsManagementSettings,
+    val fileBrowser: FileBrowserSettings,
+    val notifications: NotificationsSettings,
+    val mqtt: MqttSettings
 )
 
 data class ProcessesSettings(val enabled: Boolean)
@@ -66,6 +79,20 @@ data class DiscoverySettings(val mdnsEnabled: Boolean, val upnpEnabled: Boolean)
 
 data class PlatformSettings(val cpuTempSensorOverride: String?)
 
+data class DockerSettings(val enabled: Boolean)
+
+data class UpsSettings(val enabled: Boolean)
+
+data class SystemDaemonSettings(val enabled: Boolean)
+
+data class WindowsManagementSettings(val serviceManagementEnabled: Boolean)
+
+data class FileBrowserSettings(val enabled: Boolean)
+
+data class NotificationsSettings(val ntfyEnabled: Boolean, val webhooksConfigured: Int)
+
+data class MqttSettings(val enabled: Boolean)
+
 fun YAMLConfigFile.toSettings(): Settings = Settings(
     processes = processes.toSettings(),
     formatting = formatting.toSettings(),
@@ -77,7 +104,14 @@ fun YAMLConfigFile.toSettings(): Settings = Settings(
         internetServicesCheckEnabled = internetServicesCheck.enabled
     ),
     discovery = DiscoverySettings(mdnsEnabled = mDNS.enabled, upnpEnabled = upnp.enabled),
-    platform = linux.toSettings()
+    platform = linux.toSettings(),
+    docker = docker.toSettings(),
+    ups = ups.toSettings(),
+    systemDaemon = SystemDaemonSettings(enabled = linux.systemDaemonServiceManagement.enabled),
+    windowsManagement = windows.toSettings(),
+    fileBrowser = fileBrowser.toSettings(),
+    notifications = notifications.toSettings(),
+    mqtt = mqtt.toSettings()
 )
 
 fun ProcessesConfiguration.toSettings() = ProcessesSettings(enabled = enabled)
@@ -112,3 +146,18 @@ fun ContainerUpdateCheckConfiguration.toSettings() = ContainerUpdateCheckSetting
 )
 
 fun LinuxConfiguration.toSettings() = PlatformSettings(cpuTempSensorOverride = overrideCpuTempSensor)
+
+fun DockerConfiguration.toSettings() = DockerSettings(enabled = enabled)
+
+fun UpsConfiguration.toSettings() = UpsSettings(enabled = enabled)
+
+fun WindowsConfiguration.toSettings() = WindowsManagementSettings(serviceManagementEnabled = serviceManagement.enabled)
+
+fun FileBrowserConfiguration.toSettings() = FileBrowserSettings(enabled = enabled)
+
+fun NotificationsConfiguration.toSettings() = NotificationsSettings(
+    ntfyEnabled = ntfy.enabled,
+    webhooksConfigured = webhooks.size
+)
+
+fun MqttConfiguration.toSettings() = MqttSettings(enabled = enabled)

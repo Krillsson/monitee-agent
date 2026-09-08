@@ -12,6 +12,17 @@ type Settings {
     connectivity: ConnectivitySettings!
     discovery: DiscoverySettings!
     platform: PlatformSettings!
+    "The configured intent. The docker query reports whether Docker is actually reachable, which can differ, for example while the daemon is unreachable"
+    docker: DockerSettings!
+    "The configured intent. The upsInfo query reports whether the UPS is actually reachable"
+    ups: UpsSettings!
+    "The configured intent. The systemDaemon query reports whether it is actually reachable"
+    systemDaemon: SystemDaemonSettings!
+    windowsManagement: WindowsManagementSettings!
+    "The configured intent. The fileBrowser query also reports false when none of the configured roots could be used"
+    fileBrowser: FileBrowserSettings!
+    notifications: NotificationsSettings!
+    mqtt: MqttSettings!
 }
 
 type ProcessesSettings {
@@ -74,4 +85,35 @@ type DiscoverySettings {
 type PlatformSettings {
     "The sensor configured under linux.overrideCpuTempSensor, when one is set"
     cpuTempSensorOverride: String
+}
+
+type DockerSettings {
+    enabled: Boolean!
+}
+
+type UpsSettings {
+    enabled: Boolean!
+}
+
+type SystemDaemonSettings {
+    enabled: Boolean!
+}
+
+type WindowsManagementSettings {
+    "windows.serviceManagement.enabled. Gates the performWindowsServiceCommand mutation, not the windowsManagement query itself"
+    serviceManagementEnabled: Boolean!
+}
+
+type FileBrowserSettings {
+    enabled: Boolean!
+}
+
+type NotificationsSettings {
+    ntfyEnabled: Boolean!
+    "Number of webhooks configured under notifications.webhooks, regardless of their individual enabled flag"
+    webhooksConfigured: Int!
+}
+
+type MqttSettings {
+    enabled: Boolean!
 }
