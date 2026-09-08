@@ -2,9 +2,6 @@
 ### sys-API user configuration        ###
 #########################################
 metricsConfig:
-  monitor:
-    interval: 45
-    unit: SECONDS
   history:
     interval: 30
     unit: MINUTES
