@@ -1,0 +1,77 @@
+extend type Query {
+    "The settings the agent is running with. Read-only; sensitive values such as credentials, webhook URLs and configured filesystem paths are never included"
+    settings: Settings!
+}
+
+type Settings {
+    processes: ProcessesSettings!
+    formatting: FormattingSettings!
+    history: HistorySettings!
+    cache: CacheSettings!
+    containerUpdateCheck: ContainerUpdateCheckSettings!
+    connectivity: ConnectivitySettings!
+    discovery: DiscoverySettings!
+    platform: PlatformSettings!
+}
+
+type ProcessesSettings {
+    "False when processes are switched off in configuration.yml, which is why the process list is empty rather than the machine having no processes"
+    enabled: Boolean!
+}
+
+type FormattingSettings {
+    temperatureUnit: TemperatureUnit!
+}
+
+enum TemperatureUnit {
+    SYSTEM
+    CELSIUS
+    FAHRENHEIT
+}
+
+type HistorySettings {
+    "How often a history point is recorded"
+    intervalSeconds: Long!
+    "History older than this is deleted"
+    retentionDays: Long!
+    "Check results are rolled up hourly and daily, each tier kept for its own period"
+    checkRawRetentionHours: Long!
+    checkHourlyRetentionDays: Long!
+    checkDailyRetentionDays: Long!
+}
+
+type CacheSettings {
+    enabled: Boolean!
+    durationSeconds: Long!
+}
+
+type ContainerUpdateCheckSettings {
+    enabled: Boolean!
+    notify: Boolean!
+    notifyStyle: ContainerUpdateNotifyStyle!
+    "Hour of the day the digest is sent, when notifyStyle is DAILY_DIGEST"
+    digestAtHour: Int!
+    intervalMinutes: Long!
+    "Name patterns excluded from update checks"
+    excludeContainers: [String!]!
+}
+
+enum ContainerUpdateNotifyStyle {
+    DAILY_DIGEST
+    EVERY_CONTAINER
+}
+
+type ConnectivitySettings {
+    connectivityCheckEnabled: Boolean!
+    internetServicesCheckEnabled: Boolean!
+}
+
+type DiscoverySettings {
+    mdnsEnabled: Boolean!
+    upnpEnabled: Boolean!
+}
+
+type PlatformSettings {
+    "The sensor configured under linux.overrideCpuTempSensor, when one is set"
+    cpuTempSensorOverride: String
+}
