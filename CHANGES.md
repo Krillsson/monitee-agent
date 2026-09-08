@@ -1,5 +1,7 @@
 ### Unreleased
 
+- `settings` exposes the non-sensitive settings the agent is running with: process and cache toggles, temperature unit, history retention, container update check options and the discovery toggles.
+
 ### 0.45.0
 
 - `FileSystem.spaceForecast` estimates when a filesystem will fill up from its usage trend, with a low/high day range and the daily history points behind it. Also reports a `trend` of GROWING, SHRINKING or STABLE, so a non-growing filesystem still gets a result instead of nothing.
