@@ -87,7 +87,8 @@ class EventManager(
                     type = event.monitorType,
                     threshold = event.threshold,
                     endValue = event.value,
-                    startValue = event.value
+                    startValue = event.value,
+                    severity = event.severity
                 )
                 remove(event.id)
                 add(past)
@@ -120,7 +121,8 @@ class EventManager(
                 monitorType = monitorType,
                 startTime = startTime,
                 threshold = threshold,
-                value = value
+                value = value,
+                severity = severity
             )
 
             is PastEvent -> PastEvent(
@@ -132,7 +134,8 @@ class EventManager(
                 type = monitorType,
                 threshold = threshold,
                 endValue = value,
-                startValue = startValue
+                startValue = startValue,
+                severity = severity
             )
 
             else -> this
@@ -180,7 +183,8 @@ class EventManager(
                     event.monitorType,
                     event.threshold,
                     event.value,
-                    event.value
+                    event.value,
+                    event.severity
                 )
             } else {
                 newEvents += event

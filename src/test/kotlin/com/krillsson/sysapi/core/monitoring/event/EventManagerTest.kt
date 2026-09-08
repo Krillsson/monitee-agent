@@ -2,6 +2,7 @@ package com.krillsson.sysapi.core.monitoring.event
 
 import com.krillsson.sysapi.config.MetricsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.Monitor
@@ -44,7 +45,8 @@ class EventManagerTest {
         monitorType = Monitor.Type.WEBSERVER_UP,
         startTime = Instant.parse("2026-08-01T09:00:00Z"),
         threshold = MonitoredValue.ConditionalValue(true),
-        value = MonitoredValue.ConditionalValue(false)
+        value = MonitoredValue.ConditionalValue(false),
+        severity = EventSeverity.CRITICAL
     )
 
     private fun pastEvent(monitorId: UUID) = PastEvent(
@@ -56,7 +58,8 @@ class EventManagerTest {
         type = Monitor.Type.WEBSERVER_UP,
         threshold = MonitoredValue.ConditionalValue(true),
         endValue = MonitoredValue.ConditionalValue(true),
-        startValue = MonitoredValue.ConditionalValue(false)
+        startValue = MonitoredValue.ConditionalValue(false),
+        severity = EventSeverity.CRITICAL
     )
 
     @Test

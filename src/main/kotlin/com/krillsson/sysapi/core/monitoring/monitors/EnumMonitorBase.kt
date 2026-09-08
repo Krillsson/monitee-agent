@@ -25,8 +25,8 @@ abstract class EnumMonitorBase<E: Enum<E>>(
             .let {  MonitoredValue.EnumValue(it) }
     }
 
-    override fun isPastThreshold(value: MonitoredValue.EnumValue<E>): Boolean {
-        val indexOfConfiguredThreshold = orderOfEntry(config.threshold.value)
+    override fun isPastThreshold(value: MonitoredValue.EnumValue<E>, threshold: MonitoredValue.EnumValue<E>): Boolean {
+        val indexOfConfiguredThreshold = orderOfEntry(threshold.value)
         val indexOfValue = orderOfEntry(value.value)
         return indexOfValue > indexOfConfiguredThreshold
     }

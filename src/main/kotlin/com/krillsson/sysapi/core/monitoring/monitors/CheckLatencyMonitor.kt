@@ -24,7 +24,7 @@ class CheckLatencyMonitor(
         return check?.timeoutSeconds?.times(1000L)?.toNumericalValue()
     }
 
-    override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.NumericalValue, threshold: MonitoredValue.NumericalValue): Boolean {
+        return value > threshold
     }
 }

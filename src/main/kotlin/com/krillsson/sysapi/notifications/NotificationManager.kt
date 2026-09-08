@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.notifications
 
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.mqtt.MqttNotificationService
 import com.krillsson.sysapi.notifications.localization.NotificationFormatter
 import com.krillsson.sysapi.notifications.ntfy.NtfyService
@@ -58,13 +59,25 @@ class NotificationManager(
             title = title,
             message = message,
             clickUrl = deeplinkCreator.createDeeplink(this),
-            priority = if (this is Notification.OngoingEvent) 4 else 3,
+            priority = priority(),
             eventType = eventType(),
             monitorType = monitorType(),
+            severity = severity(),
             timestamp = timestamp(),
             serverName = serverName,
             serverId = serverIdService.serverId.toString()
         )
+    }
+
+    private fun Notification.priority() = when {
+        this !is Notification.OngoingEvent -> 3
+        severity == EventSeverity.WARNING -> 3
+        else -> 4
+    }
+
+    private fun Notification.severity() = when (this) {
+        is Notification.OngoingEvent -> severity
+        else -> null
     }
 
     private fun Notification.eventType() = when (this) {

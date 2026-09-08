@@ -135,7 +135,8 @@ class MutationResolver(
             Duration.ofSeconds(input.inertiaInSeconds.toLong()),
             input.type,
             input.threshold.toNumericalValue(),
-            input.monitoredItemId
+            input.monitoredItemId,
+            input.warningThreshold?.toNumericalValue()
         )
         return CreateMonitorOutput(createdId)
     }
@@ -146,7 +147,8 @@ class MutationResolver(
             Duration.ofSeconds(input.inertiaInSeconds.toLong()),
             input.type,
             input.threshold.toFractionalValue(),
-            input.monitoredItemId
+            input.monitoredItemId,
+            input.warningThreshold?.toFractionalValue()
         )
         return CreateMonitorOutput(createdId)
     }
@@ -191,7 +193,9 @@ class MutationResolver(
             val updatedMonitorId = monitorManager.update(
                 input.monitorId,
                 input.inertiaInSeconds?.toLong()?.let { Duration.ofSeconds(it) },
-                input.threshold?.toNumericalValue()
+                input.threshold?.toNumericalValue(),
+                input.warningThreshold?.toNumericalValue(),
+                input.clearWarningThreshold == true
             )
             UpdateMonitorOutputSucceeded(updatedMonitorId)
         } catch (exception: Exception) {
@@ -205,7 +209,9 @@ class MutationResolver(
             val updatedMonitorId = monitorManager.update(
                 input.monitorId,
                 input.inertiaInSeconds?.toLong()?.let { Duration.ofSeconds(it) },
-                input.threshold?.toFractionalValue()
+                input.threshold?.toFractionalValue(),
+                input.warningThreshold?.toFractionalValue(),
+                input.clearWarningThreshold == true
             )
             UpdateMonitorOutputSucceeded(updatedMonitorId)
         } catch (exception: Exception) {

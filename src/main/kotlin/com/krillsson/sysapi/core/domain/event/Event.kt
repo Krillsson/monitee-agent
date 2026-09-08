@@ -12,5 +12,6 @@ abstract class Event(
     val monitorType: Monitor.Type,
     val startTime: Instant,
     val threshold: MonitoredValue,
-    val value: MonitoredValue
+    val value: MonitoredValue,
+    val severity: EventSeverity
 )

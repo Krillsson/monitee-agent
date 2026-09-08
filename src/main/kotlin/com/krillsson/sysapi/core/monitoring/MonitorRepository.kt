@@ -25,25 +25,28 @@ class MonitorRepository(private val store: MonitorStore, private val monitorFact
 
     private fun MonitorConfig<out MonitoredValue>.asStoredMonitorConfig(): MonitorStore.StoredMonitor.Config {
         return MonitorStore.StoredMonitor.Config(
-            monitoredItemId, threshold.asDouble(), inertia
+            monitoredItemId, threshold.asDouble(), inertia, warningThreshold?.asDouble()
         )
     }
 
     private fun <E : Enum<E>> MonitorStore.StoredMonitor.Config.asConfig(type: Monitor.Type): MonitorConfig<MonitoredValue> {
-        val convertedValue = when (type.valueType) {
-            Monitor.ValueType.Conditional -> threshold.toConditionalValue()
-            Monitor.ValueType.Fractional -> threshold.toFractionalValue()
-            Monitor.ValueType.Numerical -> threshold.toNumericalValue()
-            Monitor.ValueType.Enum -> threshold.toEnumValue(
+        return MonitorConfig(
+            monitoredItemId = monitoredItemId,
+            threshold = threshold.asMonitoredValue<E>(type),
+            inertia = inertia,
+            warningThreshold = warningThreshold?.asMonitoredValue<E>(type)
+        )
+    }
+
+    private fun <E : Enum<E>> Double.asMonitoredValue(type: Monitor.Type): MonitoredValue {
+        return when (type.valueType) {
+            Monitor.ValueType.Conditional -> toConditionalValue()
+            Monitor.ValueType.Fractional -> toFractionalValue()
+            Monitor.ValueType.Numerical -> toNumericalValue()
+            Monitor.ValueType.Enum -> toEnumValue(
                 requireNotNull(type.toEnumEntries<E>()) { "$type is not mappable to enum entries" }
             )
         }
-
-        return MonitorConfig(
-            monitoredItemId = monitoredItemId,
-            threshold = convertedValue,
-            inertia = inertia
-        )
     }
 
     private fun MonitoredValue.asDouble(): Double {

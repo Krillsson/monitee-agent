@@ -78,8 +78,8 @@ class CheckLatencyMonitorTest {
         val at = MonitoredValue.NumericalValue(2000)
 
         // When
-        val pastAbove = monitor.isPastThreshold(above)
-        val pastAt = monitor.isPastThreshold(at)
+        val pastAbove = monitor.isPastThreshold(above, monitor.config.threshold)
+        val pastAt = monitor.isPastThreshold(at, monitor.config.threshold)
 
         // Then
         pastAbove shouldBe true

@@ -35,7 +35,7 @@ class DiskTemperatureMonitor(override val id: UUID, override val config: Monitor
         return MonitoredValue.NumericalValue(120)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.NumericalValue, threshold: MonitoredValue.NumericalValue): Boolean {
+        return value > threshold
     }
 }

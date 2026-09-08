@@ -36,8 +36,8 @@ class LoadAverageMonitorOneMinute(
         return maxValueSelector(input, null)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.FractionalValue, threshold: MonitoredValue.FractionalValue): Boolean {
+        return value > threshold
     }
 }
 
@@ -70,8 +70,8 @@ class LoadAverageMonitorFiveMinutes(
         return maxValueSelector(input, null)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.FractionalValue, threshold: MonitoredValue.FractionalValue): Boolean {
+        return value > threshold
     }
 }
 
@@ -104,7 +104,7 @@ class LoadAverageMonitorFifteenMinutes(
         return maxValueSelector(input, null)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.FractionalValue, threshold: MonitoredValue.FractionalValue): Boolean {
+        return value > threshold
     }
 }

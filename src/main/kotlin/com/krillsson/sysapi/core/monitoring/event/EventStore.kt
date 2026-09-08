@@ -3,6 +3,7 @@ package com.krillsson.sysapi.core.monitoring.event
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.persistence.JsonFile
 import org.springframework.stereotype.Component
@@ -23,7 +24,8 @@ class EventStore(objectMapper: ObjectMapper) :
         val threshold: Double,
         val value: Double,
         val startValue: Double?,
-        val type: Type
+        val type: Type,
+        val severity: EventSeverity? = null
     ) {
         enum class Type {
             ONGOING,

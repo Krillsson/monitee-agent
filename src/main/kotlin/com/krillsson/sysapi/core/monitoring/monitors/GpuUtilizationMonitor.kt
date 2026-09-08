@@ -31,7 +31,7 @@ class GpuUtilizationMonitor(override val id: UUID, override val config: MonitorC
         return MonitoredValue.FractionalValue(100f)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.FractionalValue): Boolean {
-        return value > config.threshold
+    override fun isPastThreshold(value: MonitoredValue.FractionalValue, threshold: MonitoredValue.FractionalValue): Boolean {
+        return value > threshold
     }
 }

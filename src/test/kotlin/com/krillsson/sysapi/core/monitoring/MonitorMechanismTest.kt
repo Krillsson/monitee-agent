@@ -1,6 +1,6 @@
 package com.krillsson.sysapi.core.monitoring
 
-import com.krillsson.sysapi.core.domain.event.Event
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import io.kotest.matchers.shouldBe
@@ -15,43 +15,56 @@ class MonitorMechanismTest {
 
     private val inertia = Duration.ofMinutes(5)
     private val threshold = 80L.toNumericalValue()
+    private val warningThreshold = 70L.toNumericalValue()
     private val breachingValue = 95L.toNumericalValue()
+    private val warningValue = 75L.toNumericalValue()
     private val recoveredValue = 60L.toNumericalValue()
 
     private val clock = MutableClock()
-    private var monitor = testMonitor(threshold = threshold, inertia = inertia)
+    private var monitor = testMonitor(threshold = threshold, inertia = inertia, warningThreshold = warningThreshold)
     private var mechanism = MonitorMechanism(clock)
 
-    private fun breach(value: MonitoredValue = breachingValue): Event? =
-        mechanism.check(monitor, monitor.config, value, true)
+    private fun breach(value: MonitoredValue = breachingValue): MonitorMechanism.Outcome? =
+        mechanism.check(monitor, monitor.config, value, Monitor.Level.CRITICAL)
 
-    private fun recover(value: MonitoredValue = recoveredValue): Event? =
-        mechanism.check(monitor, monitor.config, value, false)
+    private fun warn(value: MonitoredValue = warningValue): MonitorMechanism.Outcome? =
+        mechanism.check(monitor, monitor.config, value, Monitor.Level.WARNING)
+
+    private fun recover(value: MonitoredValue = recoveredValue): MonitorMechanism.Outcome? =
+        mechanism.check(monitor, monitor.config, value, Monitor.Level.NORMAL)
 
     private fun raiseOngoingEvent(): OngoingEvent {
         breach()
         clock.advance(inertia.plusSeconds(1))
-        return breach().shouldBeInstanceOf<OngoingEvent>()
+        return breach()?.event.shouldBeInstanceOf<OngoingEvent>()
+    }
+
+    private fun settleAtWarning(): OngoingEvent {
+        warn()
+        clock.advance(inertia.plusSeconds(1))
+        return warn()?.event.shouldBeInstanceOf<OngoingEvent>()
     }
 
     @Test
     fun `emits nothing while the value stays inside the threshold`() {
         // When
-        val event = recover()
+        val outcome = recover()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.INSIDE
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe null
     }
 
     @Test
     fun `records the first breach without emitting an event`() {
         // When
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE_BEFORE_INERTIA
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe Monitor.Level.CRITICAL
     }
 
     @Test
@@ -61,11 +74,12 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(Duration.ofMinutes(1))
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE_BEFORE_INERTIA
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe Monitor.Level.CRITICAL
     }
 
     @Test
@@ -75,11 +89,12 @@ class MonitorMechanismTest {
         clock.advance(Duration.ofMinutes(1))
 
         // When
-        val event = recover()
+        val outcome = recover()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.INSIDE
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe null
     }
 
     @Test
@@ -92,11 +107,12 @@ class MonitorMechanismTest {
         // When
         breach()
         clock.advance(inertia)
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE_BEFORE_INERTIA
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe Monitor.Level.CRITICAL
     }
 
     @Test
@@ -106,17 +122,20 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(inertia.plusSeconds(1))
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        val ongoing = event.shouldBeInstanceOf<OngoingEvent>()
+        val ongoing = outcome?.event.shouldBeInstanceOf<OngoingEvent>()
+        outcome?.notify shouldBe true
         ongoing.monitorId shouldBe MONITOR_ID
         ongoing.monitoredItemId shouldBe MONITORED_ITEM_ID
         ongoing.monitorType shouldBe monitor.type
         ongoing.threshold shouldBe threshold
         ongoing.value shouldBe breachingValue
+        ongoing.severity shouldBe EventSeverity.CRITICAL
         ongoing.startTime shouldBe clock.instant()
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+        mechanism.pendingLevel shouldBe null
     }
 
     @Test
@@ -132,7 +151,7 @@ class MonitorMechanismTest {
 
         // Then
         atBoundary shouldBe null
-        pastBoundary.shouldBeInstanceOf<OngoingEvent>()
+        pastBoundary?.event.shouldBeInstanceOf<OngoingEvent>()
     }
 
     @Test
@@ -143,10 +162,10 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(Duration.ofMillis(1))
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        event.shouldBeInstanceOf<OngoingEvent>()
+        outcome?.event.shouldBeInstanceOf<OngoingEvent>()
     }
 
     @Test
@@ -156,11 +175,12 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(Duration.ofHours(1))
-        val event = breach()
+        val outcome = breach()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+        mechanism.pendingLevel shouldBe null
     }
 
     @Test
@@ -169,11 +189,12 @@ class MonitorMechanismTest {
         raiseOngoingEvent()
 
         // When
-        val event = recover()
+        val outcome = recover()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.INSIDE_BEFORE_INERTIA
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+        mechanism.pendingLevel shouldBe Monitor.Level.NORMAL
     }
 
     @Test
@@ -184,11 +205,12 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(Duration.ofMinutes(1))
-        val event = recover()
+        val outcome = recover()
 
         // Then
-        event shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.INSIDE_BEFORE_INERTIA
+        outcome shouldBe null
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+        mechanism.pendingLevel shouldBe Monitor.Level.NORMAL
     }
 
     @Test
@@ -199,10 +221,11 @@ class MonitorMechanismTest {
 
         // When
         clock.advance(inertia.plusSeconds(1))
-        val event = recover()
+        val outcome = recover()
 
         // Then
-        val past = event.shouldBeInstanceOf<PastEvent>()
+        val past = outcome?.event.shouldBeInstanceOf<PastEvent>()
+        outcome?.notify shouldBe true
         past.id shouldBe ongoing.id
         past.monitorId shouldBe ongoing.monitorId
         past.monitoredItemId shouldBe MONITORED_ITEM_ID
@@ -211,8 +234,10 @@ class MonitorMechanismTest {
         past.startTime shouldBe ongoing.startTime
         past.startValue shouldBe breachingValue
         past.value shouldBe recoveredValue
+        past.severity shouldBe EventSeverity.CRITICAL
         past.endTime shouldBe clock.instant()
-        mechanism.state shouldBe MonitorMechanism.State.INSIDE
+        mechanism.level shouldBe Monitor.Level.NORMAL
+        mechanism.pendingLevel shouldBe null
     }
 
     @Test
@@ -230,11 +255,12 @@ class MonitorMechanismTest {
         // Then
         duringRecovery shouldBe null
         stillBreaching shouldBe null
-        mechanism.state shouldBe MonitorMechanism.State.OUTSIDE
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+        mechanism.pendingLevel shouldBe null
 
         recover()
         clock.advance(inertia.plusSeconds(1))
-        recover().shouldBeInstanceOf<PastEvent>().id shouldBe ongoing.id
+        recover()?.event.shouldBeInstanceOf<PastEvent>().id shouldBe ongoing.id
     }
 
     @Test
@@ -252,6 +278,119 @@ class MonitorMechanismTest {
         first.id shouldNotBe second.id
     }
 
+    @Test
+    fun `raises a warning event when the value only reaches the warning level`() {
+        // When
+        val ongoing = settleAtWarning()
+
+        // Then
+        ongoing.severity shouldBe EventSeverity.WARNING
+        ongoing.value shouldBe warningValue
+        mechanism.level shouldBe Monitor.Level.WARNING
+    }
+
+    @Test
+    fun `escalates a warning to critical as one event with a second notification`() {
+        // Given
+        val warning = settleAtWarning()
+
+        // When
+        breach()
+        clock.advance(inertia.plusSeconds(1))
+        val outcome = breach()
+
+        // Then
+        val escalated = outcome?.event.shouldBeInstanceOf<OngoingEvent>()
+        outcome?.notify shouldBe true
+        escalated.id shouldBe warning.id
+        escalated.startTime shouldBe warning.startTime
+        escalated.severity shouldBe EventSeverity.CRITICAL
+        escalated.value shouldBe breachingValue
+        mechanism.level shouldBe Monitor.Level.CRITICAL
+    }
+
+    @Test
+    fun `holds an escalation back until it outlasts the inertia`() {
+        // Given
+        settleAtWarning()
+
+        // When
+        val firstBreach = breach()
+        clock.advance(Duration.ofMinutes(1))
+        val insideGrace = breach()
+
+        // Then
+        firstBreach shouldBe null
+        insideGrace shouldBe null
+        mechanism.level shouldBe Monitor.Level.WARNING
+        mechanism.pendingLevel shouldBe Monitor.Level.CRITICAL
+    }
+
+    @Test
+    fun `de-escalates a critical event to a warning without notifying`() {
+        // Given
+        val ongoing = raiseOngoingEvent()
+
+        // When
+        warn()
+        clock.advance(inertia.plusSeconds(1))
+        val outcome = warn()
+
+        // Then
+        val deEscalated = outcome?.event.shouldBeInstanceOf<OngoingEvent>()
+        outcome?.notify shouldBe false
+        deEscalated.id shouldBe ongoing.id
+        deEscalated.startTime shouldBe ongoing.startTime
+        deEscalated.severity shouldBe EventSeverity.WARNING
+        mechanism.level shouldBe Monitor.Level.WARNING
+    }
+
+    @Test
+    fun `closes a warning-only incident as a warning`() {
+        // Given
+        settleAtWarning()
+
+        // When
+        recover()
+        clock.advance(inertia.plusSeconds(1))
+        val past = recover()?.event.shouldBeInstanceOf<PastEvent>()
+
+        // Then
+        past.severity shouldBe EventSeverity.WARNING
+    }
+
+    @Test
+    fun `closes an incident that de-escalated at the highest severity it reached`() {
+        // Given
+        raiseOngoingEvent()
+        warn()
+        clock.advance(inertia.plusSeconds(1))
+        warn()
+
+        // When
+        recover()
+        clock.advance(inertia.plusSeconds(1))
+        val past = recover()?.event.shouldBeInstanceOf<PastEvent>()
+
+        // Then
+        past.severity shouldBe EventSeverity.CRITICAL
+    }
+
+    @Test
+    fun `starts the next incident at the severity it is raised with`() {
+        // Given
+        raiseOngoingEvent()
+        recover()
+        clock.advance(inertia.plusSeconds(1))
+        recover()
+
+        // When
+        val second = settleAtWarning()
+
+        // Then
+        second.severity shouldBe EventSeverity.WARNING
+    }
+
     @ParameterizedTest
     @EnumSource(Monitor.ValueType::class)
     fun `carries the monitored value through a full breach and recovery for every value kind`(valueType: Monitor.ValueType) {
@@ -262,10 +401,10 @@ class MonitorMechanismTest {
         // When
         breach(values.breaching)
         clock.advance(inertia.plusSeconds(1))
-        val ongoing = breach(values.breaching).shouldBeInstanceOf<OngoingEvent>()
+        val ongoing = breach(values.breaching)?.event.shouldBeInstanceOf<OngoingEvent>()
         recover(values.recovered)
         clock.advance(inertia.plusSeconds(1))
-        val past = recover(values.recovered).shouldBeInstanceOf<PastEvent>()
+        val past = recover(values.recovered)?.event.shouldBeInstanceOf<PastEvent>()
 
         // Then
         ongoing.monitorType shouldBe values.monitorType

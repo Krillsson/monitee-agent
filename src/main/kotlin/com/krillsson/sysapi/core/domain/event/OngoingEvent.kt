@@ -12,5 +12,6 @@ class OngoingEvent(
     monitorType: Monitor.Type,
     startTime: Instant,
     threshold: MonitoredValue,
-    value: MonitoredValue
-) : Event(id, monitorId, monitoredItemId, monitorType, startTime, threshold, value)
+    value: MonitoredValue,
+    severity: EventSeverity
+) : Event(id, monitorId, monitoredItemId, monitorType, startTime, threshold, value, severity)

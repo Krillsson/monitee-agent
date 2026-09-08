@@ -37,7 +37,8 @@ data class Monitor(
     val inertiaInSeconds: Int,
     val monitoredItemId: String?,
     val threshold: com.krillsson.sysapi.graphql.domain.MonitoredValue,
-    val type: com.krillsson.sysapi.core.monitoring.Monitor.Type
+    val type: com.krillsson.sysapi.core.monitoring.Monitor.Type,
+    val warningThreshold: com.krillsson.sysapi.graphql.domain.MonitoredValue?
 )
 
 fun com.krillsson.sysapi.core.monitoring.Monitor<MonitoredValue>.asMonitor(): Monitor {
@@ -46,7 +47,8 @@ fun com.krillsson.sysapi.core.monitoring.Monitor<MonitoredValue>.asMonitor(): Mo
         config.inertia.seconds.toInt(),
         config.monitoredItemId,
         config.threshold.asMonitoredValue(),
-        type
+        type,
+        config.warningThreshold?.asMonitoredValue()
     )
 }
 

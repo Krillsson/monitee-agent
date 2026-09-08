@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.notifications
 
+import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 
 object NotificationEmoji {
@@ -9,7 +10,7 @@ object NotificationEmoji {
     fun decorate(notification: NotificationParameters): NotificationParameters {
         val messageEmoji = notification.monitorType?.emoji()
         return notification.copy(
-            title = "${notification.eventType.emoji().character} ${notification.title}",
+            title = "${notification.eventType.emoji(notification.severity).character} ${notification.title}",
             message = if (messageEmoji == null) {
                 notification.message
             } else {
@@ -20,13 +21,14 @@ object NotificationEmoji {
 
     fun ntfyTags(notification: NotificationParameters): List<String> {
         return listOfNotNull(
-            notification.eventType.emoji().ntfyTag,
+            notification.eventType.emoji(notification.severity).ntfyTag,
             notification.monitorType?.emoji()?.ntfyTag
         )
     }
 
-    private fun NotificationEventType.emoji() = when (this) {
-        NotificationEventType.ONGOING_EVENT -> Emoji("🚨", "rotating_light")
+    private fun NotificationEventType.emoji(severity: EventSeverity?) = when (this) {
+        NotificationEventType.ONGOING_EVENT ->
+            if (severity == EventSeverity.WARNING) Emoji("⚠️", "warning") else Emoji("🚨", "rotating_light")
         NotificationEventType.RESOLVED_EVENT -> Emoji("✅", "white_check_mark")
         NotificationEventType.UPDATE_AVAILABLE -> Emoji("🆕", "new")
         NotificationEventType.MONITORED_ITEM_MISSING -> Emoji("❓", "question")

@@ -34,7 +34,7 @@ class MemorySpaceMonitor(override val id: UUID, override val config: MonitorConf
         return maxValueSelector(input, null)
     }
 
-    override fun isPastThreshold(value: MonitoredValue.NumericalValue): Boolean {
-        return value < config.threshold
+    override fun isPastThreshold(value: MonitoredValue.NumericalValue, threshold: MonitoredValue.NumericalValue): Boolean {
+        return value < threshold
     }
 }

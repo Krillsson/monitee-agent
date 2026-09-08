@@ -7,6 +7,7 @@ data class WebhookPayload(
     val clickUrl: String,
     val eventType: String,
     val monitorType: String?,
+    val severity: String?,
     val timestamp: String,
     val serverName: String,
     val serverId: String
