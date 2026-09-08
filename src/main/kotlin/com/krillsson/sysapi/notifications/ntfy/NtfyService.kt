@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.notifications.ntfy
 
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.notifications.NotificationAction
 import com.krillsson.sysapi.notifications.NotificationEmoji
 import com.krillsson.sysapi.notifications.NotificationParameters
 import com.krillsson.sysapi.notifications.NotificationService
@@ -41,7 +42,8 @@ class NtfyService(
             priority = notification.priority,
             clickUrl = notification.clickUrl,
             topic = topic,
-            tags = if (config.emoji) NotificationEmoji.ntfyTags(notification) else emptyList()
+            tags = if (config.emoji) NotificationEmoji.ntfyTags(notification) else emptyList(),
+            actions = if (config.actions) notification.actions.map { it.toNtfyAction() } else emptyList()
         )
     }
 
@@ -49,10 +51,10 @@ class NtfyService(
         title: String,
         message: String,
         priority: Int = 3,
-        clickAction: NtfyApi.Notification.Action? = null,
         clickUrl: String? = null,
         topic: String,
-        tags: List<String> = emptyList()
+        tags: List<String> = emptyList(),
+        actions: List<NtfyApi.Notification.Action> = emptyList()
     ) {
         val notification = NtfyApi.Notification(
             title = title,
@@ -61,7 +63,8 @@ class NtfyService(
             priority = priority,
             clickUrl = clickUrl,
             iconUrl = "https://monitee.app/logo/logo.png",
-            tags = tags.takeIf { it.isNotEmpty() }
+            tags = tags.takeIf { it.isNotEmpty() },
+            actions = actions.takeIf { it.isNotEmpty() }
         )
 
         try {
@@ -83,6 +86,15 @@ class NtfyService(
             config.enabled,
             "ntfy://${config.url.toHttpUrl().host}/$topic",
             topic,
+        )
+    }
+
+    private fun NotificationAction.toNtfyAction(): NtfyApi.Notification.Action = when (this) {
+        is NotificationAction.View -> NtfyApi.Notification.Action(
+            action = "view",
+            label = label,
+            url = url,
+            clear = clear
         )
     }
 

@@ -179,4 +179,17 @@ class NotificationManagerTest {
         // Then
         snoozeNotificationsService.info().suppressedNotificationCount shouldBe 2
     }
+
+    @Test
+    fun `an ongoing event notification carries a Snooze action`() {
+        // When
+        manager.notify(ongoingEvent())
+
+        // Then
+        verify {
+            ntfyService.notify(match { params ->
+                params.actions.any { it is NotificationAction.View && it.label == "Snooze" }
+            })
+        }
+    }
 }
