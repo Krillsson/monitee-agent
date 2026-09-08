@@ -19,7 +19,7 @@ class TemperatureFormatter(yamlConfigFile: YAMLConfigFile) {
         private const val degrees = 0x00B0.toChar()
     }
 
-    private val preferredTemperatureUnit = when (yamlConfigFile.formatting.temperatureUnit) {
+    val preferredTemperatureUnit = when (yamlConfigFile.formatting.temperatureUnit) {
         system -> readTemperatureUnitFromLocale()
         celsius -> TemperatureUnit.Celsius
         fahrenheit -> TemperatureUnit.Fahrenheit

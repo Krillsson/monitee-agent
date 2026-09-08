@@ -11,7 +11,6 @@ type Settings {
     containerUpdateCheck: ContainerUpdateCheckSettings!
     connectivity: ConnectivitySettings!
     discovery: DiscoverySettings!
-    platform: PlatformSettings!
     "The configured intent. The docker query reports whether Docker is actually reachable, which can differ, for example while the daemon is unreachable"
     docker: DockerSettings!
     "The configured intent. The upsInfo query reports whether the UPS is actually reachable"
@@ -32,10 +31,17 @@ type ProcessesSettings {
 
 type FormattingSettings {
     temperatureUnit: TemperatureUnit!
+    "temperatureUnit resolved to a concrete unit. Equal to temperatureUnit unless temperatureUnit is SYSTEM, in which case this is what the agent's locale resolved to"
+    activeUnit: ActiveTemperatureUnit!
 }
 
 enum TemperatureUnit {
     SYSTEM
+    CELSIUS
+    FAHRENHEIT
+}
+
+enum ActiveTemperatureUnit {
     CELSIUS
     FAHRENHEIT
 }
@@ -80,11 +86,6 @@ type ConnectivitySettings {
 type DiscoverySettings {
     mdnsEnabled: Boolean!
     upnpEnabled: Boolean!
-}
-
-type PlatformSettings {
-    "The sensor configured under linux.overrideCpuTempSensor, when one is set"
-    cpuTempSensorOverride: String
 }
 
 type DockerSettings {
