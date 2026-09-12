@@ -125,6 +125,12 @@ import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.event.EventStore
 import com.krillsson.sysapi.tls.CertificateNamesCreator
 import com.krillsson.sysapi.tls.SelfSignedCertificateManager
+import com.krillsson.sysapi.config.IntervalConfiguration
+import com.krillsson.sysapi.config.MetricSamplingConfiguration
+import com.krillsson.sysapi.config.MetricSeriesConfiguration
+import com.krillsson.sysapi.core.history.series.HistoryResolution
+import com.krillsson.sysapi.core.history.series.MetricHistory
+import com.krillsson.sysapi.core.history.series.MetricHistoryPoint
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration
@@ -196,6 +202,12 @@ import org.springframework.context.annotation.ImportRuntimeHints
     HistoryPurgingConfiguration::class,
     CheckHistoryConfiguration::class,
     RetentionConfiguration::class,
+    MetricSeriesConfiguration::class,
+    MetricSamplingConfiguration::class,
+    IntervalConfiguration::class,
+    MetricHistory::class,
+    MetricHistoryPoint::class,
+    HistoryResolution::class,
     LinuxConfiguration::class,
     LogReaderConfiguration::class,
     MdnsConfiguration::class,

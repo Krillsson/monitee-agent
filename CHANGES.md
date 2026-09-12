@@ -2,6 +2,10 @@
 
 - Metrics are sampled into a tiered min/avg/max series kept as raw for 12 hours, five-minute buckets for 72 hours, hourly for 90 days and daily for two years, configured under `metricsConfig.history.series`.
 - Disk read/write rates are sampled without reading S.M.A.R.T, so the two no longer share an interval.
+- `Monitor.metricHistory` reports min/avg/max over a range at the coarsest resolution that still covers it, alongside the resolution actually served.
+- `Monitor.history` and `historyBetweenTimestamps` read the metric series instead of walking every history row, and are deprecated in favour of `metricHistory`.
+- The process monitors return an empty history instead of a flat line at zero, which was never recorded data.
+- `settings.history` reports the metric sampling cadences and the retention of each series tier.
 
 ### 0.46.0
 
