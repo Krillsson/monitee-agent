@@ -21,6 +21,10 @@ class CachingDiskMetrics(private val diskMetrics: DiskMetrics, cacheConfiguratio
         { diskMetrics.diskLoads() },
         cacheConfiguration.duration, cacheConfiguration.unit
     )
+    private val diskLoadsExcludingSmartDataCache: Supplier<List<DiskLoad>> = Suppliers.memoizeWithExpiration(
+        { diskMetrics.diskLoadsExcludingSmartData() },
+        cacheConfiguration.duration, cacheConfiguration.unit
+    )
     private val diskQueryCache: LoadingCache<String, Disk?> = CacheBuilder.newBuilder()
         .expireAfterWrite(cacheConfiguration.duration, cacheConfiguration.unit)
         .build(object : CacheLoader<String, Disk>() {
@@ -45,6 +49,10 @@ class CachingDiskMetrics(private val diskMetrics: DiskMetrics, cacheConfiguratio
 
     override fun diskLoads(): List<DiskLoad> {
         return diskLoadsCache.get()
+    }
+
+    override fun diskLoadsExcludingSmartData(): List<DiskLoad> {
+        return diskLoadsExcludingSmartDataCache.get()
     }
 
     override fun diskByName(name: String): Disk? {

@@ -43,13 +43,17 @@ open class DefaultDiskMetrics(
     }
 
     override fun diskLoads(): List<DiskLoad> {
-        return hal.diskStores.map { d: HWDiskStore -> createDiskLoad(d) }
+        return hal.diskStores.map { d: HWDiskStore -> createDiskLoad(d, includeSmartData = true) }
+    }
+
+    override fun diskLoadsExcludingSmartData(): List<DiskLoad> {
+        return hal.diskStores.map { d: HWDiskStore -> createDiskLoad(d, includeSmartData = false) }
     }
 
     override fun diskLoadByName(name: String): DiskLoad? {
         return hal.diskStores
             .filter { n: HWDiskStore -> n.name.equals(name, ignoreCase = true) }
-            .map { d: HWDiskStore -> createDiskLoad(d) }
+            .map { d: HWDiskStore -> createDiskLoad(d, includeSmartData = true) }
             .firstOrNull()
     }
 
@@ -97,10 +101,10 @@ open class DefaultDiskMetrics(
         }
     }
 
-    private fun createDiskLoad(diskStore: HWDiskStore): DiskLoad {
+    private fun createDiskLoad(diskStore: HWDiskStore, includeSmartData: Boolean): DiskLoad {
         val metrics = diskMetrics(diskStore)
         val speed: DiskSpeed = requireNotNull(diskSpeedForStore(diskStore).orElse(DiskSpeed(-1, -1)))
-        val smartData = diskSensors.getSmartData(diskStore)
+        val smartData = if (includeSmartData) diskSensors.getSmartData(diskStore) else null
         val health = smartData?.let { diskSensors.getDiskHealth(smartData) }
         return DiskLoad(
             name = diskStore.name,
