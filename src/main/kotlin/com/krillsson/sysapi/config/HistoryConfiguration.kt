@@ -8,5 +8,6 @@ class HistoryConfiguration(
         @JsonProperty val purging: HistoryPurgingConfiguration = HistoryPurgingConfiguration(14, ChronoUnit.DAYS, 1, TimeUnit.DAYS),
         @JsonProperty val interval: Long = 30,
         @JsonProperty val unit: TimeUnit = TimeUnit.MINUTES,
-        @JsonProperty val checks: CheckHistoryConfiguration = CheckHistoryConfiguration()
+        @JsonProperty val checks: CheckHistoryConfiguration = CheckHistoryConfiguration(),
+        @JsonProperty val series: MetricSeriesConfiguration = MetricSeriesConfiguration()
 )

@@ -1,24 +1,24 @@
 package com.krillsson.sysapi.core.check
 
+import com.krillsson.sysapi.core.history.HistoryBuckets
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import kotlin.math.ceil
 import kotlin.math.roundToLong
 
 object CheckBuckets {
 
     fun startOfHour(instant: Instant, zone: ZoneId = ZoneId.systemDefault()): Instant =
-        instant.atZone(zone).truncatedTo(ChronoUnit.HOURS).toInstant()
+        HistoryBuckets.startOfHour(instant, zone)
 
     fun startOfDay(instant: Instant, zone: ZoneId = ZoneId.systemDefault()): Instant =
-        instant.atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
+        HistoryBuckets.startOfDay(instant, zone)
 
     fun endOf(bucketStart: Instant, resolution: BucketResolution, zone: ZoneId = ZoneId.systemDefault()): Instant =
         when (resolution) {
-            BucketResolution.HOURLY -> bucketStart.atZone(zone).plusHours(1).toInstant()
-            BucketResolution.DAILY -> bucketStart.atZone(zone).plusDays(1).toInstant()
+            BucketResolution.HOURLY -> HistoryBuckets.endOfHour(bucketStart, zone)
+            BucketResolution.DAILY -> HistoryBuckets.endOfDay(bucketStart, zone)
         }
 
     fun startOf(instant: Instant, resolution: BucketResolution): Instant = when (resolution) {

@@ -22,6 +22,30 @@ metricsConfig:
       daily:
         olderThan: 730
         unit: DAYS
+    # Metrics are sampled into a tiered series and rolled up once an hour.
+    # Each tier is kept for as long as it says here, the purging section above does not apply to them
+    series:
+      sampling:
+        # cpu, memory, network, connectivity, gpu and disk read/write rates
+        fast:
+          interval: 60
+          unit: SECONDS
+        # filesystems, disk S.M.A.R.T, containers and UPS devices
+        slow:
+          interval: 5
+          unit: MINUTES
+      raw:
+        olderThan: 12
+        unit: HOURS
+      fiveMinute:
+        olderThan: 72
+        unit: HOURS
+      hourly:
+        olderThan: 90
+        unit: DAYS
+      daily:
+        olderThan: 730
+        unit: DAYS
   cache:
     enabled: true
     duration: 5
