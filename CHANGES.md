@@ -10,6 +10,8 @@
 - `containerMetricsHistoryBetweenTimestamps` and `upsMetricsHistoryBetweenTimestamps` do the same.
 - `metricHistory` reports any metric's min/avg/max over a range, for a filesystem, disk, interface, GPU, container or UPS device, or host-wide.
 - The filesystem space forecast reads the daily metric series, so its 30 day window is the window it actually gets rather than whatever the purge had left.
+- The wide history table is now kept for 7 days instead of 14, since the metric series answers the history queries beyond it. `metricsConfig.history.purging` governs only that table.
+- Removed `purgeEvery` and `purgeEveryUnit`, which nothing read. Existing configuration files that still set them keep working.
 
 ### 0.46.0
 
