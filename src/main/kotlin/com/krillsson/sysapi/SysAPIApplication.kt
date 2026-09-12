@@ -132,6 +132,7 @@ import com.krillsson.sysapi.core.history.series.HistoryResolution
 import com.krillsson.sysapi.core.history.series.MetricHistory
 import com.krillsson.sysapi.core.history.series.MetricHistoryPoint
 import com.krillsson.sysapi.core.history.series.MetricTierAvailability
+import com.krillsson.sysapi.core.history.series.MetricId
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration
@@ -210,6 +211,7 @@ import org.springframework.context.annotation.ImportRuntimeHints
     MetricHistoryPoint::class,
     MetricTierAvailability::class,
     HistoryResolution::class,
+    MetricId::class,
     LinuxConfiguration::class,
     LogReaderConfiguration::class,
     MdnsConfiguration::class,

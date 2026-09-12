@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.core.history.compat.LegacyHistoryCompatService
 import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsMetricsHistoryEntry
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Controller
 @SchemaMapping(typeName = "UpsInfoAvailable")
 class UpsResolver(
     val upsService: UpsService,
-    val upsMetricsHistoryRepository: UpsMetricsHistoryRepository
+    val upsMetricsHistoryRepository: UpsMetricsHistoryRepository,
+    val legacyHistoryCompatService: LegacyHistoryCompatService
 ) {
 
     @SchemaMapping
@@ -32,6 +34,6 @@ class UpsResolver(
         @Argument from: Instant,
         @Argument to: Instant
     ): List<UpsMetricsHistoryEntry> {
-        return upsMetricsHistoryRepository.getHistoryLimitedToDates(id, from, to)
+        return legacyHistoryCompatService.upsHistory(id, from, to)
     }
 }
