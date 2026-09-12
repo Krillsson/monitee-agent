@@ -9,6 +9,7 @@
 - `history`, `historyBetweenTimestamps` and `historyBetweenDates` keep answering beyond the recorded window by synthesizing entries from the metric series.
 - `containerMetricsHistoryBetweenTimestamps` and `upsMetricsHistoryBetweenTimestamps` do the same.
 - `metricHistory` reports any metric's min/avg/max over a range, for a filesystem, disk, interface, GPU, container or UPS device, or host-wide.
+- The filesystem space forecast reads the daily metric series, so its 30 day window is the window it actually gets rather than whatever the purge had left.
 
 ### 0.46.0
 
