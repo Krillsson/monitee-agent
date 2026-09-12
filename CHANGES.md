@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: Disk read-rate and write-rate monitors no longer return a null `maxValue`, which was breaking `monitorById` for them.
+
 ### 0.46.0
 
 - Numerical and fractional monitors take an optional `warningThreshold` that raises the event as WARNING and escalates the same event to CRITICAL when `threshold` is crossed too, reported through the new `Event.severity`.

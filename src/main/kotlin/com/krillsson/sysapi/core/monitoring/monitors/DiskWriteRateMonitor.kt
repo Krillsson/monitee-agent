@@ -7,6 +7,7 @@ import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorInput
+import com.krillsson.sysapi.core.monitoring.MonitorInputCreator
 import java.util.*
 
 class DiskWriteRateMonitor(override val id: UUID, override val config: MonitorConfig<MonitoredValue.NumericalValue>) :
@@ -32,8 +33,7 @@ class DiskWriteRateMonitor(override val id: UUID, override val config: MonitorCo
         selector(event.load, config.monitoredItemId)
 
     override fun maxValue(input: MonitorMaxValueInput): MonitoredValue.NumericalValue? {
-        // have no way of knowing this
-        return null
+        return MonitorInputCreator.THEORETICAL_DRIVE_READ_SPEED_LIMIT_BYTES_PER_SECOND.toNumericalValue()
     }
 
     override fun isPastThreshold(value: MonitoredValue.NumericalValue, threshold: MonitoredValue.NumericalValue): Boolean {
