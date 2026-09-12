@@ -47,10 +47,10 @@ enum ActiveTemperatureUnit {
 }
 
 type HistorySettings {
-    "How often a history point is recorded"
+    "How often a point is recorded into the wide history table"
     intervalSeconds: Long!
-    "History older than this is deleted"
-    retentionDays: Long!
+    "How long the wide history table is kept. Says nothing about the metric series or the check results, which have their own tiers below"
+    retentionDays: Long! @deprecated(reason: "Governs only the legacy wide history table. Use the metric fields below")
     "Check results are rolled up hourly and daily, each tier kept for its own period"
     checkRawRetentionHours: Long!
     checkHourlyRetentionDays: Long!
