@@ -229,11 +229,50 @@ type Monitor {
     maxValue: MonitoredValue!
     monitoredItemId: String
     monitoredItem: MonitorableItem
-    history: [MonitoredValueHistoryEntry!]!
+    # Served from the tiered metric series. Points beyond the raw window are bucket
+    # statistics rather than instantaneous samples: a gauge reports its average, a counter
+    # its value at the end of the bucket, and a flag is true only if it held for the whole
+    # bucket. Use metricHistory to get the band and the resolution that was served
+    history: [MonitoredValueHistoryEntry!]! @deprecated(reason: "Covers only the raw window. Use metricHistory")
     events: [Event!]!
     pastEvents: [PastEvent!]!
     ongoingEvents: [OngoingEvent!]!
-    historyBetweenTimestamps(from: Instant!, to: Instant!): [MonitoredValueHistoryEntry!]!
+    historyBetweenTimestamps(from: Instant!, to: Instant!): [MonitoredValueHistoryEntry!]! @deprecated(reason: "Collapses each bucket to one value. Use metricHistory")
+    # Min/avg/max over the range at the coarsest resolution that still covers it.
+    # Empty for the process monitors and CONTAINER_UPDATE_AVAILABLE, which are not sampled,
+    # and for DISK_SMART_HEALTH, whose health enum has no honest numeric collapse
+    metricHistory(from: Instant!, to: Instant!, resolution: HistoryResolution): MetricHistory!
+}
+
+enum HistoryResolution {
+    # Picks a resolution from the requested range: raw for the last few hours, five-minute
+    # buckets up to two days, hourly up to a month, daily beyond that
+    AUTO
+    RAW
+    FIVE_MINUTE
+    HOURLY
+    DAILY
+}
+
+type MetricHistory {
+    "The resolution actually served, which may be coarser than the one asked for"
+    resolution: HistoryResolution!
+    from: Instant!
+    to: Instant!
+    points: [MetricHistoryPoint!]!
+}
+
+type MetricHistoryPoint {
+    "Start of the bucket, or the sample timestamp at RAW resolution"
+    timestamp: Instant!
+    "How many raw samples are behind this point. 1 at RAW"
+    samples: Int!
+    "Equal to avg and max at RAW, where a point is one sample rather than a band"
+    min: Float!
+    avg: Float!
+    max: Float!
+    "The value at the end of the bucket. The only meaningful one for a counter such as bytesReceived"
+    last: Float!
 }
 
 enum MonitorType {

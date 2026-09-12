@@ -55,6 +55,15 @@ type HistorySettings {
     checkRawRetentionHours: Long!
     checkHourlyRetentionDays: Long!
     checkDailyRetentionDays: Long!
+    "How often the cheap metrics (cpu, memory, network, gpu, disk rates) are sampled"
+    metricFastSamplingSeconds: Long!
+    "How often the expensive ones (filesystems, S.M.A.R.T, containers, UPS) are sampled"
+    metricSlowSamplingSeconds: Long!
+    "Metrics are rolled up into five-minute, hourly and daily tiers, each kept for its own period"
+    metricRawRetentionHours: Long!
+    metricFiveMinuteRetentionHours: Long!
+    metricHourlyRetentionDays: Long!
+    metricDailyRetentionDays: Long!
 }
 
 type CacheSettings {
