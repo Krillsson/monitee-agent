@@ -1,11 +1,12 @@
 package com.krillsson.sysapi.core.forecast
 
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
-import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemSpaceTrend
-import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
-import com.krillsson.sysapi.core.domain.history.SystemHistoryEntry
-import com.krillsson.sysapi.core.history.HistoryRepository
+import com.krillsson.sysapi.core.history.series.HistoryResolution
+import com.krillsson.sysapi.core.history.series.MetricHistory
+import com.krillsson.sysapi.core.history.series.MetricHistoryPoint
+import com.krillsson.sysapi.core.history.series.MetricHistoryService
+import com.krillsson.sysapi.core.history.series.MetricId
 import com.krillsson.sysapi.core.metrics.FileSystemMetrics
 import com.krillsson.sysapi.core.metrics.Metrics
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -27,11 +28,11 @@ class FileSystemSpaceForecastRecorderTest {
     private val metrics: Metrics = mockk {
         every { fileSystemMetrics() } returns fileSystemMetrics
     }
-    private val historyRepository: HistoryRepository = mockk()
+    private val metricHistoryService: MetricHistoryService = mockk()
     private val forecastDAO: FileSystemSpaceForecastDAO = mockk(relaxed = true)
     private val now: Instant = Instant.parse("2026-01-15T00:00:00Z")
     private val clock: Clock = Clock.fixed(now, ZoneOffset.UTC)
-    private val recorder = FileSystemSpaceForecastRecorder(metrics, historyRepository, forecastDAO, clock)
+    private val recorder = FileSystemSpaceForecastRecorder(metrics, metricHistoryService, forecastDAO, clock)
 
     @Test
     fun `computes and saves a forecast for every filesystem with enough history, growing or not`() {
@@ -39,16 +40,8 @@ class FileSystemSpaceForecastRecorderTest {
         val growing = fileSystem("growing")
         val flat = fileSystem("flat")
         every { fileSystemMetrics.fileSystems() } returns listOf(growing, flat)
-        val history = (0..9).map { day ->
-            historyEntry(
-                date = now.minus(Duration.ofDays((9 - day).toLong())),
-                fileSystemLoads = listOf(
-                    FileSystemLoad("growing", "growing", 90_000 - day * 1_000L, 0, 100_000),
-                    FileSystemLoad("flat", "flat", 90_000, 0, 100_000)
-                )
-            )
-        }
-        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history
+        givenDailyUsedBytes("growing") { day -> 10_000 + day * 1_000L }
+        givenDailyUsedBytes("flat") { 10_000L }
 
         val saved = slot<List<FileSystemSpaceForecastEntity>>()
         every { forecastDAO.saveAll(capture(saved)) } returns emptyList()
@@ -66,17 +59,36 @@ class FileSystemSpaceForecastRecorderTest {
     }
 
     @Test
+    fun `asks for the daily tier over the full forecast window`() {
+        // Given
+        val fileSystem = fileSystem("data")
+        every { fileSystemMetrics.fileSystems() } returns listOf(fileSystem)
+        givenDailyUsedBytes("data") { day -> 10_000 + day * 1_000L }
+        every {
+            forecastDAO.saveAll(any<List<FileSystemSpaceForecastEntity>>())
+        } returns emptyList<FileSystemSpaceForecastEntity>()
+
+        // When
+        recorder.run()
+
+        // Then
+        verify {
+            metricHistoryService.history(
+                MetricId.FILESYSTEM_USED_BYTES,
+                "data",
+                now.minus(Duration.ofDays(30)),
+                now,
+                HistoryResolution.DAILY
+            )
+        }
+    }
+
+    @Test
     fun `saves nothing for a filesystem without enough history yet`() {
         // Given
         val tooNew = fileSystem("tooNew")
         every { fileSystemMetrics.fileSystems() } returns listOf(tooNew)
-        val history = (0..2).map { day ->
-            historyEntry(
-                date = now.minus(Duration.ofDays((2 - day).toLong())),
-                fileSystemLoads = listOf(FileSystemLoad("tooNew", "tooNew", 90_000 - day * 1_000L, 0, 100_000))
-            )
-        }
-        every { historyRepository.getExtendedHistoryLimitedToDates(any(), any()) } returns history
+        givenDailyUsedBytes("tooNew", days = 3) { day -> 10_000 + day * 1_000L }
 
         val saved = slot<List<FileSystemSpaceForecastEntity>>()
         every { forecastDAO.saveAll(capture(saved)) } returns emptyList()
@@ -88,14 +100,39 @@ class FileSystemSpaceForecastRecorderTest {
         saved.captured.shouldBeEmpty()
     }
 
-    private fun historyEntry(date: Instant, fileSystemLoads: List<FileSystemLoad>): SystemHistoryEntry {
-        val historySystemLoad: HistorySystemLoad = mockk {
-            every { this@mockk.fileSystemLoads } returns fileSystemLoads
+    @Test
+    fun `saves nothing for a filesystem the series holds no points for`() {
+        // Given
+        val unknown = fileSystem("unknown")
+        every { fileSystemMetrics.fileSystems() } returns listOf(unknown)
+        every {
+            metricHistoryService.history(MetricId.FILESYSTEM_USED_BYTES, "unknown", any(), any(), any())
+        } returns MetricHistory(HistoryResolution.DAILY, now.minus(Duration.ofDays(30)), now, emptyList())
+
+        val saved = slot<List<FileSystemSpaceForecastEntity>>()
+        every { forecastDAO.saveAll(capture(saved)) } returns emptyList()
+
+        // When
+        recorder.run()
+
+        // Then
+        saved.captured.shouldBeEmpty()
+    }
+
+    private fun givenDailyUsedBytes(id: String, days: Int = 10, usedBytes: (Int) -> Long) {
+        val points = (0 until days).map { day ->
+            MetricHistoryPoint(
+                timestamp = now.minus(Duration.ofDays((days - 1 - day).toLong())),
+                samples = 288,
+                min = usedBytes(day).toDouble(),
+                avg = usedBytes(day).toDouble(),
+                max = usedBytes(day).toDouble(),
+                last = usedBytes(day).toDouble()
+            )
         }
-        return mockk {
-            every { this@mockk.date } returns date
-            every { this@mockk.value } returns historySystemLoad
-        }
+        every {
+            metricHistoryService.history(MetricId.FILESYSTEM_USED_BYTES, id, any(), any(), any())
+        } returns MetricHistory(HistoryResolution.DAILY, now.minus(Duration.ofDays(30)), now, points)
     }
 
     private fun fileSystem(id: String, totalSpaceBytes: Long = 100_000) = FileSystem(
