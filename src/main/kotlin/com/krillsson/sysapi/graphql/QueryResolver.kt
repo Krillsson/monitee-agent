@@ -8,7 +8,12 @@ import com.krillsson.sysapi.core.domain.system.OperatingSystem
 import com.krillsson.sysapi.core.domain.system.Platform
 import com.krillsson.sysapi.core.genericevents.GenericEventRepository
 import com.krillsson.sysapi.core.history.HistoryRepository
-import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
+import com.krillsson.sysapi.core.history.compat.LegacyHistoryCompatService
+import com.krillsson.sysapi.core.history.compat.SystemHistoryPoint
+import com.krillsson.sysapi.core.history.series.HistoryResolution
+import com.krillsson.sysapi.core.history.series.MetricHistory
+import com.krillsson.sysapi.core.history.series.MetricHistoryService
+import com.krillsson.sysapi.core.history.series.MetricId
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.toEnumEntries
@@ -52,7 +57,9 @@ class QueryResolver(
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
-    private val upsService: UpsService
+    private val upsService: UpsService,
+    private val legacyHistoryCompatService: LegacyHistoryCompatService,
+    private val metricHistoryService: MetricHistoryService
 ) {
 
     @QueryMapping
@@ -68,21 +75,33 @@ class QueryResolver(
     fun system(): System = System(EnvironmentUtils.hostName, operatingSystem, platform)
 
     @QueryMapping
-    fun history(): List<BasicHistorySystemLoadEntity> {
-        return historyRepository.getBasic()
+    fun history(): List<SystemHistoryPoint> {
+        val to = Instant.now()
+        return legacyHistoryCompatService.systemHistory(metricHistoryService.rawWindowStart(to), to)
     }
 
     @QueryMapping
     fun historyBetweenDates(
         @Argument from: OffsetDateTime,
         @Argument to: OffsetDateTime
-    ): List<BasicHistorySystemLoadEntity> {
-        return historyRepository.getHistoryLimitedToDates(from?.toInstant(), to?.toInstant())
+    ): List<SystemHistoryPoint> {
+        return legacyHistoryCompatService.systemHistory(from.toInstant(), to.toInstant())
     }
 
     @QueryMapping
-    fun historyBetweenTimestamps(@Argument from: Instant, @Argument to: Instant): List<BasicHistorySystemLoadEntity> {
-        return historyRepository.getHistoryLimitedToDates(from, to)
+    fun historyBetweenTimestamps(@Argument from: Instant, @Argument to: Instant): List<SystemHistoryPoint> {
+        return legacyHistoryCompatService.systemHistory(from, to)
+    }
+
+    @QueryMapping
+    fun metricHistory(
+        @Argument metric: MetricId,
+        @Argument itemId: String?,
+        @Argument from: Instant,
+        @Argument to: Instant,
+        @Argument resolution: HistoryResolution?
+    ): MetricHistory {
+        return metricHistoryService.history(metric, itemId ?: MetricId.HOST_WIDE, from, to, resolution)
     }
 
     @QueryMapping
