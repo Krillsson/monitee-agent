@@ -54,8 +54,8 @@ class SettingsResolverTest {
     @Test
     fun `normalises retention configured in hours to the same days value as one configured in days`() {
         // Given
-        val configuredInDays = HistoryConfiguration(purging = HistoryPurgingConfiguration(14, ChronoUnit.DAYS, 1, TimeUnit.DAYS))
-        val configuredInHours = HistoryConfiguration(purging = HistoryPurgingConfiguration(336, ChronoUnit.HOURS, 1, TimeUnit.DAYS))
+        val configuredInDays = HistoryConfiguration(purging = HistoryPurgingConfiguration(14, ChronoUnit.DAYS))
+        val configuredInHours = HistoryConfiguration(purging = HistoryPurgingConfiguration(336, ChronoUnit.HOURS))
 
         // When
         val fromDays = configuredInDays.toSettings()

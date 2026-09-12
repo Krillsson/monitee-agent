@@ -3,13 +3,14 @@
 #########################################
 metricsConfig:
   history:
+    # The wide history table behind the history, historyBetweenTimestamps and
+    # historyBetweenDates queries. Older clients read it directly; beyond its retention those
+    # queries are answered from the metric series below, so it no longer needs to be long
     interval: 30
     unit: MINUTES
     purging:
-      olderThan: 14
+      olderThan: 7
       unit: DAYS
-      purgeEvery: 1
-      purgeEveryUnit: DAYS
     # Check results are rolled up into hourly and daily buckets once an hour.
     # Each tier is kept for as long as it says here, the purging section above does not apply to them
     checks:
