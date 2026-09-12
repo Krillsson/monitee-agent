@@ -1,5 +1,8 @@
 ### Unreleased
 
+- Metrics are sampled into a tiered min/avg/max series kept as raw for 12 hours, five-minute buckets for 72 hours, hourly for 90 days and daily for two years, configured under `metricsConfig.history.series`.
+- Disk read/write rates are sampled without reading S.M.A.R.T, so the two no longer share an interval.
+
 ### 0.46.0
 
 - Numerical and fractional monitors take an optional `warningThreshold` that raises the event as WARNING and escalates the same event to CRITICAL when `threshold` is crossed too, reported through the new `Event.severity`.
