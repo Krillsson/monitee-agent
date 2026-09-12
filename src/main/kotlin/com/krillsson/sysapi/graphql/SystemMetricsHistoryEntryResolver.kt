@@ -8,7 +8,7 @@ import com.krillsson.sysapi.core.domain.memory.MemoryLoad
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.core.domain.network.NetworkInterfaceLoad
 import com.krillsson.sysapi.core.history.HistoryRepository
-import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
+import com.krillsson.sysapi.core.history.compat.SystemHistoryPoint
 import com.krillsson.sysapi.util.toOffsetDateTime
 import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
@@ -20,47 +20,53 @@ import java.time.OffsetDateTime
 class SystemMetricsHistoryEntryResolver(val historyRepository: HistoryRepository) {
 
     @SchemaMapping
-    fun dateTime(historyEntry: BasicHistorySystemLoadEntity): OffsetDateTime {
-        return historyEntry.date.toOffsetDateTime()
+    fun date(point: SystemHistoryPoint): String = point.timestamp.toString()
+
+    @SchemaMapping
+    fun dateTime(point: SystemHistoryPoint): OffsetDateTime = point.timestamp.toOffsetDateTime()
+
+    @SchemaMapping
+    fun timestamp(point: SystemHistoryPoint): Instant = point.timestamp
+
+    @SchemaMapping
+    fun processorMetrics(point: SystemHistoryPoint): CpuLoad = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getCpuLoadById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.processorMetrics
     }
 
     @SchemaMapping
-    fun timestamp(historyEntry: BasicHistorySystemLoadEntity): Instant {
-        return historyEntry.date
+    fun diskMetrics(point: SystemHistoryPoint): List<DiskLoad> = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getDiskLoadsById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.diskMetrics
     }
 
     @SchemaMapping
-    fun processorMetrics(historyEntry: BasicHistorySystemLoadEntity): CpuLoad {
-        return historyRepository.getCpuLoadById(historyEntry.id)
+    fun fileSystemMetrics(point: SystemHistoryPoint): List<FileSystemLoad> = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getFileSystemLoadsById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.fileSystemMetrics
     }
 
     @SchemaMapping
-    fun diskMetrics(historyEntry: BasicHistorySystemLoadEntity): List<DiskLoad> {
-        return historyRepository.getDiskLoadsById(historyEntry.id)
+    fun networkInterfaceMetrics(point: SystemHistoryPoint): List<NetworkInterfaceLoad> = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getNetworkInterfaceLoadsById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.networkInterfaceMetrics
     }
 
     @SchemaMapping
-    fun fileSystemMetrics(historyEntry: BasicHistorySystemLoadEntity): List<FileSystemLoad> {
-        return historyRepository.getFileSystemLoadsById(historyEntry.id)
+    fun gpuMetrics(point: SystemHistoryPoint): List<GpuLoad> = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getGpuLoadsById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.gpuMetrics
     }
 
     @SchemaMapping
-    fun networkInterfaceMetrics(historyEntry: BasicHistorySystemLoadEntity): List<NetworkInterfaceLoad> {
-        return historyRepository.getNetworkInterfaceLoadsById(historyEntry.id)
+    fun connectivity(point: SystemHistoryPoint): Connectivity = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getConnectivityById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.connectivity
     }
 
     @SchemaMapping
-    fun gpuMetrics(historyEntry: BasicHistorySystemLoadEntity): List<GpuLoad> {
-        return historyRepository.getGpuLoadsById(historyEntry.id)
-    }
-
-    @SchemaMapping
-    fun connectivity(historyEntry: BasicHistorySystemLoadEntity): Connectivity {
-        return historyRepository.getConnectivityById(historyEntry.id)
-    }
-
-    @SchemaMapping
-    fun memoryMetrics(historyEntry: BasicHistorySystemLoadEntity): MemoryLoad {
-        return historyRepository.getMemoryLoadById(historyEntry.id)
+    fun memoryMetrics(point: SystemHistoryPoint): MemoryLoad = when (point) {
+        is SystemHistoryPoint.Stored -> historyRepository.getMemoryLoadById(point.entity.id)
+        is SystemHistoryPoint.Synthesized -> point.memoryMetrics
     }
 }

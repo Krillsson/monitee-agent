@@ -40,6 +40,12 @@ interface MetricSeriesBucketRepository : JpaRepository<MetricSeriesBucketEntity,
         bucketStarts: Collection<Instant>
     ): List<MetricSeriesBucketEntity>
 
+    fun findByResolutionAndBucketStartGreaterThanEqualAndBucketStartLessThanOrderByBucketStartAsc(
+        resolution: MetricResolution,
+        from: Instant,
+        to: Instant
+    ): List<MetricSeriesBucketEntity>
+
     fun findFirstByMetricAndItemIdAndResolutionOrderByBucketStartDesc(
         metric: MetricId,
         itemId: String,

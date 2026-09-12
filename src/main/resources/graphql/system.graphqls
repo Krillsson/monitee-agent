@@ -1,8 +1,14 @@
 extend type Query {
     system: System!
-    history: [SystemMetricsHistoryEntry!]!
+    # Covers the raw window only. Beyond it, entries are synthesized from the metric series:
+    # see SystemMetricsHistoryEntry for what a synthesized entry cannot carry
+    history: [SystemMetricsHistoryEntry!]! @deprecated(reason: "Covers only the raw window. Use historyBetweenTimestamps or metricHistory")
     historyBetweenDates(from: OffsetDateTime!, to: OffsetDateTime!): [SystemMetricsHistoryEntry!]! @deprecated(reason: "Replaced by historyBetweenTimestamps")
     historyBetweenTimestamps(from: Instant!, to: Instant!): [SystemMetricsHistoryEntry!]!
+    # One metric's min/avg/max over a range, at the coarsest resolution that still covers it.
+    # itemId selects the filesystem, disk, interface, GPU, container or UPS device; leave it
+    # out for a host-wide metric such as CPU_USAGE_PERCENT
+    metricHistory(metric: MetricId!, itemId: String, from: Instant!, to: Instant!, resolution: HistoryResolution): MetricHistory!
 }
 
 extend type Mutation {
@@ -62,6 +68,11 @@ enum Platform {
     UNKNOWN
 }
 
+# An entry is either a recorded sample or, beyond the recorded window, synthesized from the
+# metric series. A synthesized entry reports bucket statistics rather than one instant, and
+# cannot carry what the series does not hold: diskMetrics.smartData and .health are null,
+# connectivity.externalIp/previousExternalIp/localIp are null, processorMetrics.coreLoads is
+# empty, and a device's name falls back to its id
 type SystemMetricsHistoryEntry {
     date: String!
     dateTime: OffsetDateTime! @deprecated(reason: "Replaced by timestamp")

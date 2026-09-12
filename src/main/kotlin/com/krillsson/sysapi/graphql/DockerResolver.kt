@@ -6,6 +6,7 @@ import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
+import com.krillsson.sysapi.core.history.compat.LegacyHistoryCompatService
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.docker.ReadLogsCommandResult
@@ -25,7 +26,8 @@ class DockerResolver(
     val containerService: ContainerService,
     val containerUpdateChecker: ContainerUpdateChecker,
     val containerUpdateJobs: ContainerUpdateJobs,
-    val containerBatchUpdateJobs: ContainerBatchUpdateJobs
+    val containerBatchUpdateJobs: ContainerBatchUpdateJobs,
+    val legacyHistoryCompatService: LegacyHistoryCompatService
 ) {
 
     @SchemaMapping
@@ -117,9 +119,7 @@ class DockerResolver(
         @Argument from: Instant,
         @Argument to: Instant
     ): List<ContainerMetricsHistoryEntry> {
-        return containerService.containerMetricsHistoryBetweenTimestamps(
-            containerId, from, to
-        )
+        return legacyHistoryCompatService.containerHistory(containerId, from, to)
     }
 
     @SchemaMapping

@@ -6,6 +6,9 @@
 - `Monitor.history` and `historyBetweenTimestamps` read the metric series instead of walking every history row, and are deprecated in favour of `metricHistory`.
 - The process monitors return an empty history instead of a flat line at zero, which was never recorded data.
 - `settings.history` reports the metric sampling cadences and the retention of each series tier.
+- `history`, `historyBetweenTimestamps` and `historyBetweenDates` keep answering beyond the recorded window by synthesizing entries from the metric series.
+- `containerMetricsHistoryBetweenTimestamps` and `upsMetricsHistoryBetweenTimestamps` do the same.
+- `metricHistory` reports any metric's min/avg/max over a range, for a filesystem, disk, interface, GPU, container or UPS device, or host-wide.
 
 ### 0.46.0
 
