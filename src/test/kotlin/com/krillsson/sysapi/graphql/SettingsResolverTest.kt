@@ -9,6 +9,9 @@ import com.krillsson.sysapi.config.ContainerUpdateCheckConfiguration
 import com.krillsson.sysapi.config.DockerConfiguration
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.config.HistoryConfiguration
+import com.krillsson.sysapi.config.IntervalConfiguration
+import com.krillsson.sysapi.config.MetricSamplingConfiguration
+import com.krillsson.sysapi.config.MetricSeriesConfiguration
 import com.krillsson.sysapi.config.HistoryPurgingConfiguration
 import com.krillsson.sysapi.config.InternetServicesCheckConfiguration
 import com.krillsson.sysapi.config.LogReaderConfiguration
@@ -61,6 +64,34 @@ class SettingsResolverTest {
         // Then
         fromDays.retentionDays shouldBe 14L
         fromHours.retentionDays shouldBe fromDays.retentionDays
+    }
+
+    @Test
+    fun `normalises the metric series tiers and sampling cadences`() {
+        // Given
+        val history = HistoryConfiguration(
+            series = MetricSeriesConfiguration(
+                sampling = MetricSamplingConfiguration(
+                    fast = IntervalConfiguration(1, TimeUnit.MINUTES),
+                    slow = IntervalConfiguration(300, TimeUnit.SECONDS)
+                ),
+                raw = RetentionConfiguration(12, ChronoUnit.HOURS),
+                fiveMinute = RetentionConfiguration(3, ChronoUnit.DAYS),
+                hourly = RetentionConfiguration(90, ChronoUnit.DAYS),
+                daily = RetentionConfiguration(2, ChronoUnit.YEARS)
+            )
+        )
+
+        // When
+        val result = history.toSettings()
+
+        // Then
+        result.metricFastSamplingSeconds shouldBe 60L
+        result.metricSlowSamplingSeconds shouldBe 300L
+        result.metricRawRetentionHours shouldBe 12L
+        result.metricFiveMinuteRetentionHours shouldBe 72L
+        result.metricHourlyRetentionDays shouldBe 90L
+        result.metricDailyRetentionDays shouldBe 730L
     }
 
     @Test

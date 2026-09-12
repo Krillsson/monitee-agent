@@ -61,7 +61,13 @@ data class HistorySettings(
     val retentionDays: Long,
     val checkRawRetentionHours: Long,
     val checkHourlyRetentionDays: Long,
-    val checkDailyRetentionDays: Long
+    val checkDailyRetentionDays: Long,
+    val metricFastSamplingSeconds: Long,
+    val metricSlowSamplingSeconds: Long,
+    val metricRawRetentionHours: Long,
+    val metricFiveMinuteRetentionHours: Long,
+    val metricHourlyRetentionDays: Long,
+    val metricDailyRetentionDays: Long
 )
 
 data class CacheSettings(val enabled: Boolean, val durationSeconds: Long)
@@ -139,7 +145,13 @@ fun HistoryConfiguration.toSettings() = HistorySettings(
     retentionDays = purging.unit.durationOf(purging.olderThan).toDays(),
     checkRawRetentionHours = checks.raw.unit.durationOf(checks.raw.olderThan).toHours(),
     checkHourlyRetentionDays = checks.hourly.unit.durationOf(checks.hourly.olderThan).toDays(),
-    checkDailyRetentionDays = checks.daily.unit.durationOf(checks.daily.olderThan).toDays()
+    checkDailyRetentionDays = checks.daily.unit.durationOf(checks.daily.olderThan).toDays(),
+    metricFastSamplingSeconds = series.sampling.fast.unit.toSeconds(series.sampling.fast.interval),
+    metricSlowSamplingSeconds = series.sampling.slow.unit.toSeconds(series.sampling.slow.interval),
+    metricRawRetentionHours = series.raw.unit.durationOf(series.raw.olderThan).toHours(),
+    metricFiveMinuteRetentionHours = series.fiveMinute.unit.durationOf(series.fiveMinute.olderThan).toHours(),
+    metricHourlyRetentionDays = series.hourly.unit.durationOf(series.hourly.olderThan).toDays(),
+    metricDailyRetentionDays = series.daily.unit.durationOf(series.daily.olderThan).toDays()
 )
 
 private fun ChronoUnit.durationOf(amount: Long): Duration = duration.multipliedBy(amount)
