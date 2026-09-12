@@ -7,6 +7,9 @@
 - The process monitors return an empty history instead of a flat line at zero, which was never recorded data.
 - `settings.history` reports the metric sampling cadences and the retention of each series tier.
 - `metricAvailability` reports what each series tier currently holds, so a client can pick a range without knowing the agent's retention.
+- `history`, `historyBetweenTimestamps` and `historyBetweenDates` keep answering beyond the recorded window by synthesizing entries from the metric series.
+- `containerMetricsHistoryBetweenTimestamps` and `upsMetricsHistoryBetweenTimestamps` do the same.
+- `metricHistory` reports any metric's min/avg/max over a range, for a filesystem, disk, interface, GPU, container or UPS device, or host-wide.
 
 ### 0.46.0
 
