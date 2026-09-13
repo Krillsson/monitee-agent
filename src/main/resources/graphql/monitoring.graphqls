@@ -238,15 +238,18 @@ type Monitor {
     pastEvents: [PastEvent!]!
     ongoingEvents: [OngoingEvent!]!
     historyBetweenTimestamps(from: Instant!, to: Instant!): [MonitoredValueHistoryEntry!]! @deprecated(reason: "Collapses each bucket to one value. Use metricHistory")
-    # Min/avg/max over the range at the coarsest resolution that still covers it.
-    # Empty for the process monitors and CONTAINER_UPDATE_AVAILABLE, which are not sampled,
-    # and for DISK_SMART_HEALTH, whose health enum has no honest numeric collapse
+    # Min/avg/max over the range. resolution is a floor, not a demand: a range reaching further
+    # back than that resolution is kept for is served from a coarser tier rather than truncated,
+    # and MetricHistory.resolution reports which tier answered. metricAvailability says what each
+    # tier currently holds. Empty for the process monitors and CONTAINER_UPDATE_AVAILABLE, which
+    # are not sampled, and for DISK_SMART_HEALTH, whose health enum has no honest numeric collapse
     metricHistory(from: Instant!, to: Instant!, resolution: HistoryResolution): MetricHistory!
 }
 
 enum HistoryResolution {
-    # Picks a resolution from the requested range: raw for the last few hours, five-minute
-    # buckets up to two days, hourly up to a month, daily beyond that
+    # Picks from the requested range: raw for the last few hours, five-minute buckets up to two
+    # days, hourly up to a month, daily beyond that - never a tier whose retention stops short
+    # of the range
     AUTO
     RAW
     FIVE_MINUTE
@@ -260,6 +263,20 @@ type MetricHistory {
     from: Instant!
     to: Instant!
     points: [MetricHistoryPoint!]!
+}
+
+# What each tier of the metric series can actually answer for, so a client can pick a range
+# without knowing the agent's retention configuration. metricHistory serves a range the
+# requested resolution cannot cover from a coarser tier rather than truncating it, and reports
+# which one it used
+type MetricTierAvailability {
+    resolution: HistoryResolution!
+    "Start of the window this tier is configured to keep"
+    retainedFrom: Instant!
+    "Oldest point actually stored in this tier. Null while the tier holds nothing yet"
+    earliestPoint: Instant
+    "Newest point actually stored in this tier"
+    latestPoint: Instant
 }
 
 type MetricHistoryPoint {
