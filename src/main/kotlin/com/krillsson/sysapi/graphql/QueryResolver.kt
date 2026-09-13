@@ -9,6 +9,8 @@ import com.krillsson.sysapi.core.domain.system.Platform
 import com.krillsson.sysapi.core.genericevents.GenericEventRepository
 import com.krillsson.sysapi.core.history.HistoryRepository
 import com.krillsson.sysapi.core.history.db.BasicHistorySystemLoadEntity
+import com.krillsson.sysapi.core.history.series.MetricHistoryService
+import com.krillsson.sysapi.core.history.series.MetricTierAvailability
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.toEnumEntries
@@ -52,7 +54,8 @@ class QueryResolver(
     private val windowsEventLogManager: WindowsManager,
     private val systemDaemonManager: SystemDaemonManager,
     private val serverIdService: ServerIdService,
-    private val upsService: UpsService
+    private val upsService: UpsService,
+    private val metricHistoryService: MetricHistoryService
 ) {
 
     @QueryMapping
@@ -84,6 +87,9 @@ class QueryResolver(
     fun historyBetweenTimestamps(@Argument from: Instant, @Argument to: Instant): List<BasicHistorySystemLoadEntity> {
         return historyRepository.getHistoryLimitedToDates(from, to)
     }
+
+    @QueryMapping
+    fun metricAvailability(): List<MetricTierAvailability> = metricHistoryService.availability()
 
     @QueryMapping
     fun monitors(): List<Monitor> {

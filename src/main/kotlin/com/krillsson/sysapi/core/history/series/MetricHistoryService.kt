@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.history.series
 
+import com.krillsson.sysapi.config.RetentionConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import org.springframework.stereotype.Component
 import java.time.Duration
@@ -10,13 +11,13 @@ class MetricHistoryService(
     private val repository: MetricSeriesBucketRepository,
     yamlConfigFile: YAMLConfigFile
 ) {
-    companion object {
-        private val RAW_RANGE_LIMIT: Duration = Duration.ofHours(6)
-        private val FIVE_MINUTE_RANGE_LIMIT: Duration = Duration.ofHours(48)
-        private val HOURLY_RANGE_LIMIT: Duration = Duration.ofDays(30)
-    }
-
     private val retention = yamlConfigFile.metricsConfig.history.series
+
+    private val tiers = listOf(
+        Tier(MetricResolution.RAW, Duration.ofHours(6), retention.raw),
+        Tier(MetricResolution.FIVE_MINUTE, Duration.ofHours(48), retention.fiveMinute),
+        Tier(MetricResolution.HOURLY, Duration.ofDays(30), retention.hourly)
+    )
 
     fun history(
         metric: MetricId,
@@ -25,7 +26,7 @@ class MetricHistoryService(
         to: Instant,
         requested: HistoryResolution?
     ): MetricHistory {
-        val resolution = requested?.asMetricResolution() ?: resolutionFor(from, to)
+        val resolution = resolutionFor(from, to, requested)
         return MetricHistory(
             resolution = resolution.asHistoryResolution(),
             from = from,
@@ -50,17 +51,39 @@ class MetricHistoryService(
 
     fun rawWindowStart(now: Instant): Instant = now.minus(retention.raw.olderThan, retention.raw.unit)
 
-    fun resolutionFor(from: Instant, to: Instant): MetricResolution {
+    // Whisper's archive rule: a range reaching further back than a tier keeps is served by a
+    // coarser tier, rather than truncated to the part that tier still happens to hold.
+    fun resolutionFor(from: Instant, to: Instant, requested: HistoryResolution? = null): MetricResolution {
+        val floor = requested?.asMetricResolution()
         val range = Duration.between(from, to)
         val now = Instant.now()
-        val rawWindowStart = now.minus(retention.raw.olderThan, retention.raw.unit)
-        val fiveMinuteWindowStart = now.minus(retention.fiveMinute.olderThan, retention.fiveMinute.unit)
-        return when {
-            range <= RAW_RANGE_LIMIT && !from.isBefore(rawWindowStart) -> MetricResolution.RAW
-            range <= FIVE_MINUTE_RANGE_LIMIT && !from.isBefore(fiveMinuteWindowStart) -> MetricResolution.FIVE_MINUTE
-            range <= HOURLY_RANGE_LIMIT -> MetricResolution.HOURLY
-            else -> MetricResolution.DAILY
-        }
+        return tiers
+            .dropWhile { floor != null && it.resolution != floor }
+            .firstOrNull { tier ->
+                tier.covers(from, now) && (floor != null || range <= tier.autoRangeLimit)
+            }
+            ?.resolution
+            ?: MetricResolution.DAILY
+    }
+
+    fun availability(): List<MetricTierAvailability> {
+        val now = Instant.now()
+        return (tiers.map { it.resolution to it.retainedFrom(now) } +
+            (MetricResolution.DAILY to retainedFrom(retention.daily, now)))
+            .map { (resolution, retainedFrom) ->
+                MetricTierAvailability(
+                    resolution = resolution.asHistoryResolution(),
+                    retainedFrom = retainedFrom,
+                    earliestPoint = repository
+                        .findFirstByResolutionOrderByBucketStartAsc(resolution)
+                        .orElse(null)
+                        ?.bucketStart,
+                    latestPoint = repository
+                        .findFirstByResolutionOrderByBucketStartDesc(resolution)
+                        .orElse(null)
+                        ?.bucketStart
+                )
+            }
     }
 
     private fun pointsAt(
@@ -134,5 +157,18 @@ class MetricHistoryService(
         avg = avgValue,
         max = maxValue,
         last = lastValue
+    )
+
+    private fun Tier.covers(from: Instant, now: Instant): Boolean = !from.isBefore(retainedFrom(now))
+
+    private fun Tier.retainedFrom(now: Instant): Instant = retainedFrom(retention, now)
+
+    private fun retainedFrom(retention: RetentionConfiguration, now: Instant): Instant =
+        now.minus(retention.olderThan, retention.unit)
+
+    private data class Tier(
+        val resolution: MetricResolution,
+        val autoRangeLimit: Duration,
+        val retention: RetentionConfiguration
     )
 }
