@@ -6,6 +6,7 @@
 - `Monitor.history` and `historyBetweenTimestamps` read the metric series instead of walking every history row, and are deprecated in favour of `metricHistory`.
 - The process monitors return an empty history instead of a flat line at zero, which was never recorded data.
 - `settings.history` reports the metric sampling cadences and the retention of each series tier.
+- `metricAvailability` reports what each series tier currently holds, so a client can pick a range without knowing the agent's retention.
 
 ### 0.46.0
 

@@ -26,6 +26,13 @@ data class MetricHistoryPoint(
     val last: Double
 )
 
+data class MetricTierAvailability(
+    val resolution: HistoryResolution,
+    val retainedFrom: Instant,
+    val earliestPoint: Instant?,
+    val latestPoint: Instant?
+)
+
 fun HistoryResolution.asMetricResolution(): MetricResolution? = when (this) {
     HistoryResolution.AUTO -> null
     HistoryResolution.RAW -> MetricResolution.RAW

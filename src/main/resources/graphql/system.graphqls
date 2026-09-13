@@ -3,6 +3,8 @@ extend type Query {
     history: [SystemMetricsHistoryEntry!]!
     historyBetweenDates(from: OffsetDateTime!, to: OffsetDateTime!): [SystemMetricsHistoryEntry!]! @deprecated(reason: "Replaced by historyBetweenTimestamps")
     historyBetweenTimestamps(from: Instant!, to: Instant!): [SystemMetricsHistoryEntry!]!
+    "What each tier of the metric series currently holds, per resolution"
+    metricAvailability: [MetricTierAvailability!]!
 }
 
 extend type Mutation {

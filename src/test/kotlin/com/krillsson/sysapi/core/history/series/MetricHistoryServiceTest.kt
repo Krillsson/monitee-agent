@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.Optional
 
 class MetricHistoryServiceTest {
 
@@ -90,6 +91,105 @@ class MetricHistoryServiceTest {
 
         // Then
         resolution shouldBe MetricResolution.FIVE_MINUTE
+    }
+
+    @Test
+    fun `serves a range a requested resolution cannot cover from a coarser tier`() {
+        // Given
+        val to = Instant.now()
+
+        // When
+        val resolution = service.resolutionFor(to.minus(Duration.ofDays(365)), to, HistoryResolution.RAW)
+
+        // Then
+        resolution shouldBe MetricResolution.DAILY
+    }
+
+    @Test
+    fun `honours a requested resolution its retention does cover, however long the range`() {
+        // Given
+        val service = MetricHistoryService(
+            repository,
+            configWithSeriesRetention(fiveMinute = RetentionConfiguration(30, ChronoUnit.DAYS))
+        )
+        val to = Instant.now()
+
+        // When
+        val resolution = service.resolutionFor(to.minus(Duration.ofDays(7)), to, HistoryResolution.FIVE_MINUTE)
+
+        // Then
+        resolution shouldBe MetricResolution.FIVE_MINUTE
+    }
+
+    @Test
+    fun `never picks a tier whose retention stops short of the range, even on AUTO`() {
+        // Given
+        val service = MetricHistoryService(
+            repository,
+            configWithSeriesRetention(hourly = RetentionConfiguration(7, ChronoUnit.DAYS))
+        )
+        val to = Instant.now()
+
+        // When
+        val resolution = service.resolutionFor(to.minus(Duration.ofDays(30)), to)
+
+        // Then
+        resolution shouldBe MetricResolution.DAILY
+    }
+
+    @Test
+    fun `treats an explicitly requested daily as always servable, since nothing is coarser`() {
+        // Given
+        val to = Instant.now()
+
+        // When
+        val resolution = service.resolutionFor(to.minus(Duration.ofDays(3650)), to, HistoryResolution.DAILY)
+
+        // Then
+        resolution shouldBe MetricResolution.DAILY
+    }
+
+    @Test
+    fun `reports the coarser resolution it fell back to`() {
+        // Given
+        val to = Instant.now()
+
+        // When
+        val history = service.history(metric, itemId, to.minus(Duration.ofDays(365)), to, HistoryResolution.RAW)
+
+        // Then
+        history.resolution shouldBe HistoryResolution.DAILY
+        history.from shouldBe to.minus(Duration.ofDays(365))
+    }
+
+    @Test
+    fun `reports each tier's configured window and what it actually holds`() {
+        // Given
+        every { repository.findFirstByResolutionOrderByBucketStartAsc(any()) } returns Optional.empty()
+        every { repository.findFirstByResolutionOrderByBucketStartDesc(any()) } returns Optional.empty()
+        val oldest = seriesBucket(MetricResolution.HOURLY, at("2026-09-01T00:00:00Z"))
+        val newest = seriesBucket(MetricResolution.HOURLY, at("2026-09-12T00:00:00Z"))
+        every {
+            repository.findFirstByResolutionOrderByBucketStartAsc(MetricResolution.HOURLY)
+        } returns Optional.of(oldest)
+        every {
+            repository.findFirstByResolutionOrderByBucketStartDesc(MetricResolution.HOURLY)
+        } returns Optional.of(newest)
+
+        // When
+        val availability = service.availability()
+
+        // Then
+        availability.map { it.resolution } shouldBe listOf(
+            HistoryResolution.RAW,
+            HistoryResolution.FIVE_MINUTE,
+            HistoryResolution.HOURLY,
+            HistoryResolution.DAILY
+        )
+        val hourly = availability.single { it.resolution == HistoryResolution.HOURLY }
+        hourly.earliestPoint shouldBe oldest.bucketStart
+        hourly.latestPoint shouldBe newest.bucketStart
+        availability.single { it.resolution == HistoryResolution.RAW }.earliestPoint shouldBe null
     }
 
     @Test
