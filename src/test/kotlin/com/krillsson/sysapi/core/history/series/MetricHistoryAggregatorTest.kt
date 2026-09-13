@@ -17,7 +17,7 @@ import java.util.Optional
 class MetricHistoryAggregatorTest {
 
     private val repository = mockk<MetricSeriesBucketRepository>(relaxed = true)
-    private val series = MetricSeriesKey(MetricId.CPU_USAGE_PERCENT, MetricId.HOST_WIDE)
+    private val series = seriesKey(MetricId.CPU_USAGE_PERCENT)
     private val saved = mutableListOf<MetricSeriesBucketEntity>()
 
     private val openFiveMinutes = MetricSeriesBuckets.startOf(Instant.now(), MetricResolution.FIVE_MINUTE)
@@ -25,7 +25,7 @@ class MetricHistoryAggregatorTest {
     @BeforeEach
     fun setUp() {
         saved.clear()
-        every { repository.findDistinctSeriesTuples(any()) } returns emptyList()
+        every { repository.findDistinctSeries(any()) } returns emptyList()
         every { repository.findByMetricAndItemIdAndResolutionAndBucketStartIn(any(), any(), any(), any()) } returns emptyList()
         every { repository.findFirstByMetricAndItemIdAndResolutionOrderByBucketStartDesc(any(), any(), any()) } returns Optional.empty()
         every { repository.findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(any(), any(), any()) } returns Optional.empty()
@@ -40,7 +40,7 @@ class MetricHistoryAggregatorTest {
     }
 
     private fun givenRawBuckets(buckets: List<MetricSeriesBucketEntity>) {
-        every { repository.findDistinctSeriesTuples(MetricResolution.RAW) } returns listOf(series.asTuple())
+        every { repository.findDistinctSeries(MetricResolution.RAW) } returns listOf(series)
         every {
             repository.findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(
                 series.metric,
@@ -202,7 +202,7 @@ class MetricHistoryAggregatorTest {
     fun `merges five minute buckets into hours and hours into days`() {
         // Given
         val hour = MetricSeriesBuckets.startOf(Instant.now(), MetricResolution.HOURLY).minus(Duration.ofHours(2))
-        every { repository.findDistinctSeriesTuples(MetricResolution.FIVE_MINUTE) } returns listOf(series.asTuple())
+        every { repository.findDistinctSeries(MetricResolution.FIVE_MINUTE) } returns listOf(series)
         every {
             repository.findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(
                 series.metric,
@@ -241,6 +241,4 @@ class MetricHistoryAggregatorTest {
         hourly.maxValue shouldBe 20.0
         hourly.avgValue shouldBe 5.0
     }
-
-    private fun MetricSeriesKey.asTuple(): Array<Any> = arrayOf(metric, itemId)
 }

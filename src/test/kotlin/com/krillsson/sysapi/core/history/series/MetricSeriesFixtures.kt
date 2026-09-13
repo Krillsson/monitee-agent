@@ -31,6 +31,13 @@ import java.util.UUID
 
 fun at(timestamp: String): Instant = Instant.parse(timestamp)
 
+private data class SeriesKey(
+    override val metric: MetricId,
+    override val itemId: String
+) : MetricSeriesKey
+
+fun seriesKey(metric: MetricId, itemId: String = MetricId.HOST_WIDE): MetricSeriesKey = SeriesKey(metric, itemId)
+
 fun seriesBucket(
     resolution: MetricResolution,
     bucketStart: Instant,
