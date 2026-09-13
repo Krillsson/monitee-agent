@@ -53,40 +53,46 @@ class MetricHistoryAggregator(
         target: MetricResolution,
         cutoff: Instant
     ): Int {
-        val from = repository
-            .findFirstByMetricAndItemIdAndResolutionOrderByBucketStartDesc(series.metric, series.itemId, target)
-            .map { MetricSeriesBuckets.endOf(it.bucketStart, target) }
-            .orElseGet {
-                repository
-                    .findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(
-                        series.metric,
-                        series.itemId,
-                        source
-                    )
-                    .map { MetricSeriesBuckets.startOf(it.bucketStart, target) }
-                    .orElse(null)
-            } ?: return 0
-        if (!from.isBefore(cutoff)) {
-            return 0
+        val from = resumeFrom(series, source, target)
+        val sourceBuckets = when {
+            from == null || !from.isBefore(cutoff) -> emptyList()
+            else -> repository
+                .findByMetricAndItemIdAndResolutionAndBucketStartGreaterThanEqualAndBucketStartLessThanOrderByBucketStartAsc(
+                    series.metric,
+                    series.itemId,
+                    source,
+                    from,
+                    cutoff
+                )
         }
-        val sourceBuckets = repository
-            .findByMetricAndItemIdAndResolutionAndBucketStartGreaterThanEqualAndBucketStartLessThanOrderByBucketStartAsc(
-                series.metric,
-                series.itemId,
-                source,
-                from,
-                cutoff
+        return when {
+            sourceBuckets.isEmpty() -> 0
+            else -> upsertAll(
+                series,
+                target,
+                sourceBuckets
+                    .groupBy { MetricSeriesBuckets.startOf(it.bucketStart, target) }
+                    .mapValues { (_, buckets) -> MetricSeriesBuckets.merge(buckets) }
             )
-        if (sourceBuckets.isEmpty()) {
-            return 0
         }
-        return upsertAll(
-            series,
-            target,
-            sourceBuckets
-                .groupBy { MetricSeriesBuckets.startOf(it.bucketStart, target) }
-                .mapValues { (_, buckets) -> MetricSeriesBuckets.merge(buckets) }
-        )
+    }
+
+    private fun resumeFrom(
+        series: MetricSeriesKey,
+        source: MetricResolution,
+        target: MetricResolution
+    ): Instant? {
+        val newestTarget = repository
+            .findFirstByMetricAndItemIdAndResolutionOrderByBucketStartDesc(series.metric, series.itemId, target)
+            .orElse(null)
+        return when (newestTarget) {
+            null -> repository
+                .findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(series.metric, series.itemId, source)
+                .orElse(null)
+                ?.let { MetricSeriesBuckets.startOf(it.bucketStart, target) }
+
+            else -> MetricSeriesBuckets.endOf(newestTarget.bucketStart, target)
+        }
     }
 
     private fun upsertAll(

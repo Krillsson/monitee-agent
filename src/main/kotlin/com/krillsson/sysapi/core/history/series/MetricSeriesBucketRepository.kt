@@ -9,21 +9,16 @@ import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 
-data class MetricSeriesKey(
-    val metric: MetricId,
+interface MetricSeriesKey {
+    val metric: MetricId
     val itemId: String
-)
-
-fun MetricSeriesBucketRepository.findDistinctSeries(resolution: MetricResolution): List<MetricSeriesKey> =
-    findDistinctSeriesTuples(resolution).map { (metric, itemId) ->
-        MetricSeriesKey(metric as MetricId, itemId as String)
-    }
+}
 
 @Repository
 interface MetricSeriesBucketRepository : JpaRepository<MetricSeriesBucketEntity, UUID> {
 
-    @Query("select distinct b.metric, b.itemId from MetricSeriesBucketEntity b where b.resolution = :resolution")
-    fun findDistinctSeriesTuples(@Param("resolution") resolution: MetricResolution): List<Array<Any>>
+    @Query("select distinct b.metric as metric, b.itemId as itemId from MetricSeriesBucketEntity b where b.resolution = :resolution")
+    fun findDistinctSeries(@Param("resolution") resolution: MetricResolution): List<MetricSeriesKey>
 
     fun findByMetricAndItemIdAndResolutionAndBucketStartGreaterThanEqualAndBucketStartLessThanOrderByBucketStartAsc(
         metric: MetricId,
