@@ -13,6 +13,7 @@
 - The filesystem space forecast reads the daily metric series, so its 30 day window is the window it actually gets rather than whatever the purge had left.
 - The wide history table is now kept for 7 days instead of 14, since the metric series answers the history queries beyond it. `metricsConfig.history.purging` governs only that table.
 - Removed `purgeEvery` and `purgeEveryUnit`, which nothing read. Existing configuration files that still set them keep working.
+- Fix: Disk read-rate and write-rate monitors no longer return a null `maxValue`, which was breaking `monitorById` for them.
 
 ### 0.46.0
 
