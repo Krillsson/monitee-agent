@@ -13,6 +13,7 @@ import org.springframework.aot.hint.BindingReflectionHintsRegistrar
 import org.springframework.aot.hint.MemberCategory
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.RuntimeHintsRegistrar
+import org.springframework.aot.hint.TypeReference
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
@@ -37,6 +38,7 @@ class RuntimeHint(
 
     companion object {
         private const val DOCKER_MODEL_PACKAGE = "com.github.dockerjava.api.model"
+        private const val DOCKER_NAMED_PIPE_KERNEL32 = "com.github.dockerjava.transport.NamedPipeSocket\$Kernel32"
         private val JNA_NATIVE_TYPES = listOf(
             Structure::class.java,
             NativeMapped::class.java,
@@ -103,6 +105,8 @@ class RuntimeHint(
                     type.isEnum -> hints.reflection().registerType(type, MemberCategory.PUBLIC_FIELDS, MemberCategory.INVOKE_PUBLIC_METHODS)
                 }
             }
+        hints.proxies().registerJdkProxy(TypeReference.of(DOCKER_NAMED_PIPE_KERNEL32))
+        hints.reflection().registerType(TypeReference.of(DOCKER_NAMED_PIPE_KERNEL32), MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS)
     }
 
     private fun classesInJarOf(anchor: Class<*>, classLoader: ClassLoader?): List<Class<*>> {

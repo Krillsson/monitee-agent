@@ -1,9 +1,13 @@
 package com.krillsson.sysapi.launcher
 
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.condition.EnabledOnOs
+import org.junit.jupiter.api.condition.OS
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 
@@ -63,5 +67,17 @@ class NativeSelfTestTest {
     @Test
     fun `reads every field of the canned container list`() {
         assertDoesNotThrow { NativeSelfTest.readContainerList() }
+    }
+
+    @Test
+    fun `checks the docker named pipe binding only on Windows`() {
+        NativeSelfTest.forThisHost(onWindows = true).names shouldContain "docker named pipe"
+        NativeSelfTest.forThisHost(onWindows = false).names shouldNotContain "docker named pipe"
+    }
+
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    fun `loads the docker named pipe binding`() {
+        assertDoesNotThrow { NativeSelfTest.loadDockerNamedPipeBinding() }
     }
 }
