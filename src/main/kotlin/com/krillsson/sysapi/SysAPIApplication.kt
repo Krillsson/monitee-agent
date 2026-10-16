@@ -133,6 +133,10 @@ import com.krillsson.sysapi.core.history.series.MetricHistory
 import com.krillsson.sysapi.core.history.series.MetricHistoryPoint
 import com.krillsson.sysapi.core.history.series.MetricTierAvailability
 import com.krillsson.sysapi.core.history.series.MetricId
+import com.krillsson.sysapi.launcher.LaunchCommand
+import com.krillsson.sysapi.launcher.LauncherHandshake
+import com.krillsson.sysapi.launcher.NativeSelfTest
+import com.krillsson.sysapi.launcher.StartupFailure
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration
@@ -162,6 +166,8 @@ import org.springframework.boot.autoconfigure.websocket.servlet.WebSocketMessagi
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ImportRuntimeHints
+import org.springframework.core.NativeDetector
+import kotlin.system.exitProcess
 
 
 @SpringBootApplication(
@@ -373,6 +379,15 @@ class SysAPIApplication {
 }
 
 fun main(args: Array<String>) {
+    val inNativeImage = NativeDetector.inNativeImage()
+    LaunchCommand.run(args, System.out, inNativeImage) { NativeSelfTest.forThisHost() }?.let { exitProcess(it) }
+    LauncherHandshake.fromEnvironment(inNativeImage).exitWhenLauncherExits()
     System.setProperty("spring.graphql.websocket.path", "/graphql");
-    runApplication<SysAPIApplication>(*args)
+    try {
+        runApplication<SysAPIApplication>(*args)
+    } catch (failure: Throwable) {
+        val exitCode = StartupFailure.exitCode(failure, inNativeImage) ?: throw failure
+        System.err.println("Startup failed on a native-image limitation, exiting with $exitCode so the launcher can fall back to the JVM")
+        exitProcess(exitCode)
+    }
 }

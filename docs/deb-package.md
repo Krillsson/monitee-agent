@@ -95,6 +95,8 @@ When you see the following, we know that the server is up and running:
 [...]: Started SysAPIApplicationKt in 6.352 seconds (process running for 7.234)
 ```
 
+To try the native build, which uses less memory, run `sudo systemctl edit sys-api`, add `Environment=SYSAPI_RUNTIME=auto` under `[Service]` and restart the service. The agent falls back to Java on hosts the native build can't run on.
+
 Now you are ready to proceed to next step
 
 **Connect App to Server**

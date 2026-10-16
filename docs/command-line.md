@@ -68,6 +68,8 @@ Now we can use `nohup` to run the process disconnected from the terminal
 nohup ./run.sh &
 ```
 
+To try the native build, which uses less memory, start it with `SYSAPI_RUNTIME=auto ./run.sh` instead, or put the word `auto` in a file named `runtime` in the `config` directory. The agent falls back to Java on hosts the native build can't run on.
+
 Then press **CTRL+C** on your keyboard to get back to your terminal input
 
 Now we can verify that the server started correctly by reading and following the latest lines in the output file

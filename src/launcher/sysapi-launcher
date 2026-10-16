@@ -1,0 +1,144 @@
+#!/bin/sh
+set -u
+
+version='@VERSION@'
+jvm_args='@JVM_ARGS@'
+native_args='@NATIVE_ARGS@'
+default_runtime='jvm'
+native_limitation_exit_code=86
+
+app_home=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
+runtime_file='config/runtime'
+runtime=${SYSAPI_RUNTIME:-}
+runtime_source=SYSAPI_RUNTIME
+if [ -z "$runtime" ] && [ -f "$runtime_file" ]; then
+    runtime=$(head -n 1 "$runtime_file" | tr -d '[:space:]')
+    runtime_source=$runtime_file
+fi
+[ -n "$runtime" ] || runtime=$default_runtime
+data_dir=${SYSAPI_DATA_DIR:-data}
+marker="$data_dir/native-disabled"
+ready_file="$data_dir/.native-ready"
+
+log() {
+    echo "[launcher] $*"
+}
+
+platform() {
+    case "$(uname -s)" in
+        Linux) os=linux ;;
+        *) return 1 ;;
+    esac
+    case "$(uname -m)" in
+        x86_64 | amd64) arch=amd64 ;;
+        aarch64 | arm64) arch=arm64 ;;
+        *) return 1 ;;
+    esac
+    echo "$os-$arch"
+}
+
+native_binary() {
+    binary="$app_home/native/$(platform)/sysapi" || return 1
+    [ -f "$binary" ] || return 1
+    echo "$binary"
+}
+
+run_jvm() {
+    java="${JAVA_HOME:+$JAVA_HOME/bin/}java"
+    if [ -f "$app_home/lib/sysapi-all.jar" ]; then
+        # shellcheck disable=SC2086
+        exec "$java" $jvm_args ${JAVA_OPTS:-} -jar "$app_home/lib/sysapi-all.jar" "$@"
+    fi
+    # shellcheck disable=SC2086
+    exec "$java" $jvm_args ${JAVA_OPTS:-} -cp "@$app_home/jib-classpath-file" "$(cat "$app_home/jib-main-class-file")" "$@"
+}
+
+disable_native() {
+    mkdir -p "$data_dir"
+    printf '%s\n%s\n%s\n' "$version" "$1" "$2" > "$marker"
+    log "runtime=jvm reason=$1, native stays off for $version (delete $marker to try it again)"
+}
+
+native_disabled() {
+    [ -f "$marker" ] && [ "$(sed -n 1p "$marker")" = "$version" ]
+}
+
+case "$runtime" in
+    jvm)
+        log "runtime=jvm reason=configured"
+        run_jvm "$@"
+        ;;
+    auto | native) ;;
+    *)
+        log "$runtime_source must be auto, native or jvm, not '$runtime'"
+        exit 64
+        ;;
+esac
+
+if ! binary=$(native_binary); then
+    if [ "$runtime" = native ]; then
+        log "$runtime_source is native but there is no native binary for $(uname -s) $(uname -m) in $app_home/native"
+        exit 1
+    fi
+    log "runtime=jvm reason=no native binary for $(uname -s) $(uname -m)"
+    run_jvm "$@"
+fi
+
+if [ "$runtime" = native ]; then
+    log "runtime=native reason=configured"
+    # shellcheck disable=SC2086
+    exec "$binary" $native_args "$@"
+fi
+
+if native_disabled; then
+    log "runtime=jvm reason=$(sed -n 2p "$marker"), recorded in $marker"
+    run_jvm "$@"
+fi
+
+if ! probe=$("$binary" --native-probe 2>&1); then
+    log "the native binary cannot run on this host: $probe"
+    disable_native platform "$probe"
+    run_jvm "$@"
+fi
+case "$probe" in
+    *"sysapi $version native"*) ;;
+    *)
+        disable_native version-mismatch "expected sysapi $version native, the binary said: $probe"
+        run_jvm "$@"
+        ;;
+esac
+
+mkdir -p "$data_dir"
+rm -f "$ready_file"
+stopping=0
+child=''
+trap 'stopping=1; [ -n "$child" ] && kill -TERM "$child" 2>/dev/null' TERM INT HUP
+log "runtime=native"
+# shellcheck disable=SC2086
+SYSAPI_READY_FILE="$ready_file" "$binary" $native_args "$@" &
+child=$!
+[ "$stopping" = 1 ] && kill -TERM "$child" 2>/dev/null
+wait "$child"
+status=$?
+while kill -0 "$child" 2>/dev/null; do
+    wait "$child"
+    status=$?
+done
+trap - TERM INT HUP
+
+if [ "$stopping" = 1 ] || [ -f "$ready_file" ] || [ "$status" = 0 ]; then
+    exit "$status"
+fi
+if [ "$status" = "$native_limitation_exit_code" ]; then
+    disable_native native-limitation "the native binary exited with $status during startup"
+    run_jvm "$@"
+fi
+if [ "$status" -gt 128 ]; then
+    disable_native native-crash "the native binary was killed by signal $((status - 128)) during startup"
+    run_jvm "$@"
+fi
+
+log "runtime=jvm reason=the native binary exited with $status during startup, retrying on the JVM to tell whether that was native-specific"
+SYSAPI_NATIVE_DISABLED_FILE="$marker"
+export SYSAPI_NATIVE_DISABLED_FILE
+run_jvm "$@"
