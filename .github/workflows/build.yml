@@ -129,6 +129,7 @@ jobs:
           mkdir -p native-dist
           cp build/native/nativeCompile/sysapi.exe native-dist/
           find build/native/nativeCompile -maxdepth 1 -name '*.dll' -exec cp {} native-dist/ \;
+          cp "$JAVA_HOME/bin/vcruntime140.dll" "$JAVA_HOME/bin/vcruntime140_1.dll" native-dist/
           ls -la native-dist
       - name: Self-test the native binary
         shell: bash
