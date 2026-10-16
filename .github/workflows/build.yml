@@ -1,0 +1,285 @@
+name: Build
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        description: 'Tag to release, or empty for a nightly build of the current ref'
+        required: false
+        type: string
+        default: ''
+
+env:
+  CHECKOUT_REF: ${{ inputs.release-tag != '' && format('refs/tags/{0}', inputs.release-tag) || '' }}
+  IMAGE_TAG: ${{ inputs.release-tag != '' && 'latest' || 'nightly' }}
+  RELEASE_PROPERTIES: ${{ inputs.release-tag != '' && format('-PbuildType=release -PsemVerTag={0}', inputs.release-tag) || '' }}
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - name: Run tests
+        run: ./gradlew test jacocoTestReport jacocoTestCoverageVerification
+      - name: Run launcher tests
+        run: |
+          src/test/launcher/launcher-test.sh dash
+          src/test/launcher/launcher-test.sh bash
+      - name: Store test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/reports/tests/test
+      - name: Store coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-results
+          path: build/reports/jacoco/test/html
+
+  native:
+    name: Build native binary (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Built on Debian 11 so the binary only needs glibc 2.31 on hosts running the deb or zip.
+          - platform: linux-amd64
+            runner: ubuntu-latest
+            container: debian:11
+            arch: amd64
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+            container: debian:11
+            arch: arm64
+          - platform: windows-amd64
+            runner: windows-latest
+            container: ''
+            arch: amd64
+    steps:
+      - name: Install build tools
+        if: runner.os == 'Linux'
+        run: apt-get update && apt-get install -y --no-install-recommends build-essential zlib1g-dev curl git ca-certificates
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      # Gradle 8.8 cannot compile a Groovy build script on JDK 25, so the daemon
+      # stays on 21 and only native-image runs on GraalVM 25 via GRAALVM_HOME.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          set-java-home: 'false'
+          native-image-job-reports: 'true'
+      - name: Build the native binary
+        shell: bash
+        run: ./gradlew nativeCompile -PimageArch=${{ matrix.arch }}
+      - name: Collect the native binary
+        shell: bash
+        run: |
+          mkdir -p native-dist
+          cp build/native/nativeCompile/sysapi* native-dist/
+          find build/native/nativeCompile -maxdepth 1 \( -name '*.so' -o -name '*.dll' \) -exec cp {} native-dist/ \;
+          rm -f native-dist/*.txt native-dist/*.json native-dist/*.lib native-dist/*.exp native-dist/*.pdb
+          ls -la native-dist
+      - name: Self-test the native binary
+        shell: bash
+        run: native-dist/${{ runner.os == 'Windows' && 'sysapi.exe' || 'sysapi' }} --native-self-test
+      - name: Smoke test the native binary
+        if: runner.os == 'Linux'
+        run: ./.github/smoke-test-native.sh native-dist/sysapi
+      - name: Smoke test the native binary
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./.github/smoke-test-native.ps1 native-dist\sysapi.exe
+      - name: Store the native binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native-dist/
+
+  docker:
+    name: Build sys-API docker image
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-linux-amd64
+          path: native-dist/linux-amd64
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-linux-arm64
+          path: native-dist/linux-arm64
+      # jib cannot put a different binary into each platform of one build, so every
+      # architecture is its own image and the two are combined into one manifest afterwards.
+      - name: Upload per-architecture images to Docker Hub
+        run: |
+          ./gradlew jibJvm -PimageArch=amd64 -PnativeDir=native-dist $RELEASE_PROPERTIES
+          ./gradlew jibJvm -PimageArch=arm64 -PnativeDir=native-dist $RELEASE_PROPERTIES
+      - name: Combine per-architecture images into one manifest
+        run: |
+          docker buildx imagetools create --tag krillsson/sys-api:$IMAGE_TAG \
+            krillsson/sys-api:$IMAGE_TAG-amd64 krillsson/sys-api:$IMAGE_TAG-arm64
+          if [ -n "${{ inputs.release-tag }}" ]; then
+            docker buildx imagetools create --tag krillsson/sys-api:${{ inputs.release-tag }} \
+              krillsson/sys-api:${{ inputs.release-tag }}-amd64 krillsson/sys-api:${{ inputs.release-tag }}-arm64
+          fi
+      - name: Smoke test the image on the native runtime
+        run: |
+          docker run -d --name sysapi -p 8080:8080 -e SYSAPI_RUNTIME=auto krillsson/sys-api:$IMAGE_TAG-amd64
+          docker logs -f sysapi > container.log 2>&1 &
+          ./.github/smoke-test-launcher.sh container.log native
+          time docker stop -t 30 sysapi
+
+  deb:
+    name: Build sys-API deb package
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-linux-amd64
+          path: native-dist/linux-amd64
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-linux-arm64
+          path: native-dist/linux-arm64
+      - name: Build .deb
+        run: ./gradlew packageDeb -PnativeDir=native-dist
+      - name: Smoke test the installed service on the native runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ./build/distributions/*.deb
+          sudo mkdir -p /etc/systemd/system/sys-api.service.d
+          printf '[Service]\nEnvironment=SYSAPI_RUNTIME=auto\n' | sudo tee /etc/systemd/system/sys-api.service.d/runtime.conf
+          sudo systemctl daemon-reload
+          sudo systemctl start sys-api
+          sudo journalctl -f -u sys-api > service.log 2>&1 &
+          ./.github/smoke-test-launcher.sh service.log native
+          sudo systemctl stop sys-api
+          if pgrep -f /opt/sys-api/native/; then echo "The native agent survived systemctl stop"; exit 1; fi
+      - name: Store .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sys-api-debian-package
+          path: build/distributions/*.deb
+
+  cmd:
+    name: Build sys-API command line .zip
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          path: native-dist
+      - name: Name the native directories after their platform
+        run: for dir in native-dist/native-*; do mv "$dir" "native-dist/${dir#native-dist/native-}"; done
+      - name: Build shadowJar
+        run: ./gradlew shadowDistZip -PnativeDir=native-dist
+      - name: Smoke test the zip on the native runtime
+        run: |
+          mkdir smoke && unzip -q build/distributions/*.zip -d smoke
+          cd smoke/*/
+          SYSAPI_RUNTIME=auto sh run.sh > ../../zip.log 2>&1 &
+          cd ../..
+          ./.github/smoke-test-launcher.sh zip.log native
+      - name: Store distribution artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-dist
+          path: build/distributions/*.zip
+
+  win:
+    name: Build on Windows
+    needs: native
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - name: inno-setup-download
+        uses: ./.github/actions/inno-setup-download
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-windows-amd64
+          path: native-dist/windows-amd64
+      - name: Build Windows installer
+        run: ./gradlew packageWindowsInstaller -PnativeDir=native-dist
+      - name: Smoke test the launcher on the native runtime
+        shell: pwsh
+        run: |
+          $app = (Get-ChildItem build -Recurse -Filter sysapi-launcher.ps1 | Where-Object { $_.DirectoryName -notlike '*launcher*' } | Select-Object -First 1).DirectoryName
+          Write-Output "App folder: $app"
+          Push-Location $app
+          & native\windows-amd64\sysapi.exe --native-self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:SYSAPI_RUNTIME = 'auto'
+          $launcher = Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$app\sysapi-launcher.ps1" -WorkingDirectory $app -RedirectStandardOutput "$app\launcher.log" -RedirectStandardError "$app\launcher.err" -PassThru -NoNewWindow
+          $deadline = (Get-Date).AddSeconds(180)
+          $healthy = $false
+          while (-not $healthy -and (Get-Date) -lt $deadline -and -not $launcher.HasExited) {
+            try { Invoke-RestMethod http://localhost:8080/actuator/health -TimeoutSec 5 | Out-Null; $healthy = $true } catch { Start-Sleep 2 }
+          }
+          Get-Content "$app\launcher.log" | Select-String '\[launcher\]'
+          if (-not $healthy) { Get-Content "$app\launcher.log", "$app\launcher.err"; exit 1 }
+          if (-not (Select-String -Path "$app\launcher.log" -Pattern '\[launcher\] runtime=native\b' -Quiet)) { Write-Output 'The launcher did not pick the native runtime'; exit 1 }
+          Stop-Process -Id $launcher.Id -Force
+          Start-Sleep -Seconds 15
+          $left = Get-Process | Where-Object { $_.Path -like "$app\*" }
+          if ($left) { Write-Output "Still running after the launcher was killed: $($left.Path)"; $left | Stop-Process -Force; exit 1 }
+      - name: Store setup.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-setup
+          path: build/*.exe

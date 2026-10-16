@@ -20,6 +20,8 @@ If you need to change the default application ports *8080* and *8443*, you can d
 
 Restart the *sys-api* service in the Services program for the changes to take effect.
 
+To try the native build, which uses less memory, add `<env name="SYSAPI_RUNTIME" value="auto"/>` to *sys-API-servicew.xml* in the installation directory and restart the service. It reads sensors without OpenHardwareMonitor.
+
 ![](https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docs/images/Screenshot-2024-09-29-092341.png)
 
 ## 3. Checking that it runs

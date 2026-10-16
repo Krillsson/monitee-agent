@@ -4,7 +4,6 @@ import org.redline_rpm.header.Flags
 
 buildscript {
     dependencies {
-        classpath('com.google.cloud.tools:jib-native-image-extension-gradle:0.1.0')
         classpath 'io.github.fvarrui:javapackager:1.7.6'
     }
 }
@@ -34,7 +33,7 @@ version = '0.47.0'
 
 def imageArch = findProperty("imageArch")?.toString()?.trim()
 def largestSupportedPageSize = 65536
-def nativeBaseImage = findProperty("nativeBaseImage")?.toString()?.trim() ?: 'krillsson/openjdk21-ubuntu-systemd:latest'
+def nativeDir = findProperty("nativeDir")?.toString()?.trim()?.with { file(it) }
 
 buildConfig {
     buildConfigField("String", "APP_VERSION", provider { "\"${project.version}\"" })
@@ -94,90 +93,100 @@ graalvmNative {
     }
 }
 
+def launcherScripts = tasks.register('launcherScripts', Copy) {
+    def nativeArgs = jvmArgs.findAll { it.startsWith('-Xm') || it.startsWith('-D') }
+    inputs.property("version", project.version)
+    inputs.property("jvmArgs", jvmArgs)
+    from "$rootDir/src/launcher"
+    into layout.buildDirectory.dir("launcher")
+    filesMatching('sysapi-launcher') {
+        filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+                VERSION    : project.version.toString(),
+                JVM_ARGS   : jvmArgs.join(' '),
+                NATIVE_ARGS: nativeArgs.join(' ')
+        ])
+        filePermissions { unix(0755) }
+    }
+    filesMatching('*.ps1') {
+        filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [
+                VERSION    : project.version.toString(),
+                JVM_ARGS   : jvmArgs.collect { "'$it'" }.join(', '),
+                NATIVE_ARGS: nativeArgs.collect { "'$it'" }.join(', ')
+        ])
+    }
+}
+
+def jibExtraDirectory = tasks.register('jibExtraDirectory', Sync) {
+    into layout.buildDirectory.dir("jib-extra")
+    from(launcherScripts) {
+        include 'sysapi-launcher'
+        into 'app'
+    }
+    if (nativeDir && imageArch) {
+        from(new File(nativeDir, "linux-$imageArch")) {
+            into "app/native/linux-$imageArch"
+        }
+    }
+}
+
+def windowsNativeDirectory = tasks.register('windowsNativeDirectory', Sync) {
+    into layout.buildDirectory.dir("win-native/native")
+    if (nativeDir) {
+        from(nativeDir) {
+            include 'windows-amd64/**'
+        }
+    }
+}
+
 task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
     group = 'Docker'
-    description = 'Creates image with jvm build'
+    description = 'Creates image with jvm build, and the native binary when -PimageArch and -PnativeDir are given'
     jibExtension = project.extensions.getByName('jib')
-    dependsOn 'jar'
+    dependsOn 'jar', jibExtraDirectory
     doFirst {
         jib {
             container {
                 ports = ["8080", "8443", "2375"]
                 volumes = ["/config", "/data"]
-                jvmFlags = jvmArgs
+                entrypoint = ["/app/sysapi-launcher"]
                 environment = [
                         "LD_PRELOAD": "libjemalloc.so.2",
-                        "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000"
+                        "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000,narenas:4"
+                ]
+            }
+            extraDirectories {
+                paths {
+                    path {
+                        from = jibExtraDirectory.get().destinationDir
+                        into = '/'
+                    }
+                }
+                permissions = [
+                        '/app/sysapi-launcher': '755',
+                        '/app/native/*/sysapi': '755'
                 ]
             }
             from {
                 image = 'krillsson/openjdk21-ubuntu-systemd:latest'
                 platforms {
-                    platform {
-                        architecture = 'amd64'
-                        os = 'linux'
-                    }
-                    platform {
-                        architecture = 'arm64'
-                        os = 'linux'
-                    }
-                }
-            }
-            to {
-                def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
-                image = "krillsson/sys-api:$tag"
-                def semVerRegex = /^\d+\.\d+\.\d+$/
-                def semVerTag = findProperty("semVerTag")?.toString()?.trim()
-                if (semVerTag && semVerTag.matches(semVerRegex) && tag == "latest") {
-                    tags = [semVerTag]
-                } else {
-                    tags = []  // Explicitly set an empty list if no valid SemVer tag
-                }
-            }
-        }
-    }
-}
-
-task jibNativeImage(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
-    group = 'Docker'
-    description = 'Creates image with native build'
-    jibExtension = project.extensions.getByName('jib')
-    dependsOn 'nativeCompile'
-    doFirst {
-        jib {
-            container {
-                ports = ["8080", "8443", "2375"]
-                volumes = ["/config", "/data"]
-            }
-            jib.from {
-                image = nativeBaseImage
-                if (imageArch && !nativeBaseImage.startsWith('docker://')) {
-                    platforms {
+                    (imageArch ? [imageArch] : ['amd64', 'arm64']).each { arch ->
                         platform {
-                            architecture = imageArch
+                            architecture = arch
                             os = 'linux'
                         }
                     }
                 }
             }
             to {
-                def tag = findProperty("buildType") == "release" ? "native" : "native-nightly"
+                def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
                 def suffix = imageArch ? "-$imageArch" : ""
                 image = "krillsson/sys-api:$tag$suffix"
                 def semVerRegex = /^\d+\.\d+\.\d+$/
                 def semVerTag = findProperty("semVerTag")?.toString()?.trim()
-                if (semVerTag && semVerTag.matches(semVerRegex) && tag == "native") {
-                    tags = [semVerTag + "-native" + suffix]
+                if (semVerTag && semVerTag.matches(semVerRegex) && tag == "latest") {
+                    tags = [semVerTag + suffix]
                 } else {
                     tags = []  // Explicitly set an empty list if no valid SemVer tag
-                }
-            }
-            pluginExtensions {
-                pluginExtension {
-                    implementation = 'com.google.cloud.tools.jib.gradle.extension.nativeimage.JibNativeImageExtension'
-                    properties = [
-                            imageName: 'sysapi'
-                    ]
                 }
             }
         }
@@ -236,6 +245,16 @@ shadowDistZip {
     from("$rootDir/config/") {
         into "sysapi-shadow-${project.version}/config/"
         include '**'
+    }
+    from(launcherScripts) {
+        into "sysapi-shadow-${project.version}/"
+    }
+    if (nativeDir) {
+        from(nativeDir) {
+            include 'linux-*/**', 'windows-amd64/**'
+            into "sysapi-shadow-${project.version}/native/"
+            filePermissions { unix(0755) }
+        }
     }
 }
 
@@ -321,6 +340,22 @@ task packageDeb(type: Deb) {
         }
     }
 
+    into('/opt/sys-api') {
+        from(launcherScripts) {
+            include 'sysapi-launcher'
+            fileMode 0755
+        }
+    }
+
+    if (nativeDir) {
+        into('/opt/sys-api/native') {
+            from(nativeDir) {
+                include 'linux-*/**'
+                fileMode 0755
+            }
+        }
+    }
+
     into('lib/systemd/system') {
         from('src/deb/lib/systemd/system') {
             include 'sys-api.service'
@@ -342,14 +377,7 @@ task packageDeb(type: Deb) {
     }
 }
 
-def windowsServiceConfig = tasks.register('windowsServiceConfig', Copy) {
-    from "$rootDir/src/win/config/sys-API-servicew.xml"
-    into layout.buildDirectory.dir("win")
-    inputs.property("jvmArgs", jvmArgs)
-    filter(org.apache.tools.ant.filters.ReplaceTokens, tokens: [JVM_ARGS: jvmArgs.join(" ")])
-}
-
-task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.PackageTask, dependsOn: [shadowJar, windowsServiceConfig]) {
+task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.PackageTask, dependsOn: [shadowJar, launcherScripts, windowsNativeDirectory]) {
     displayName = "sys-API"
     organizationName = "Krillsson"
     mainClass = 'com.krillsson.sysapi.SysAPIApplicationKt'
@@ -367,12 +395,13 @@ task packageWindowsInstaller(type: io.github.fvarrui.javapackager.gradle.Package
             file("$rootDir/src/dist/sample-queries"),
             file("$rootDir/config"),
             file("$rootDir/src/win/bin/sys-API-servicew.exe"),
-            layout.buildDirectory.file("win/sys-API-servicew.xml").get().asFile,
+            file("$rootDir/src/win/config/sys-API-servicew.xml"),
+            layout.buildDirectory.file("launcher/sysapi-launcher.ps1").get().asFile,
             file("$rootDir/src/win/scripts/install-service.bat"),
             file("$rootDir/src/win/scripts/start-service.bat"),
             file("$rootDir/src/win/scripts/stop-service.bat"),
             file("$rootDir/src/win/scripts/uninstall-service.bat")
-    ]
+    ] + (nativeDir ? [layout.buildDirectory.dir("win-native/native").get().asFile] : [])
     winConfig {
         headerType = "console"
         generateMsi = false

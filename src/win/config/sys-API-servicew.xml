@@ -2,8 +2,8 @@
   <id>sys-api</id>
   <name>sys-API</name>
   <description>System API (sys-API) provide a GraphQL API to your computers hardware.</description>
-  <executable>%BASE%\jre\bin\java.exe</executable>
-  <arguments>@JVM_ARGS@ -jar "%BASE%\sysapi.exe"</arguments>
+  <executable>%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe</executable>
+  <arguments>-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%BASE%\sysapi-launcher.ps1"</arguments>
   <log mode="roll" />
   <onfailure action="restart" />
 </service>

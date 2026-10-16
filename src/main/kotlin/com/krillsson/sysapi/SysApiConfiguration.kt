@@ -33,6 +33,7 @@ import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactor
 import org.springframework.boot.web.server.WebServerFactoryCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.NativeDetector
 import org.springframework.graphql.execution.RuntimeWiringConfigurer
 import org.springframework.scheduling.annotation.AsyncConfigurer
 import org.springframework.scheduling.annotation.EnableAsync
@@ -135,6 +136,11 @@ class SysApiConfiguration : AsyncConfigurer {
     ): Metrics {
 
         val platformSpecific = when {
+            platform == Platform.WINDOWS && configuration.windows.enableOhmJniWrapper && NativeDetector.inNativeImage() -> {
+                logger.info("OpenHardwareMonitor is not available in the native image, using the default implementation")
+                defaultMetrics
+            }
+
             platform == Platform.WINDOWS && (configuration.windows.enableOhmJniWrapper) -> {
                 logger.info("Windows detected")
                 val windowsMetrics = windowsMetricsProvider.getObject()
