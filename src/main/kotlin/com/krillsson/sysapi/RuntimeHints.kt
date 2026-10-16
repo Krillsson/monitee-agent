@@ -16,13 +16,29 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
+import com.sun.jna.Library
+import com.sun.jna.Structure
+import com.sun.jna.platform.win32.Kernel32
+import oshi.SystemInfo
 import oshi.jna.common.Nvml
+import oshi.util.ParseUtil
+import java.io.File
+import java.util.jar.JarFile
 import java.lang.reflect.Type
 
-class RuntimeHint : RuntimeHintsRegistrar {
+class RuntimeHint(
+    private val aotOnWindows: Boolean = System.getProperty("os.name").startsWith("Windows")
+) : RuntimeHintsRegistrar {
 
     companion object {
         private const val DOCKER_MODEL_PACKAGE = "com.github.dockerjava.api.model"
+        private val JNA_STRUCTURE_MEMBERS = arrayOf(
+            MemberCategory.DECLARED_FIELDS,
+            MemberCategory.PUBLIC_FIELDS,
+            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+            MemberCategory.INVOKE_PUBLIC_CONSTRUCTORS,
+            MemberCategory.INVOKE_PUBLIC_METHODS
+        )
         private const val PAHO_JSR47_LOGGER = "org.eclipse.paho.client.mqttv3.logging.JSR47Logger"
         private const val PAHO_LOGCAT_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.logcat"
         private const val PAHO_MESSAGES_BUNDLE = "org.eclipse.paho.client.mqttv3.internal.nls.messages"
@@ -42,7 +58,55 @@ class RuntimeHint : RuntimeHintsRegistrar {
         registerNvmlHints(hints)
         registerDockerJsonHints(hints, classLoader)
         registerPahoHints(hints)
+        if (aotOnWindows) {
+            registerWindowsJnaHints(hints, classLoader)
+        }
     }
+
+    /**
+     * OSHI reaches Windows through JNA, which reads every Structure's fields and builds a JDK proxy
+     * for every Library interface by reflection. The checked-in metadata was captured on Linux and
+     * has none of the Windows ones. A native image only ever runs on the OS that built it, so these
+     * are only registered when the AOT step runs on Windows, which keeps them out of the Linux
+     * binaries.
+     */
+    private fun registerWindowsJnaHints(hints: RuntimeHints, classLoader: ClassLoader?) {
+        listOf(Kernel32::class.java, SystemInfo::class.java, ParseUtil::class.java)
+            .flatMap { classesInJarOf(it, classLoader) }
+            .distinct()
+            .forEach { type ->
+                when {
+                    Structure::class.java.isAssignableFrom(type) -> {
+                        hints.reflection().registerType(type, *JNA_STRUCTURE_MEMBERS)
+                        hints.reflection().registerType(java.lang.reflect.Array.newInstance(type, 0).javaClass)
+                    }
+
+                    type.isInterface && Library::class.java.isAssignableFrom(type) -> {
+                        hints.proxies().registerJdkProxy(type)
+                        hints.reflection().registerType(type, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS)
+                    }
+
+                    type.isEnum -> hints.reflection().registerType(type, MemberCategory.PUBLIC_FIELDS, MemberCategory.INVOKE_PUBLIC_METHODS)
+                }
+            }
+    }
+
+    private fun classesInJarOf(anchor: Class<*>, classLoader: ClassLoader?): List<Class<*>> {
+        val jar = File(anchor.protectionDomain.codeSource?.location?.toURI() ?: return emptyList())
+        if (!jar.isFile) return emptyList()
+        return JarFile(jar).use { file ->
+            file.entries().asSequence()
+                .map { it.name }
+                .filter { name -> name.endsWith(".class") && isWindowsJnaClass(name) }
+                .mapNotNull { name ->
+                    runCatching { ClassUtils.forName(ClassUtils.convertResourcePathToClassName(name.removeSuffix(".class")), classLoader) }.getOrNull()
+                }
+                .toList()
+        }
+    }
+
+    private fun isWindowsJnaClass(entry: String) =
+        entry.startsWith("com/sun/jna/platform/win32/") || (entry.startsWith("oshi/") && "/windows/" in entry)
 
     /**
      * Paho picks its logger with `Class.forName` and reads every log message it writes out of a
