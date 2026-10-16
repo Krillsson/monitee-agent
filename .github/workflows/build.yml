@@ -45,7 +45,7 @@ jobs:
           name: coverage-results
           path: build/reports/jacoco/test/html
 
-  native:
+  native-linux:
     name: Build native binary (${{ matrix.platform }})
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
@@ -62,13 +62,8 @@ jobs:
             runner: ubuntu-24.04-arm
             container: almalinux:8
             arch: arm64
-          - platform: windows-amd64
-            runner: windows-latest
-            container: ''
-            arch: amd64
     steps:
       - name: Install build tools
-        if: runner.os == 'Linux'
         run: dnf install -y gcc glibc-devel zlib-devel git tar gzip findutils which
       - uses: actions/checkout@v4
         with:
@@ -93,29 +88,63 @@ jobs:
         shell: bash
         run: |
           mkdir -p native-dist
-          cp build/native/nativeCompile/sysapi* native-dist/
-          find build/native/nativeCompile -maxdepth 1 \( -name '*.so' -o -name '*.dll' \) -exec cp {} native-dist/ \;
-          rm -f native-dist/*.txt native-dist/*.json native-dist/*.lib native-dist/*.exp native-dist/*.pdb
+          cp build/native/nativeCompile/sysapi native-dist/
+          find build/native/nativeCompile -maxdepth 1 -name '*.so' -exec cp {} native-dist/ \;
           ls -la native-dist
       - name: Self-test the native binary
         shell: bash
-        run: native-dist/${{ runner.os == 'Windows' && 'sysapi.exe' || 'sysapi' }} --native-self-test
+        run: native-dist/sysapi --native-self-test
       - name: Smoke test the native binary
-        if: runner.os == 'Linux'
         run: ./.github/smoke-test-native.sh native-dist/sysapi
-      - name: Smoke test the native binary
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./.github/smoke-test-native.ps1 native-dist\sysapi.exe
       - name: Store the native binary
         uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.platform }}
           path: native-dist/
 
+  native-windows:
+    name: Build native binary (windows-amd64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm-community'
+          set-java-home: 'false'
+          native-image-job-reports: 'true'
+      - name: Build the native binary
+        shell: bash
+        run: ./gradlew nativeCompile -PimageArch=amd64
+      - name: Collect the native binary
+        shell: bash
+        run: |
+          mkdir -p native-dist
+          cp build/native/nativeCompile/sysapi.exe native-dist/
+          find build/native/nativeCompile -maxdepth 1 -name '*.dll' -exec cp {} native-dist/ \;
+          ls -la native-dist
+      - name: Self-test the native binary
+        shell: bash
+        run: native-dist/sysapi.exe --native-self-test
+      - name: Smoke test the native binary
+        shell: pwsh
+        run: ./.github/smoke-test-native.ps1 native-dist\sysapi.exe
+      - name: Store the native binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-windows-amd64
+          path: native-dist/
+
   docker:
     name: Build sys-API docker image
-    needs: native
+    needs: native-linux
     runs-on: ubuntu-latest
     steps:
       - name: Login to Docker Hub
@@ -162,7 +191,7 @@ jobs:
 
   deb:
     name: Build sys-API deb package
-    needs: native
+    needs: native-linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -203,7 +232,7 @@ jobs:
 
   cmd:
     name: Build sys-API command line .zip
-    needs: native
+    needs: [native-linux, native-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -237,7 +266,7 @@ jobs:
 
   win:
     name: Build on Windows
-    needs: native
+    needs: native-windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
