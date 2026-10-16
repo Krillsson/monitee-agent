@@ -4,6 +4,7 @@
   <description>System API (sys-API) provide a GraphQL API to your computers hardware.</description>
   <executable>%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe</executable>
   <arguments>-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%BASE%\sysapi-launcher.ps1"</arguments>
+  <stoptimeout>60 sec</stoptimeout>
   <log mode="roll" />
   <onfailure action="restart" />
 </service>

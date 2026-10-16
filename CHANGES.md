@@ -2,6 +2,7 @@
 
 - The docker image, the deb, the zip and the Windows installer carry the native build next to the Java one, and `SYSAPI_RUNTIME=auto` runs it with a fallback to Java on hosts it can't run on.
 - A `runtime` file in the `config` directory chooses `auto`, `native` or `jvm` when `SYSAPI_RUNTIME` is not set, and survives upgrades.
+- The sys-api Windows service gives the agent a minute to stop before killing it, instead of 15 seconds.
 - The separate `native` docker tags are no longer published.
 - Fix: The Windows installer stops the sys-api service before upgrading and starts it again afterwards, instead of failing on files in use.
 - The Windows installer can install and start the sys-api service, removes it on uninstall, and no longer overwrites an existing `config` directory.
