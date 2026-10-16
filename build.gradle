@@ -84,6 +84,7 @@ graalvmNative {
             buildArgs.add('--no-fallback')
             buildArgs.add('-H:+AddAllCharsets')
             buildArgs.add('-H:+ReportExceptionStackTraces')
+            buildArgs.add('-march=compatibility')
             buildArgs.add('--initialize-at-build-time=org.slf4j,ch.qos.logback')
             buildArgs.add('--initialize-at-run-time=io.netty,sun.reflect.misc.Trampoline')
             if (imageArch == 'arm64') {
