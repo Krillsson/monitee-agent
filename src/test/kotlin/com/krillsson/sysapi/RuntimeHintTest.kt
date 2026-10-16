@@ -2,6 +2,7 @@ package com.krillsson.sysapi
 
 import com.sun.jna.platform.win32.Guid
 import com.sun.jna.platform.win32.Kernel32
+import com.sun.jna.platform.win32.WinDef
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.springframework.aot.hint.RuntimeHints
@@ -19,6 +20,7 @@ class RuntimeHintTest {
 
         // Then
         RuntimeHintsPredicates.reflection().onField(Guid.GUID::class.java.getField("Data1")).test(hints) shouldBe true
+        RuntimeHintsPredicates.reflection().onConstructor(WinDef.DWORD::class.java.getConstructor()).test(hints) shouldBe true
         RuntimeHintsPredicates.proxies().forInterfaces(Kernel32::class.java).test(hints) shouldBe true
     }
 

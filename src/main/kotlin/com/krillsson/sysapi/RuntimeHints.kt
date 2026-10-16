@@ -16,8 +16,13 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
+import com.sun.jna.Callback
 import com.sun.jna.Library
+import com.sun.jna.Native
+import com.sun.jna.NativeMapped
+import com.sun.jna.PointerType
 import com.sun.jna.Structure
+import com.sun.jna.ptr.ByReference
 import com.sun.jna.platform.win32.Kernel32
 import oshi.SystemInfo
 import oshi.jna.common.Nvml
@@ -32,6 +37,12 @@ class RuntimeHint(
 
     companion object {
         private const val DOCKER_MODEL_PACKAGE = "com.github.dockerjava.api.model"
+        private val JNA_NATIVE_TYPES = listOf(
+            Structure::class.java,
+            NativeMapped::class.java,
+            PointerType::class.java,
+            ByReference::class.java
+        )
         private val JNA_STRUCTURE_MEMBERS = arrayOf(
             MemberCategory.DECLARED_FIELDS,
             MemberCategory.PUBLIC_FIELDS,
@@ -71,19 +82,22 @@ class RuntimeHint(
      * binaries.
      */
     private fun registerWindowsJnaHints(hints: RuntimeHints, classLoader: ClassLoader?) {
-        listOf(Kernel32::class.java, SystemInfo::class.java, ParseUtil::class.java)
+        listOf(Native::class.java, Kernel32::class.java, SystemInfo::class.java, ParseUtil::class.java)
             .flatMap { classesInJarOf(it, classLoader) }
             .distinct()
             .forEach { type ->
                 when {
-                    Structure::class.java.isAssignableFrom(type) -> {
-                        hints.reflection().registerType(type, *JNA_STRUCTURE_MEMBERS)
-                        hints.reflection().registerType(java.lang.reflect.Array.newInstance(type, 0).javaClass)
-                    }
-
                     type.isInterface && Library::class.java.isAssignableFrom(type) -> {
                         hints.proxies().registerJdkProxy(type)
                         hints.reflection().registerType(type, MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.PUBLIC_FIELDS)
+                    }
+
+                    type.isInterface && Callback::class.java.isAssignableFrom(type) ->
+                        hints.reflection().registerType(type, MemberCategory.INVOKE_PUBLIC_METHODS)
+
+                    JNA_NATIVE_TYPES.any { it.isAssignableFrom(type) } -> {
+                        hints.reflection().registerType(type, *JNA_STRUCTURE_MEMBERS)
+                        hints.reflection().registerType(java.lang.reflect.Array.newInstance(type, 0).javaClass)
                     }
 
                     type.isEnum -> hints.reflection().registerType(type, MemberCategory.PUBLIC_FIELDS, MemberCategory.INVOKE_PUBLIC_METHODS)
@@ -105,8 +119,9 @@ class RuntimeHint(
         }
     }
 
-    private fun isWindowsJnaClass(entry: String) =
-        entry.startsWith("com/sun/jna/platform/win32/") || (entry.startsWith("oshi/") && "/windows/" in entry)
+    private fun isWindowsJnaClass(entry: String) = entry.startsWith("com/sun/jna/platform/win32/") ||
+        entry.startsWith("com/sun/jna/ptr/") ||
+        (entry.startsWith("oshi/") && ("/windows/" in entry || entry.startsWith("oshi/jna/ByRef")))
 
     /**
      * Paho picks its logger with `Class.forName` and reads every log message it writes out of a
