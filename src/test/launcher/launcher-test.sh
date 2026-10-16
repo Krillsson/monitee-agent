@@ -55,7 +55,7 @@ FAKE
 }
 
 launch() {
-    (cd "$work" && PATH="$work/bin:$PATH" "$shell" "$app/sysapi-launcher" "$@" > "$work/calls/output" 2>&1)
+    (cd "$work" && unset JAVA_HOME && export PATH="$work/bin:$PATH" ${FAKE_JAVA_HOME:+JAVA_HOME="$FAKE_JAVA_HOME"} && "$shell" "$app/sysapi-launcher" "$@" > "$work/calls/output" 2>&1)
     status=$?
 }
 
@@ -78,7 +78,7 @@ run_case() {
     current="$1"
     shift
     rm -rf "$work/data"
-    unset SYSAPI_RUNTIME FAKE_PROBE FAKE_NATIVE FAKE_NATIVE_EXIT FAKE_JVM_EXIT FAKE_ARCH FAKE_OS DEFAULT_RUNTIME
+    unset FAKE_JAVA_HOME SYSAPI_RUNTIME FAKE_PROBE FAKE_NATIVE FAKE_NATIVE_EXIT FAKE_JVM_EXIT FAKE_ARCH FAKE_OS DEFAULT_RUNTIME
     "$@"
 }
 
@@ -226,7 +226,7 @@ case_forced_native_without_a_binary_fails() {
 case_terminate_is_forwarded_to_native() {
     setup
     export SYSAPI_RUNTIME=auto FAKE_NATIVE=serve
-    (cd "$work" && PATH="$work/bin:$PATH" exec "$shell" "$app/sysapi-launcher" > "$work/calls/output" 2>&1) &
+    (cd "$work" && unset JAVA_HOME && PATH="$work/bin:$PATH" exec "$shell" "$app/sysapi-launcher" > "$work/calls/output" 2>&1) &
     local launcher=$!
     for _ in $(seq 50); do [ -f "$work/data/.native-ready" ] && break; sleep 0.1; done
     kill -TERM "$launcher"
@@ -235,6 +235,15 @@ case_terminate_is_forwarded_to_native() {
     check "native was told to stop" '[ -f "$work/calls/native-stopped" ]'
     check "exits with native's status" '[ "$status" = 143 ]'
     check "does not fall back" '! ran_jvm'
+}
+
+case_java_home_picks_the_jvm() {
+    setup
+    mkdir -p "$work/jdk/bin"
+    mv "$work/bin/java" "$work/jdk/bin/java"
+    export FAKE_JAVA_HOME="$work/jdk"
+    launch
+    check "runs java from JAVA_HOME" ran_jvm
 }
 
 case_jib_image_runs_the_main_class() {
