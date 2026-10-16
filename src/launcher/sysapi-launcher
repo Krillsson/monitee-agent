@@ -8,7 +8,14 @@ default_runtime='jvm'
 native_limitation_exit_code=86
 
 app_home=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
-runtime=${SYSAPI_RUNTIME:-$default_runtime}
+runtime_file='config/runtime'
+runtime=${SYSAPI_RUNTIME:-}
+runtime_source=SYSAPI_RUNTIME
+if [ -z "$runtime" ] && [ -f "$runtime_file" ]; then
+    runtime=$(head -n 1 "$runtime_file" | tr -d '[:space:]')
+    runtime_source=$runtime_file
+fi
+[ -n "$runtime" ] || runtime=$default_runtime
 data_dir=${SYSAPI_DATA_DIR:-data}
 marker="$data_dir/native-disabled"
 ready_file="$data_dir/.native-ready"
@@ -63,14 +70,14 @@ case "$runtime" in
         ;;
     auto | native) ;;
     *)
-        log "SYSAPI_RUNTIME must be auto, native or jvm, not '$runtime'"
+        log "$runtime_source must be auto, native or jvm, not '$runtime'"
         exit 64
         ;;
 esac
 
 if ! binary=$(native_binary); then
     if [ "$runtime" = native ]; then
-        log "SYSAPI_RUNTIME=native but there is no native binary for $(uname -s) $(uname -m) in $app_home/native"
+        log "$runtime_source is native but there is no native binary for $(uname -s) $(uname -m) in $app_home/native"
         exit 1
     fi
     log "runtime=jvm reason=no native binary for $(uname -s) $(uname -m)"

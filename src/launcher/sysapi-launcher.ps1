@@ -7,7 +7,14 @@ $defaultRuntime = 'jvm'
 $nativeLimitationExitCode = 86
 
 $appHome = $PSScriptRoot
-$runtime = if ($env:SYSAPI_RUNTIME) { $env:SYSAPI_RUNTIME } else { $defaultRuntime }
+$runtimeFile = 'config\runtime'
+$runtime = $env:SYSAPI_RUNTIME
+$runtimeSource = 'SYSAPI_RUNTIME'
+if (-not $runtime -and (Test-Path $runtimeFile)) {
+    $runtime = "$(Get-Content $runtimeFile -TotalCount 1)".Trim()
+    $runtimeSource = $runtimeFile
+}
+if (-not $runtime) { $runtime = $defaultRuntime }
 $dataDir = if ($env:SYSAPI_DATA_DIR) { $env:SYSAPI_DATA_DIR } else { 'data' }
 $marker = Join-Path $dataDir 'native-disabled'
 $readyFile = Join-Path $dataDir '.native-ready'
@@ -101,7 +108,7 @@ switch ($runtime) {
     }
     { $_ -in 'auto', 'native' } { }
     default {
-        Write-Launcher "SYSAPI_RUNTIME must be auto, native or jvm, not '$runtime'"
+        Write-Launcher "$runtimeSource must be auto, native or jvm, not '$runtime'"
         exit 64
     }
 }
@@ -109,7 +116,7 @@ switch ($runtime) {
 $binary = Join-Path $appHome 'native\windows-amd64\sysapi.exe'
 if (-not [Environment]::Is64BitOperatingSystem -or -not (Test-Path $binary)) {
     if ($runtime -eq 'native') {
-        Write-Launcher "SYSAPI_RUNTIME=native but there is no native binary at $binary"
+        Write-Launcher "$runtimeSource is native but there is no native binary at $binary"
         exit 1
     }
     Write-Launcher 'runtime=jvm reason=no native binary for this platform'

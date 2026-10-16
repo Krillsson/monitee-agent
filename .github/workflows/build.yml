@@ -294,7 +294,7 @@ jobs:
           Push-Location $app
           & native\windows-amd64\sysapi.exe --native-self-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:SYSAPI_RUNTIME = 'auto'
+          Set-Content "$app\config\runtime" 'auto'
           $launcher = Start-Process powershell -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "$app\sysapi-launcher.ps1" -WorkingDirectory $app -RedirectStandardOutput "$app\launcher.log" -RedirectStandardError "$app\launcher.err" -PassThru -NoNewWindow
           $deadline = (Get-Date).AddSeconds(180)
           $healthy = $false

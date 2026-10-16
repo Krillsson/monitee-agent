@@ -77,7 +77,7 @@ no_marker() { [ ! -f "$work/data/native-disabled" ]; }
 run_case() {
     current="$1"
     shift
-    rm -rf "$work/data"
+    rm -rf "$work/data" "$work/config"
     unset FAKE_JAVA_HOME SYSAPI_RUNTIME FAKE_PROBE FAKE_NATIVE FAKE_NATIVE_EXIT FAKE_JVM_EXIT FAKE_ARCH FAKE_OS DEFAULT_RUNTIME
     "$@"
 }
@@ -221,6 +221,45 @@ case_forced_native_without_a_binary_fails() {
     launch
     check "exits 1" '[ "$status" = 1 ]'
     check "does not run the JVM" '! ran_jvm'
+}
+
+case_runtime_file_sets_the_runtime() {
+    setup
+    mkdir -p "$work/config"
+    printf '  auto \r\n' > "$work/config/runtime"
+    export FAKE_NATIVE=ready-then-exit
+    launch
+    check "runs native" ran_native
+    check "does not run the JVM" '! ran_jvm'
+}
+
+case_environment_overrides_the_runtime_file() {
+    setup
+    mkdir -p "$work/config"
+    echo native > "$work/config/runtime"
+    export SYSAPI_RUNTIME=jvm
+    launch
+    check "runs the JVM" ran_jvm
+    check "does not touch the native binary" '! ran_native'
+}
+
+case_empty_runtime_file_uses_the_default() {
+    setup
+    mkdir -p "$work/config"
+    : > "$work/config/runtime"
+    launch
+    check "runs the JVM" ran_jvm
+    check "does not touch the native binary" '! ran_native'
+}
+
+case_rejects_an_unknown_runtime_in_the_file() {
+    setup
+    mkdir -p "$work/config"
+    echo fast > "$work/config/runtime"
+    launch
+    check "exits 64" '[ "$status" = 64 ]'
+    check "names the file" 'grep -q "config/runtime must be auto, native or jvm, not .fast." "$work/calls/output"'
+    check "starts nothing" '! ran_jvm && ! ran_native'
 }
 
 case_terminate_is_forwarded_to_native() {
