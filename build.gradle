@@ -138,59 +138,58 @@ def windowsNativeDirectory = tasks.register('windowsNativeDirectory', Sync) {
     }
 }
 
+jib {
+    container {
+        ports = ["8080", "8443", "2375"]
+        volumes = ["/config", "/data"]
+        entrypoint = ["/app/sysapi-launcher"]
+        environment = [
+                "LD_PRELOAD": "libjemalloc.so.2",
+                "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000,narenas:4"
+        ]
+    }
+    extraDirectories {
+        paths {
+            path {
+                from = layout.buildDirectory.dir("jib-extra").get().asFile
+                into = '/'
+            }
+        }
+        permissions = [
+                '/app/sysapi-launcher': '755',
+                '/app/native/*/sysapi': '755'
+        ]
+    }
+    from {
+        image = 'krillsson/openjdk21-ubuntu-systemd:latest'
+        platforms {
+            (imageArch ? [imageArch] : ['amd64', 'arm64']).each { arch ->
+                platform {
+                    architecture = arch
+                    os = 'linux'
+                }
+            }
+        }
+    }
+    to {
+        def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
+        def suffix = imageArch ? "-$imageArch" : ""
+        image = "krillsson/sys-api:$tag$suffix"
+        def semVerRegex = /^\d+\.\d+\.\d+$/
+        def semVerTag = findProperty("semVerTag")?.toString()?.trim()
+        if (semVerTag && semVerTag.matches(semVerRegex) && tag == "latest") {
+            tags = [semVerTag + suffix]
+        } else {
+            tags = []  // Explicitly set an empty list if no valid SemVer tag
+        }
+    }
+}
+
 task jibJvm(type: com.google.cloud.tools.jib.gradle.BuildImageTask) {
     group = 'Docker'
     description = 'Creates image with jvm build, and the native binary when -PimageArch and -PnativeDir are given'
     jibExtension = project.extensions.getByName('jib')
     dependsOn 'jar', jibExtraDirectory
-    doFirst {
-        jib {
-            container {
-                ports = ["8080", "8443", "2375"]
-                volumes = ["/config", "/data"]
-                entrypoint = ["/app/sysapi-launcher"]
-                environment = [
-                        "LD_PRELOAD": "libjemalloc.so.2",
-                        "MALLOC_CONF": "background_thread:true,dirty_decay_ms:5000,muzzy_decay_ms:5000,narenas:4"
-                ]
-            }
-            extraDirectories {
-                paths {
-                    path {
-                        from = jibExtraDirectory.get().destinationDir
-                        into = '/'
-                    }
-                }
-                permissions = [
-                        '/app/sysapi-launcher': '755',
-                        '/app/native/*/sysapi': '755'
-                ]
-            }
-            from {
-                image = 'krillsson/openjdk21-ubuntu-systemd:latest'
-                platforms {
-                    (imageArch ? [imageArch] : ['amd64', 'arm64']).each { arch ->
-                        platform {
-                            architecture = arch
-                            os = 'linux'
-                        }
-                    }
-                }
-            }
-            to {
-                def tag = findProperty("buildType") == "release" ? "latest" : "nightly"
-                def suffix = imageArch ? "-$imageArch" : ""
-                image = "krillsson/sys-api:$tag$suffix"
-                def semVerRegex = /^\d+\.\d+\.\d+$/
-                def semVerTag = findProperty("semVerTag")?.toString()?.trim()
-                if (semVerTag && semVerTag.matches(semVerRegex) && tag == "latest") {
-                    tags = [semVerTag + suffix]
-                } else {
-                    tags = []  // Explicitly set an empty list if no valid SemVer tag
-                }
-            }
-        }
-    }
 }
 
 shadowJar {
