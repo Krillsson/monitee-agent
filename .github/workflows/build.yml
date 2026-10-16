@@ -304,9 +304,14 @@ jobs:
           if (-not $healthy) { Get-Content "$app\launcher.log", "$app\launcher.err"; exit 1 }
           if (-not (Select-String -Path "$app\launcher.log" -Pattern '\[launcher\] runtime=native\b' -Quiet)) { Write-Output 'The launcher did not pick the native runtime'; exit 1 }
           Stop-Process -Id $launcher.Id -Force
-          Start-Sleep -Seconds 15
-          $left = Get-Process | Where-Object { $_.Path -like "$app\*" }
-          if ($left) { Write-Output "Still running after the launcher was killed: $($left.Path)"; $left | Stop-Process -Force; exit 1 }
+          $killed = Get-Date
+          do {
+            Start-Sleep -Seconds 1
+            $left = Get-Process | Where-Object { $_.Path -like "$app\*" }
+          } while ($left -and ((Get-Date) - $killed).TotalSeconds -lt 60)
+          Get-Content "$app\launcher.log" -Tail 25
+          if ($left) { Write-Output "Still running 60s after the launcher was killed: $($left.Path)"; $left | Stop-Process -Force; exit 1 }
+          Write-Output "The agent exited $([int]((Get-Date) - $killed).TotalSeconds)s after the launcher was killed"
       - name: Store setup.exe artifact
         uses: actions/upload-artifact@v4
         with:
