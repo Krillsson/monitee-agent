@@ -5,7 +5,6 @@ import com.krillsson.sysapi.util.logger
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.bitlet.weupnp.GatewayDevice
-import org.bitlet.weupnp.GatewayDiscover
 import org.bitlet.weupnp.PortMappingEntry
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
 import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext
@@ -16,9 +15,12 @@ import java.net.InetAddress
 class UpnpIgd(
     private val configuration: YAMLConfigFile,
     private val serverApplicationContext: ServletWebServerApplicationContext,
+    private val gatewayLocator: GatewayLocator,
     ) {
 
     private val logger by logger()
+
+    private var mappedGateway: GatewayDevice? = null
 
     companion object {
         private const val PROTOCOL = "TCP"
@@ -32,9 +34,15 @@ class UpnpIgd(
                     getActiveGateway()?.let { activeGW ->
                         logger.info("Attempting to open $port using UPnP-IGD")
                         val localAddress = activeGW.localAddress
-                        val availability = checkPortAvailability(activeGW, port)
-                        if (availability == PortMappingAvailability.Available) {
-                            requestPortMapping(activeGW, port, localAddress)
+                        when (checkPortAvailability(activeGW, port)) {
+                            PortMappingAvailability.Available -> {
+                                if (requestPortMapping(activeGW, port, localAddress)) {
+                                    mappedGateway = activeGW
+                                }
+                            }
+
+                            PortMappingAvailability.AlreadyMappedToThisDevice -> mappedGateway = activeGW
+                            PortMappingAvailability.AlreadyMappedToAnotherDevice -> Unit
                         }
                     }
                 }
@@ -48,7 +56,7 @@ class UpnpIgd(
         activeGW: GatewayDevice,
         port: Int,
         localAddress: InetAddress
-    ) {
+    ): Boolean {
         logger.info("Requesting static lease for ${localAddress.hostAddress} internal: $PROTOCOL/$port external: $PROTOCOL/$port")
         val mappingResult = activeGW.addPortMapping(
             /* externalPort = */ port,
@@ -62,6 +70,7 @@ class UpnpIgd(
         } else {
             logger.info("Mapping request failed")
         }
+        return mappingResult
     }
 
     enum class PortMappingAvailability {
@@ -95,9 +104,7 @@ class UpnpIgd(
     }
 
     private fun getActiveGateway(): GatewayDevice? {
-        val gatewayDiscover = GatewayDiscover()
-        gatewayDiscover.discover()
-        val activeGW = gatewayDiscover.validGateway
+        val activeGW = gatewayLocator.find()
         return if (null != activeGW) {
             logger.info("Using gateway: " + activeGW.friendlyName)
             activeGW
@@ -109,20 +116,14 @@ class UpnpIgd(
 
     @PreDestroy
     fun stop() {
-        if (configuration.upnp.enabled) {
-            try {
-                httpsPort().let { port ->
-                    getActiveGateway()?.let { device ->
-                        val availability = checkPortAvailability(device, port)
-                        if (availability == PortMappingAvailability.AlreadyMappedToThisDevice) {
-                            logger.info("Releasing static lease to $port")
-                            device.deletePortMapping(port, PROTOCOL)
-                        }
-                    }
-                }
-            } catch (exception: Exception) {
-                logger.error("Error occurred while releasing UPnP-IGD mapping", exception)
-            }
+        val device = mappedGateway ?: return
+        try {
+            val port = httpsPort()
+            logger.info("Releasing static lease to $port")
+            device.deletePortMapping(port, PROTOCOL)
+            mappedGateway = null
+        } catch (exception: Exception) {
+            logger.error("Error occurred while releasing UPnP-IGD mapping", exception)
         }
     }
 
