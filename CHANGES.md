@@ -2,6 +2,7 @@
 
 - HTTPS check results record the expiry, issue date, issuer and subject of the leaf certificate, also exposed as `HttpCheck.certificate` with `daysUntilExpiry`.
 - New `CHECK_CERTIFICATE_EXPIRY` monitor type alerts when an HTTPS check's certificate has fewer days left than its warning and critical thresholds.
+- Fix: Warning notifications show the warning threshold that was crossed and the critical threshold, and the title says high/low or critical.
 
 ### 0.48.0
 

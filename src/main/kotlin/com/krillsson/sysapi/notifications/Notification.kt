@@ -15,6 +15,7 @@ sealed interface Notification {
         val monitorType: Monitor.Type,
         val startTime: Instant,
         val threshold: MonitoredValue,
+        val warningThreshold: MonitoredValue?,
         val value: MonitoredValue,
         val inertia: Duration,
         val severity: EventSeverity
