@@ -60,7 +60,7 @@ class MonitorManager(
                 )
                 outcome?.let {
                     if (it.notify) {
-                        notificationManager.notify(it.event.asNotification(monitor.config.inertia))
+                        notificationManager.notify(it.event.asNotification(monitor.config))
                     }
                     eventManager.add(it.event)
                 }
@@ -259,7 +259,7 @@ class MonitorManager(
         ) != null
     }
 
-    private fun Event.asNotification(inertia: Duration): Notification {
+    private fun Event.asNotification(config: MonitorConfig<out MonitoredValue>): Notification {
         return when (this) {
             is PastEvent -> Notification.ResolvedEvent(
                 id = id,
@@ -280,7 +280,8 @@ class MonitorManager(
                 monitorType = monitorType,
                 startTime = startTime,
                 threshold = threshold,
-                inertia = inertia,
+                warningThreshold = config.warningThreshold,
+                inertia = config.inertia,
                 value = value,
                 severity = severity
             )

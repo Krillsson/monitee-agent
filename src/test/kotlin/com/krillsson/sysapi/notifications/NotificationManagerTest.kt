@@ -91,6 +91,7 @@ class NotificationManagerTest {
         monitorType = Monitor.Type.CPU_LOAD,
         startTime = now,
         threshold = MonitoredValue.FractionalValue(0.9f),
+        warningThreshold = null,
         value = MonitoredValue.FractionalValue(0.95f),
         inertia = Duration.ZERO,
         severity = severity
