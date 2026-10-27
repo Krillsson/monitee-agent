@@ -13,6 +13,7 @@
 - Fix: Warning notifications show the warning threshold that was crossed and the critical threshold, and the title says high/low or critical.
 - Fix: The `EXTERNAL_IP_CHANGED` monitor fires on a changed external IP also when its inertia is 5 minutes or longer.
 - `storagePools` reports md/mdadm and Unraid array state, member devices and parity/resync progress, plus a `STORAGE_POOL_HEALTH` monitor for a degraded pool. Read straight from /proc and /sys, no extra privileges needed.
+- `storagePools` also reports btrfs filesystems with their missing devices and error counters, and the state of every imported ZFS pool.
 
 ### 0.48.0
 
