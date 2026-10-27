@@ -26,6 +26,7 @@ type StoragePool {
     sizeBytes: Long
     allocatedBytes: Long
     freeBytes: Long
+    # Empty for ZFS pools, whose kernel interface only reports the pool state
     devices: [StoragePoolDevice!]!
     scan: StoragePoolScan
     dataSource: StoragePoolDataSource!
@@ -49,6 +50,8 @@ enum StoragePoolState {
 
 type StoragePoolDevice {
     id: ID!
+    # btrfs devices are named "devid N" unless the filesystem has one device, as sysfs doesn't say
+    # which block device belongs to which devid
     name: String!
     path: String
     role: StoragePoolDeviceRole!
