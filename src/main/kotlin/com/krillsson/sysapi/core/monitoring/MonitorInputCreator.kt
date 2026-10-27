@@ -21,6 +21,9 @@ import com.krillsson.sysapi.core.domain.processes.ProcessSort
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.check.Check
+import com.krillsson.sysapi.core.check.HttpCheck
+import com.krillsson.sysapi.core.check.certificate
+import com.krillsson.sysapi.core.monitoring.monitors.CheckCertificateExpiryMonitor
 import com.krillsson.sysapi.core.check.CheckService
 import com.krillsson.sysapi.core.check.CheckType
 import com.krillsson.sysapi.docker.ContainerService
@@ -32,6 +35,7 @@ import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.util.measureTimeMillis
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -133,6 +137,9 @@ class MonitorInputCreator(
         val checkResults = activeTypes.filter { checkTypes.contains(it.type) }.mapNotNull {
             checkService.latestResult(UUID.fromString(it.config.monitoredItemId))
         }
+        val checkCertificateResults = activeTypes.filter { it.type == Monitor.Type.CHECK_CERTIFICATE_EXPIRY }.mapNotNull {
+            checkService.latestResultWithCertificate(UUID.fromString(it.config.monitoredItemId))
+        }
 
         val load = SystemLoad(
             uptime = metrics.cpuMetrics().uptime(),
@@ -162,7 +169,8 @@ class MonitorInputCreator(
             containersStats,
             containerImageUpdates,
             checkResults,
-            upsDeviceMetrics
+            upsDeviceMetrics,
+            checkCertificateResults
         )
     }
 
@@ -284,6 +292,12 @@ class MonitorInputCreator(
                     val check =
                         requireNotNull(checkService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
                     createCheckLatencyMonitorableItem(check)
+                }
+
+                Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> {
+                    val check =
+                        requireNotNull(checkService.getById(UUID.fromString(requireNotNull(monitor.config.monitoredItemId))))
+                    createCheckCertificateExpiryMonitorableItem(check)
                 }
 
                 Monitor.Type.EXTERNAL_IP_CHANGED -> getMonitorableItemForType(monitor.type).first()
@@ -541,6 +555,12 @@ class MonitorInputCreator(
                 }
             }
 
+            Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> {
+                checkService.getAll().filter { it.isHttps() }.map {
+                    createCheckCertificateExpiryMonitorableItem(it)
+                }
+            }
+
             Monitor.Type.DISK_TEMPERATURE -> {
                 val diskLoads =
                     metrics.diskMetrics().diskLoads().filter { it.temperature != null }.associateBy { it.name }
@@ -711,6 +731,18 @@ class MonitorInputCreator(
         currentValue = (checkService.latestResult(it.id)?.latencyMs ?: 0L).toNumericalValue(),
         type = Monitor.Type.CHECK_LATENCY
     )
+
+    private fun createCheckCertificateExpiryMonitorableItem(it: Check) = MonitorableItem(
+        id = it.id.toString(),
+        name = it.name,
+        description = "Serves a certificate that is not about to expire",
+        maxValue = CheckCertificateExpiryMonitor.LONGEST_TRUSTED_LIFETIME_DAYS.toNumericalValue(),
+        currentValue = (checkService.latestResultWithCertificate(it.id)?.certificate()
+            ?.daysUntilExpiry(Instant.now()) ?: 0).toNumericalValue(),
+        type = Monitor.Type.CHECK_CERTIFICATE_EXPIRY
+    )
+
+    private fun Check.isHttps() = this is HttpCheck && url.startsWith("https://", ignoreCase = true)
 
     private fun createExternalIpChangeMonitorableItem(connectivity: Connectivity) = MonitorableItem(
         id = null,

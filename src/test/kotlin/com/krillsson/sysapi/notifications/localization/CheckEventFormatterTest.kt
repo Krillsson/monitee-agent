@@ -7,6 +7,8 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.util.UUID
 
 class CheckEventFormatterTest {
@@ -81,5 +83,35 @@ class CheckEventFormatterTest {
         // Then
         ongoing shouldBe "example.com answered in 500ms, above 300ms"
         resolved shouldBe "example.com is back below 300ms at 150ms after 5 minutes"
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "23, 'The certificate of example.com expires in 23 days, below 30 days'",
+        "1, 'The certificate of example.com expires in 1 day, below 30 days'",
+        "0, The certificate of example.com expires today",
+        "-2, The certificate of example.com has expired"
+    )
+    fun `describes how soon a certificate expires`(days: Long, expected: String) {
+        // Given
+        every { checkService.getById(checkId) } returns httpCheck("example.com")
+
+        // When
+        val ongoing = formatter.formatCertificateExpiryOngoingDescription(checkId.toString(), days, "30 days")
+
+        // Then
+        ongoing shouldBe expected
+    }
+
+    @Test
+    fun `describes a renewed certificate`() {
+        // Given
+        every { checkService.getById(checkId) } returns httpCheck("example.com")
+
+        // When
+        val resolved = formatter.formatCertificateExpiryResolvedDescription(checkId.toString(), "89 days", "2 days")
+
+        // Then
+        resolved shouldBe "The certificate of example.com is valid for 89 days again after 2 days"
     }
 }

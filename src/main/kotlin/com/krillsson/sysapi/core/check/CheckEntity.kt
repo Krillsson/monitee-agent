@@ -53,7 +53,11 @@ class CheckResultEntity(
     val responseCode: Int?,
     val errorBody: String?,
     @Convert(converter = StringListJsonConverter::class)
-    val resolvedValues: List<String>?
+    val resolvedValues: List<String>?,
+    val certificateExpiresAt: Instant? = null,
+    val certificateIssuedAt: Instant? = null,
+    val certificateIssuer: String? = null,
+    val certificateSubject: String? = null
 )
 
 enum class BucketResolution {

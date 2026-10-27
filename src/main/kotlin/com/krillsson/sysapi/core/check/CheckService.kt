@@ -76,6 +76,9 @@ class CheckService(
     fun latestResult(id: UUID): CheckResult? =
         resultRepository.findFirstByCheckIdOrderByTimestampDesc(id).getOrNull()?.asDomain()
 
+    fun latestResultWithCertificate(id: UUID): CheckResult? =
+        resultRepository.findFirstByCheckIdAndCertificateExpiresAtIsNotNullOrderByTimestampDesc(id).getOrNull()?.asDomain()
+
     fun create(spec: CheckSpec): CreateCheckResult {
         validate(spec)?.let { return CreateCheckResult.Fail(it) }
         val id = UUID.randomUUID()
@@ -112,6 +115,7 @@ class CheckService(
         logger.debug("Deleting check: {}", entity.displayName())
         monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.WEBSERVER_UP, id.toString())
         monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_LATENCY, id.toString())
+        monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_CERTIFICATE_EXPIRY, id.toString())
         repository.delete(entity)
         resultRepository.deleteAllByCheckId(id)
         bucketRepository.deleteAllByCheckId(id)
@@ -155,7 +159,11 @@ class CheckService(
                 message = stored.message,
                 responseCode = stored.responseCode,
                 errorBody = stored.errorBody,
-                resolvedValues = stored.resolvedValues
+                resolvedValues = stored.resolvedValues,
+                certificateExpiresAt = stored.certificateExpiresAt,
+                certificateIssuedAt = stored.certificateIssuedAt,
+                certificateIssuer = stored.certificateIssuer,
+                certificateSubject = stored.certificateSubject
             )
         )
         return stored

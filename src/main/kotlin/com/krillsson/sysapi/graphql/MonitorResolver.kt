@@ -19,6 +19,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorableItem
 import com.krillsson.sysapi.core.monitoring.event.EventManager
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.core.check.CheckHistoryService
+import com.krillsson.sysapi.core.check.certificate
 import com.krillsson.sysapi.docker.ContainersHistoryRepository
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.ups.UpsMetricsHistoryRepository
@@ -87,6 +88,16 @@ class MonitorResolver(
         com.krillsson.sysapi.core.monitoring.Monitor.Type.CHECK_LATENCY ->
             checkResults(monitor, from, to).filter { it.successful }.map {
                 MonitoredValueHistoryEntry(it.timestamp, it.latencyMs.toNumericalValue().asMonitoredValue())
+            }
+
+        com.krillsson.sysapi.core.monitoring.Monitor.Type.CHECK_CERTIFICATE_EXPIRY ->
+            checkResults(monitor, from, to).mapNotNull { result ->
+                result.certificate()?.let {
+                    MonitoredValueHistoryEntry(
+                        result.timestamp,
+                        it.daysUntilExpiry(result.timestamp).toNumericalValue().asMonitoredValue()
+                    )
+                }
             }
 
         com.krillsson.sysapi.core.monitoring.Monitor.Type.DISK_SMART_HEALTH -> smartHealthEntries(monitor, from, to)

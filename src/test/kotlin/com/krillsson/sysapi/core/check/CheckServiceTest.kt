@@ -234,6 +234,9 @@ class CheckServiceTest {
         removed shouldBe true
         verify { monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.WEBSERVER_UP, CHECK_ID.toString()) }
         verify { monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_LATENCY, CHECK_ID.toString()) }
+        verify {
+            monitorManager.removeMonitorOfTypeByMonitoredItemId(Monitor.Type.CHECK_CERTIFICATE_EXPIRY, CHECK_ID.toString())
+        }
         verify { resultRepository.deleteAllByCheckId(CHECK_ID) }
         verify { bucketRepository.deleteAllByCheckId(CHECK_ID) }
     }
@@ -253,6 +256,31 @@ class CheckServiceTest {
         success.result.checkId shouldBe CHECK_ID
         success.result.id shouldBe saved.captured.id
         saved.captured.successful shouldBe true
+    }
+
+    @Test
+    fun `keeps the certificate of a result through storing and reading it back`() {
+        // Given
+        every { repository.findById(CHECK_ID) } returns Optional.of(httpCheckEntity())
+        every { probe.probe(any()) } returns probeResult(CheckType.HTTP).copy(
+            certificateExpiresAt = Instant.parse("2026-09-01T00:00:00Z"),
+            certificateIssuedAt = Instant.parse("2026-06-03T00:00:00Z"),
+            certificateIssuer = "R11",
+            certificateSubject = "example.com"
+        )
+        val saved = slot<CheckResultEntity>()
+        every { resultRepository.save(capture(saved)) } answers { saved.captured }
+        service.runNow(CHECK_ID)
+        every { resultRepository.findFirstByCheckIdOrderByTimestampDesc(CHECK_ID) } answers { Optional.of(saved.captured) }
+
+        // When
+        val latest = service.latestResult(CHECK_ID)
+
+        // Then
+        latest?.certificateExpiresAt shouldBe Instant.parse("2026-09-01T00:00:00Z")
+        latest?.certificateIssuedAt shouldBe Instant.parse("2026-06-03T00:00:00Z")
+        latest?.certificateIssuer shouldBe "R11"
+        latest?.certificateSubject shouldBe "example.com"
     }
 
     @Test

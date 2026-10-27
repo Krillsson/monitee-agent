@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.notifications.localization
 
 import com.krillsson.sysapi.core.monitoring.Monitor
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
 import org.springframework.stereotype.Component
 
@@ -38,6 +39,7 @@ class OngoingEventFormatter(
                 Monitor.Type.CONNECTIVITY -> "Connection is down on $serverName"
                 Monitor.Type.WEBSERVER_UP -> "Check is failing on $serverName"
                 Monitor.Type.CHECK_LATENCY -> "Check is slow on $serverName"
+                Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> "Certificate expiring on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP changed on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load too high on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS not operating normally on $serverName"
@@ -103,6 +105,11 @@ class OngoingEventFormatter(
                 Monitor.Type.CHECK_LATENCY -> checkEventFormatter.formatCheckLatencyOngoingDescription(
                     monitoredItemId,
                     formattedValue,
+                    formattedThreshold
+                )
+                Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> checkEventFormatter.formatCertificateExpiryOngoingDescription(
+                    monitoredItemId,
+                    (value as MonitoredValue.NumericalValue).value,
                     formattedThreshold
                 )
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId went above $formattedThreshold to $formattedValue"

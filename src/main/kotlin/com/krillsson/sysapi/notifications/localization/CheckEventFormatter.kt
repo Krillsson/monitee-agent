@@ -32,6 +32,24 @@ class CheckEventFormatter(
     ): String =
         "${displayName(monitoredItemId)} is back below $formattedThreshold at $formattedValue after $formattedDuration"
 
+    fun formatCertificateExpiryOngoingDescription(
+        monitoredItemId: String?,
+        daysUntilExpiry: Long,
+        formattedThreshold: String,
+    ): String = when {
+        daysUntilExpiry < 0 -> "The certificate of ${displayName(monitoredItemId)} has expired"
+        daysUntilExpiry == 0L -> "The certificate of ${displayName(monitoredItemId)} expires today"
+        else -> "The certificate of ${displayName(monitoredItemId)} expires in ${formatDays(daysUntilExpiry)}, " +
+            "below $formattedThreshold"
+    }
+
+    fun formatCertificateExpiryResolvedDescription(
+        monitoredItemId: String?,
+        formattedValue: String,
+        formattedDuration: String,
+    ): String =
+        "The certificate of ${displayName(monitoredItemId)} is valid for $formattedValue again after $formattedDuration"
+
     private fun displayName(monitoredItemId: String?): String? =
         monitoredItemId
             ?.let { runCatching { UUID.fromString(it) }.getOrNull() }

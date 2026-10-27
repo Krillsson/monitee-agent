@@ -32,6 +32,7 @@ abstract class Monitor<out T : MonitoredValue> {
         CONNECTIVITY(ValueType.Conditional),
         WEBSERVER_UP(ValueType.Conditional),
         CHECK_LATENCY(ValueType.Numerical),
+        CHECK_CERTIFICATE_EXPIRY(ValueType.Numerical),
         EXTERNAL_IP_CHANGED(ValueType.Conditional),
         DISK_SMART_HEALTH(ValueType.Enum),
         UPS_OPERATING_NORMALLY(ValueType.Conditional),

@@ -1,5 +1,8 @@
 ### Unreleased
 
+- HTTPS check results record the expiry, issue date, issuer and subject of the leaf certificate, also exposed as `HttpCheck.certificate` with `daysUntilExpiry`.
+- New `CHECK_CERTIFICATE_EXPIRY` monitor type alerts when an HTTPS check's certificate has fewer days left than its warning and critical thresholds.
+
 ### 0.48.0
 
 - Major changes: native image by default

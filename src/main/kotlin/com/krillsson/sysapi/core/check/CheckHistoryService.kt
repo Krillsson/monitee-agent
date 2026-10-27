@@ -228,5 +228,9 @@ fun CheckResultEntity.asDomain() = CheckResult(
     message = message,
     responseCode = responseCode,
     errorBody = errorBody,
-    resolvedValues = resolvedValues
+    resolvedValues = resolvedValues,
+    certificateExpiresAt = certificateExpiresAt,
+    certificateIssuedAt = certificateIssuedAt,
+    certificateIssuer = certificateIssuer,
+    certificateSubject = certificateSubject
 )
