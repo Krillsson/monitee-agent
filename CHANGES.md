@@ -1,6 +1,7 @@
 ### Unreleased
 
 - `storagePools` reports md/mdadm and Unraid array state, member devices and parity/resync progress, plus a `STORAGE_POOL_HEALTH` monitor for a degraded pool. Read straight from /proc and /sys, no extra privileges needed.
+- `storagePools` also reports btrfs filesystems with their missing devices and error counters, and the state of every imported ZFS pool.
 
 ### 0.48.0
 
