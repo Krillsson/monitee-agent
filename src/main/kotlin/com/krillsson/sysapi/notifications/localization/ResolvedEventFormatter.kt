@@ -40,6 +40,7 @@ class ResolvedEventFormatter(
                 Monitor.Type.CONNECTIVITY -> "Connection is back on $serverName"
                 Monitor.Type.WEBSERVER_UP -> "Check is passing again on $serverName"
                 Monitor.Type.CHECK_LATENCY -> "Check is quick again on $serverName"
+                Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> "Certificate renewed on $serverName"
                 Monitor.Type.EXTERNAL_IP_CHANGED -> "External IP back to normal on $serverName"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "Load back to normal on UPS $serverName"
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS operating normally again on $serverName"
@@ -111,6 +112,11 @@ class ResolvedEventFormatter(
                 Monitor.Type.CHECK_LATENCY -> checkEventFormatter.formatCheckLatencyResolvedDescription(
                     monitoredItemId,
                     formattedThreshold,
+                    formattedValue,
+                    formattedDuration
+                )
+                Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> checkEventFormatter.formatCertificateExpiryResolvedDescription(
+                    monitoredItemId,
                     formattedValue,
                     formattedDuration
                 )

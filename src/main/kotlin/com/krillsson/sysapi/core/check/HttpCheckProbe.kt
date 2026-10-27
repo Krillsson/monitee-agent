@@ -1,6 +1,8 @@
 package com.krillsson.sysapi.core.check
 
 import com.krillsson.sysapi.util.logger
+import okhttp3.Handshake.Companion.handshake
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -12,6 +14,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocket
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
@@ -78,6 +81,7 @@ class HttpCheckProbe {
             !keywordMatches -> "Body does not contain \"${spec.keyword}\""
             else -> response.message.ifBlank { "OK" }
         }
+        val certificate = response.leafCertificate()
         return CheckResult(
             id = null,
             checkId = null,
@@ -88,8 +92,19 @@ class HttpCheckProbe {
             message = message,
             responseCode = response.code,
             errorBody = body?.take(ERROR_BODY_LIMIT.toInt()),
-            resolvedValues = null
+            resolvedValues = null,
+            certificateExpiresAt = certificate?.expiresAt,
+            certificateIssuedAt = certificate?.issuedAt,
+            certificateIssuer = certificate?.issuer,
+            certificateSubject = certificate?.subject
         )
+    }
+
+    private fun Response.leafCertificate(): CheckCertificate? = try {
+        (handshake?.peerCertificates?.firstOrNull() as? X509Certificate)?.asCheckCertificate()
+    } catch (exception: Exception) {
+        logger.debug("Could not read the certificate of {}: {}", request.url, exception.message)
+        null
     }
 
     private fun clientFor(spec: HttpCheckSpec): OkHttpClient {
@@ -125,6 +140,16 @@ class HttpCheckProbe {
         }
         return sslSocketFactory(sslContext.socketFactory, trustManager)
             .hostnameVerifier { _, _ -> true }
+            .addNetworkInterceptor(::withUnverifiedHandshake)
             .build()
+    }
+
+    // OkHttp only exposes peer certificates it can chain to a trusted root and silently reports none
+    // otherwise, so with every certificate trusted the chain has to be read from the TLS session.
+    private fun withUnverifiedHandshake(chain: Interceptor.Chain): Response {
+        val response = chain.proceed(chain.request())
+        val session = (chain.connection()?.socket() as? SSLSocket)?.session ?: return response
+        val handshake = runCatching { session.handshake() }.getOrNull() ?: return response
+        return response.newBuilder().handshake(handshake).build()
     }
 }

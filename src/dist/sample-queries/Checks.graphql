@@ -293,3 +293,35 @@ mutation MonitorCheckLatency($id: String!) {
         monitorId
     }
 }
+
+# The certificate an HTTPS check was last served, for showing "expires in 23 days".
+query CheckCertificate($id: UUID!) {
+    checkById(id: $id) {
+        ... on HttpCheck {
+            url
+            certificate {
+                expiresAt
+                issuedAt
+                issuer
+                subject
+                daysUntilExpiry
+            }
+        }
+    }
+}
+
+# Warn 30 days before an HTTPS check's certificate expires and escalate at 7. The value is days
+# left, so this monitor alerts below its thresholds and the warning threshold is the larger one.
+mutation MonitorCheckCertificateExpiry($id: String!) {
+    createNumericalValueMonitor(
+        input: {
+            inertiaInSeconds: 0,
+            type: CHECK_CERTIFICATE_EXPIRY,
+            threshold: 7,
+            warningThreshold: 30,
+            monitoredItemId: $id
+        }
+    ) {
+        monitorId
+    }
+}

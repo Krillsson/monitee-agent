@@ -14,4 +14,5 @@ class MonitorInput(
     val containerImageUpdates: List<ContainerImageUpdate>,
     val checkResults: List<CheckResult>,
     val upsDeviceMetrics: List<UpsDevice.Metrics>,
+    val checkCertificateResults: List<CheckResult> = emptyList(),
 )

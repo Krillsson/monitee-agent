@@ -158,8 +158,21 @@ data class CheckResult(
     val message: String,
     val responseCode: Int?,
     val errorBody: String?,
-    val resolvedValues: List<String>?
+    val resolvedValues: List<String>?,
+    val certificateExpiresAt: Instant? = null,
+    val certificateIssuedAt: Instant? = null,
+    val certificateIssuer: String? = null,
+    val certificateSubject: String? = null
 )
+
+fun CheckResult.certificate(): CheckCertificate? = certificateExpiresAt?.let {
+    CheckCertificate(
+        expiresAt = it,
+        issuedAt = certificateIssuedAt,
+        issuer = certificateIssuer,
+        subject = certificateSubject
+    )
+}
 
 enum class CheckResolution {
     AUTO, RAW, HOURLY, DAILY

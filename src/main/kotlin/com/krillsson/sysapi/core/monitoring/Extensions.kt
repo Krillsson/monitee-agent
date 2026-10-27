@@ -60,6 +60,7 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.CONNECTIVITY,
         Monitor.Type.WEBSERVER_UP,
         Monitor.Type.CHECK_LATENCY,
+        Monitor.Type.CHECK_CERTIFICATE_EXPIRY,
         Monitor.Type.EXTERNAL_IP_CHANGED,
         Monitor.Type.UPS_OPERATING_NORMALLY,
         Monitor.Type.UPS_LOAD_WATT,

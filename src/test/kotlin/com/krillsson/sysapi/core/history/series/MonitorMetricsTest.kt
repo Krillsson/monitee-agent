@@ -14,6 +14,7 @@ class MonitorMetricsTest {
         Monitor.Type.DISK_SMART_HEALTH,
         Monitor.Type.WEBSERVER_UP,
         Monitor.Type.CHECK_LATENCY,
+        Monitor.Type.CHECK_CERTIFICATE_EXPIRY,
         Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
         Monitor.Type.PROCESS_MEMORY_SPACE,
         Monitor.Type.PROCESS_CPU_LOAD,

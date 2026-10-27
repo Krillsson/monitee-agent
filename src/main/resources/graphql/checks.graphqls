@@ -73,6 +73,22 @@ type HttpCheck implements Check {
     ignoreCertificateErrors: Boolean!
     followRedirects: Boolean!
     headers: [HttpHeader!]!
+    # The leaf certificate from the most recent result that completed a TLS handshake. With
+    # followRedirects it is the certificate of the host the redirects end at. Null for plain
+    # HTTP and until a handshake has succeeded within the raw retention window
+    certificate: CheckCertificate
+}
+
+type CheckCertificate {
+    expiresAt: Instant!
+    issuedAt: Instant
+    # The common name of the issuer, or its full distinguished name when it has none
+    issuer: String
+    # The common name of the subject, or its full distinguished name when it has none
+    subject: String
+    # Whole days left until expiresAt, rounded down, so it is negative once the certificate has
+    # expired
+    daysUntilExpiry: Int!
 }
 
 type TcpCheck implements Check {
@@ -177,6 +193,13 @@ type CheckResult {
     errorBody: String
     # DNS only. The records the lookup answered with
     resolvedValues: [String!]
+    # HTTPS only. The leaf certificate the final response was served with, also when
+    # ignoreCertificateErrors accepted it despite being expired or untrusted. Null for plain
+    # HTTP and when the probe failed before the handshake completed
+    certificateExpiresAt: Instant
+    certificateIssuedAt: Instant
+    certificateIssuer: String
+    certificateSubject: String
 }
 
 enum CheckResolution {

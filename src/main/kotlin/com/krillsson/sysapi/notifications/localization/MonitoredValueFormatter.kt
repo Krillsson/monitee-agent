@@ -56,6 +56,7 @@ class MonitoredValueFormatter(
 
             Monitor.Type.WEBSERVER_UP -> if ((value as MonitoredValue.ConditionalValue).value) "up" else "down"
             Monitor.Type.CHECK_LATENCY -> "${(value as MonitoredValue.NumericalValue).value}ms"
+            Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> formatDays((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.DISK_TEMPERATURE -> temperatureFormatter.format((value as MonitoredValue.NumericalValue).value.toInt())
             Monitor.Type.UPS_OPERATING_NORMALLY -> if ((value as MonitoredValue.ConditionalValue).value) "operating normally" else "not operating normally"
             Monitor.Type.UPS_LOAD_PERCENTAGE -> formatPercent(
@@ -78,3 +79,5 @@ class MonitoredValueFormatter(
         return String.format("%.0f%%", percent)
     }
 }
+
+fun formatDays(days: Long): String = if (days == 1L || days == -1L) "$days day" else "$days days"

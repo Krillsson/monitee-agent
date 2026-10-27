@@ -15,6 +15,8 @@ interface CheckRepository : JpaRepository<CheckEntity, UUID>
 interface CheckResultRepository : JpaRepository<CheckResultEntity, UUID> {
     fun findFirstByCheckIdOrderByTimestampDesc(checkId: UUID): Optional<CheckResultEntity>
 
+    fun findFirstByCheckIdAndCertificateExpiresAtIsNotNullOrderByTimestampDesc(checkId: UUID): Optional<CheckResultEntity>
+
     fun findFirstByCheckIdOrderByTimestampAsc(checkId: UUID): Optional<CheckResultEntity>
 
     fun findFirstByCheckIdAndTimestampLessThanOrderByTimestampDesc(

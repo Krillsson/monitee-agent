@@ -110,6 +110,11 @@ class MonitorFactory {
                 config as MonitorConfig<MonitoredValue.NumericalValue>
             )
 
+            Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> CheckCertificateExpiryMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
+
             Monitor.Type.DISK_TEMPERATURE -> DiskTemperatureMonitor(
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>

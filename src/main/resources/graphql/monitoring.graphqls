@@ -380,6 +380,10 @@ enum MonitorType {
     EXTERNAL_IP_CHANGED,
     WEBSERVER_UP,
     CHECK_LATENCY,
+    # Days until the leaf certificate of an HTTPS check expires, negative once it has. Alerts when
+    # the value falls below the threshold, so a warning threshold is set above it (warn at 30,
+    # critical at 7). Read from the most recent result that completed a TLS handshake
+    CHECK_CERTIFICATE_EXPIRY,
     LOAD_AVERAGE_ONE_MINUTE,
     LOAD_AVERAGE_FIVE_MINUTES,
     LOAD_AVERAGE_FIFTEEN_MINUTES,

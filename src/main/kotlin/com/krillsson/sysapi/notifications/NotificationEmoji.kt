@@ -79,6 +79,8 @@ object NotificationEmoji {
 
         Monitor.Type.CHECK_LATENCY -> Emoji("🐌", "snail")
 
+        Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> Emoji("🔒", "lock")
+
         Monitor.Type.EXTERNAL_IP_CHANGED -> Emoji("📍", "round_pushpin")
 
         Monitor.Type.UPS_OPERATING_NORMALLY,
