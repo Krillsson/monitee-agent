@@ -142,4 +142,29 @@ class UnraidMdStatParserTest {
         // Then
         array.shouldBeNull()
     }
+
+    @Test
+    fun `reads the device name, disk id and size of each slot`() {
+        // Given
+        val text = """
+            mdState=STARTED
+            diskId.1=WDC_WD80EFAX-68KNBN0_VAJ12345
+            diskSize.1=7814026532
+            rdevStatus.1=DISK_OK
+            rdevName.1=sdd
+            diskId.29=
+            diskSize.29=0
+            rdevStatus.29=DISK_NP_DSBL
+            rdevName.29=
+        """.trimIndent()
+
+        // When
+        val array = UnraidMdStatParser.parse(text).shouldNotBeNull()
+
+        // Then
+        array.disks shouldBe listOf(
+            UnraidDisk(1, "DISK_OK", null, deviceName = "sdd", diskId = "WDC_WD80EFAX-68KNBN0_VAJ12345", diskSizeK = 7814026532L),
+            UnraidDisk(29, "DISK_NP_DSBL", null, deviceName = null, diskId = null, diskSizeK = 0L)
+        )
+    }
 }

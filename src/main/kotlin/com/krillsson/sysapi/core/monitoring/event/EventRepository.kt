@@ -6,11 +6,11 @@ import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toConditionalValue
+import com.krillsson.sysapi.core.monitoring.toEnumEntries
 import com.krillsson.sysapi.core.monitoring.toEnumValue
 import com.krillsson.sysapi.core.monitoring.toFractionalValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
 import com.krillsson.sysapi.core.monitoring.Monitor
-import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.util.toOffsetDateTime
 import org.springframework.stereotype.Component
 
@@ -58,17 +58,14 @@ class EventRepository(private val store: EventStore) {
         }
     }
 
-    private fun EventStore.StoredEvent.mapValueToMonitorValue(mapper: (EventStore.StoredEvent) -> Double): MonitoredValue {
+    private fun <E : Enum<E>> EventStore.StoredEvent.mapValueToMonitorValue(mapper: (EventStore.StoredEvent) -> Double): MonitoredValue {
         return when (monitorType.valueType) {
             Monitor.ValueType.Numerical -> mapper(this).toNumericalValue()
             Monitor.ValueType.Fractional -> mapper(this).toFractionalValue()
             Monitor.ValueType.Conditional -> mapper(this).toConditionalValue()
-            Monitor.ValueType.Enum -> {
-                when(monitorType){
-                    Monitor.Type.DISK_SMART_HEALTH -> mapper(this).toEnumValue(HealthStatus.entries)
-                    else -> throw IllegalStateException("Mapping missing for $monitorType")
-                }
-            }
+            Monitor.ValueType.Enum -> mapper(this).toEnumValue(
+                requireNotNull(monitorType.toEnumEntries<E>()) { "$monitorType is not mappable to enum entries" }
+            )
         }
     }
 
