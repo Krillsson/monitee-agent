@@ -5,7 +5,9 @@ import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MONITOR_ID
 import com.krillsson.sysapi.core.monitoring.Monitor
+import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
@@ -105,5 +107,25 @@ class EventRepositoryTest {
 
         // Then
         written.captured.single().severity shouldBe EventSeverity.WARNING
+    }
+
+    @Test
+    fun `reads back the enum value of a storage pool health event`() {
+        // Given
+        every { store.read() } returns listOf(
+            storedEvent(EventStore.StoredEvent.Type.ONGOING, severity = null).copy(
+                monitorType = Monitor.Type.STORAGE_POOL_HEALTH,
+                threshold = StoragePoolState.ONLINE.ordinal.toDouble(),
+                value = StoragePoolState.DEGRADED.ordinal.toDouble()
+            )
+        )
+
+        // When
+        val event = repository.read().single()
+
+        // Then
+        val ongoing = event.shouldBeInstanceOf<OngoingEvent>()
+        ongoing.threshold shouldBe MonitoredValue.EnumValue(StoragePoolState.ONLINE)
+        ongoing.value shouldBe MonitoredValue.EnumValue(StoragePoolState.DEGRADED)
     }
 }

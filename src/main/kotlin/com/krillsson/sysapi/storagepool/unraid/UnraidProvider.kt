@@ -21,8 +21,16 @@ class UnraidProvider(
 ) : StoragePoolProvider {
 
     companion object {
+        private const val PARITY_SLOT = 0
+        private const val PARITY2_SLOT = 29
+
+        fun isAssigned(disk: UnraidDisk): Boolean {
+            val notPresent = disk.status == "DISK_NP" || disk.status == "DISK_NP_DSBL"
+            return !(notPresent && disk.diskId == null && (disk.diskSizeK ?: 0L) == 0L)
+        }
+
         fun deriveState(array: UnraidArray): StoragePoolState {
-            val anyDiskUnhealthy = array.disks.any { it.status != null && it.status != "DISK_OK" }
+            val anyDiskUnhealthy = array.disks.filter(::isAssigned).any { it.status != null && it.status != "DISK_OK" }
             return when (array.mdState) {
                 "STARTED" -> if (anyDiskUnhealthy) StoragePoolState.DEGRADED else StoragePoolState.ONLINE
                 "STOPPED" -> StoragePoolState.UNAVAIL
@@ -39,7 +47,7 @@ class UnraidProvider(
             val position = array.resyncPosK ?: 0L
             val isRunning = array.syncCompletedAtEpochSeconds == 0L
             return StoragePoolScan(
-                kind = StoragePoolScanKind.PARITY_CHECK,
+                kind = if (array.resyncAction?.startsWith("recon") == true) StoragePoolScanKind.REBUILD else StoragePoolScanKind.PARITY_CHECK,
                 state = if (isRunning) StoragePoolScanState.SCANNING else if (array.syncExitCode == -4) StoragePoolScanState.CANCELED else StoragePoolScanState.FINISHED,
                 percentComplete = (position * 100f) / total,
                 bytesProcessed = position * 1024,
@@ -54,15 +62,21 @@ class UnraidProvider(
         private fun deviceState(status: String?): StoragePoolDeviceState {
             return when (status) {
                 "DISK_OK" -> StoragePoolDeviceState.ONLINE
-                "DISK_NP", "DISK_NP_MISSING" -> StoragePoolDeviceState.MISSING
-                "DISK_INVALID" -> StoragePoolDeviceState.FAULTY
-                "DISK_DSBL" -> StoragePoolDeviceState.FAULTY
+                "DISK_NP", "DISK_NP_MISSING", "DISK_NP_DSBL" -> StoragePoolDeviceState.MISSING
+                "DISK_INVALID", "DISK_WRONG", "DISK_DSBL" -> StoragePoolDeviceState.FAULTY
+                "DISK_DSBL_NEW" -> StoragePoolDeviceState.REBUILDING
                 null -> StoragePoolDeviceState.UNKNOWN
                 else -> StoragePoolDeviceState.UNKNOWN
             }
         }
 
-        private fun slotName(slot: Int) = if (slot == 0) "parity" else "disk$slot"
+        private fun slotName(slot: Int) = when (slot) {
+            PARITY_SLOT -> "parity"
+            PARITY2_SLOT -> "parity2"
+            else -> "disk$slot"
+        }
+
+        private fun isParity(slot: Int) = slot == PARITY_SLOT || slot == PARITY2_SLOT
     }
 
     override fun supported(): Boolean = readArray() != null
@@ -86,14 +100,14 @@ class UnraidProvider(
 
     private fun toStoragePool(array: UnraidArray): StoragePool {
         val diskInfoBySlotName = readDiskInfoBySlotName()
-        val devices = array.disks.map { disk ->
+        val devices = array.disks.filter(::isAssigned).map { disk ->
             val slotName = slotName(disk.slot)
             val info = diskInfoBySlotName[slotName]
             StoragePoolDevice(
                 id = slotName,
-                name = info?.device ?: slotName,
-                path = info?.device?.let { "/dev/$it" },
-                role = if (disk.slot == 0) StoragePoolDeviceRole.PARITY else StoragePoolDeviceRole.DATA,
+                name = info?.device ?: disk.deviceName ?: slotName,
+                path = (info?.device ?: disk.deviceName)?.let { "/dev/$it" },
+                role = if (isParity(disk.slot)) StoragePoolDeviceRole.PARITY else StoragePoolDeviceRole.DATA,
                 state = deviceState(disk.status),
                 readErrors = null,
                 writeErrors = null,

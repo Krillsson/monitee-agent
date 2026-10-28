@@ -3,7 +3,10 @@ package com.krillsson.sysapi.storagepool.unraid
 data class UnraidDisk(
     val slot: Int,
     val status: String?,
-    val numErrors: Long?
+    val numErrors: Long?,
+    val deviceName: String? = null,
+    val diskId: String? = null,
+    val diskSizeK: Long? = null
 )
 
 data class UnraidArray(
@@ -39,7 +42,10 @@ object UnraidMdStatParser {
             UnraidDisk(
                 slot = slot,
                 status = values["rdevStatus.$slot"],
-                numErrors = values["rdevNumErrors.$slot"]?.toLongOrNull()
+                numErrors = values["rdevNumErrors.$slot"]?.toLongOrNull(),
+                deviceName = values["rdevName.$slot"]?.takeIf { it.isNotEmpty() },
+                diskId = values["diskId.$slot"]?.takeIf { it.isNotEmpty() },
+                diskSizeK = values["diskSize.$slot"]?.toLongOrNull()
             )
         }
 
