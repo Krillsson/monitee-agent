@@ -3,10 +3,11 @@ package com.krillsson.sysapi.core.monitoring
 import com.krillsson.sysapi.core.monitoring.monitors.*
 import com.krillsson.sysapi.smart.HealthStatus
 import org.springframework.stereotype.Component
+import java.time.Clock
 import java.util.*
 
 @Component
-class MonitorFactory {
+class MonitorFactory(private val clock: Clock) {
     @Suppress("UNCHECKED_CAST")
     fun createMonitor(type: Monitor.Type, id: UUID, config: MonitorConfig<MonitoredValue>): Monitor<MonitoredValue> {
         return when (type) {
@@ -42,7 +43,8 @@ class MonitorFactory {
 
             Monitor.Type.EXTERNAL_IP_CHANGED -> ExternalIpChangedMonitor(
                 id,
-                config as MonitorConfig<MonitoredValue.ConditionalValue>
+                config as MonitorConfig<MonitoredValue.ConditionalValue>,
+                clock
             )
 
             Monitor.Type.NETWORK_UPLOAD_RATE -> NetworkUploadRateMonitor(

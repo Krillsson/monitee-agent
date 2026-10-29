@@ -38,7 +38,7 @@ class MonitorManagerTest {
         clock = clock,
         monitorInputCreator = monitorInputCreator,
         notificationManager = notificationManager,
-        monitorFactory = MonitorFactory()
+        monitorFactory = MonitorFactory(Clock.systemUTC())
     ).also { it.start() }
 
     @Test
