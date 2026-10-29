@@ -55,6 +55,10 @@ class GenericEventFormatter {
         }
     }
 
+    fun formatQuietHoursSummaryTitle(serverName: String): String {
+        return "While quiet on $serverName"
+    }
+
     fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing, serverName: String): String {
         return "Monitored item missing from ${EnvironmentUtils.hostName}"
     }

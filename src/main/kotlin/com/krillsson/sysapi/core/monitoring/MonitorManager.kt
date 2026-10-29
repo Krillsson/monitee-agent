@@ -59,10 +59,8 @@ class MonitorManager(
                     monitor.levelFor(value)
                 )
                 outcome?.let {
-                    if (it.notify) {
-                        notificationManager.notify(it.event.asNotification(monitor.config))
-                    }
-                    eventManager.add(it.event)
+                    val notified = it.notify && notificationManager.notify(it.event.asNotification(monitor.config))
+                    eventManager.add(it.event, notified)
                 }
             }
             reportItemMissingForMonitor(monitor, value)

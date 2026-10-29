@@ -63,7 +63,7 @@ Everything is published under `<topicPrefix>/<server id>`, `monitee/<server id>`
 }
 ```
 
-`event` gets the same JSON the webhooks post — title, message, priority, click url, event type, monitor type, timestamp, server name and id. See [notifications.md](notifications.md) for the shape and the emoji, which `emoji: false` turns off here too. It makes a good MQTT trigger in an automation.
+`event` gets the same JSON the webhooks post — title, message, priority, click url, event type, monitor type, timestamp, server name and id. See [notifications.md](notifications.md) for the shape and the emoji, which `emoji: false` turns off here too. It makes a good MQTT trigger in an automation. Quiet hours, cooldown and the recovery switch from the app apply to this topic too.
 
 ## What shows up in Home Assistant
 

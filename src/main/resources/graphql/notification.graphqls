@@ -7,6 +7,8 @@ extend type Mutation {
     snoozeNotifications(input: SnoozeNotificationsInput!): SnoozeNotificationsInfo!
     "Ends an active snooze immediately. A no-op when nothing is snoozed"
     resumeNotifications: SnoozeNotificationsInfo!
+    "Changes the quiet hours, cooldown and recovery settings. Omitted fields keep their current value"
+    updateNotificationPolicy(input: NotificationPolicyInput!): NotificationPolicy!
 }
 
 type NotificationServicesInfo{
@@ -18,6 +20,8 @@ type NotificationServicesInfo{
     mqtt: MqttInfo!
     "Notification suppression state. Never null - check `snoozed`"
     snooze: SnoozeNotificationsInfo!
+    "Which notifications the agent sends. Applies to ntfy, webhooks and MQTT alike"
+    policy: NotificationPolicy!
 }
 
 input SnoozeNotificationsInput {
@@ -40,6 +44,72 @@ type SnoozeNotificationsInfo {
     suppressedNotificationCount: Int!
 }
 
+type NotificationPolicy {
+    quietHours: QuietHours!
+    "After a notification for a new event on a monitor, further events on that monitor send nothing for this many minutes. 0 turns it off"
+    cooldownMinutes: Int!
+    "When false, nothing is sent when an event resolves"
+    notifyOnRecovery: Boolean!
+    "Dropped since start, by reason"
+    suppressed: SuppressedNotificationCounts!
+}
+
+type QuietHours {
+    enabled: Boolean!
+    "Local time the window opens, as HH:mm"
+    start: String!
+    "Local time the window closes, as HH:mm. Earlier than start for a window that crosses midnight"
+    end: String!
+    "Days the window opens on. A window crossing midnight belongs to the day it opens"
+    days: [DayOfWeek!]!
+    "IANA time zone start and end are read in. Defaults to the agent's system zone"
+    timeZone: String!
+    "When true, a CRITICAL event is sent even inside the window"
+    allowCritical: Boolean!
+    "True right now, so clients can mirror the agent's decision"
+    active: Boolean!
+}
+
+type SuppressedNotificationCounts {
+    "Further notifications for an acknowledged event"
+    acknowledged: Int!
+    "Events on a monitor inside its cooldown, and their recoveries"
+    cooldown: Int!
+    "Notifications inside quiet hours"
+    quietHours: Int!
+    "Recoveries dropped because notifyOnRecovery is false"
+    recovery: Int!
+}
+
+enum DayOfWeek {
+    MONDAY
+    TUESDAY
+    WEDNESDAY
+    THURSDAY
+    FRIDAY
+    SATURDAY
+    SUNDAY
+}
+
+input NotificationPolicyInput {
+    quietHours: QuietHoursInput
+    "0 turns the cooldown off"
+    cooldownMinutes: Int
+    notifyOnRecovery: Boolean
+}
+
+input QuietHoursInput {
+    enabled: Boolean
+    "HH:mm"
+    start: String
+    "HH:mm, must differ from start"
+    end: String
+    "At least one day"
+    days: [DayOfWeek!]
+    "An IANA time zone such as Europe/Stockholm"
+    timeZone: String
+    allowCritical: Boolean
+}
 
 type NtfyInfo{
     enabled: Boolean

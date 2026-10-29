@@ -9,6 +9,7 @@ import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Service
 import java.time.Clock
+import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
 
@@ -36,11 +37,35 @@ class EventManager(
         persist()
     }
 
-    fun add(event: Event) {
+    fun add(event: Event, notified: Boolean = true) {
+        val previous = ongoingEventById(event.id)
         removeOngoingEventForMonitor(event.monitorId)
-        events.add(event)
+        events.add(event.continuing(previous, notified))
         cleanupPastEvents()
         persist()
+    }
+
+    fun ongoingEventById(id: UUID): OngoingEvent? = events.filterIsInstance<OngoingEvent>().firstOrNull { it.id == id }
+
+    fun acknowledge(id: UUID, note: String?): OngoingEvent {
+        logger.info("Acknowledging event {}", id)
+        return replaceOngoingEvent(id) { it.copy(acknowledgedAt = clock.instant(), acknowledgementNote = note) }
+    }
+
+    fun unacknowledge(id: UUID): OngoingEvent {
+        logger.info("Clearing the acknowledgement of event {}", id)
+        return replaceOngoingEvent(id) { it.copy(acknowledgedAt = null, acknowledgementNote = null) }
+    }
+
+    private fun replaceOngoingEvent(id: UUID, change: (OngoingEvent) -> OngoingEvent): OngoingEvent {
+        val index = events.indexOfFirst { it.id == id }
+        require(index >= 0) { "No event with id $id" }
+        val event = events[index]
+        require(event is OngoingEvent) { "Event $id has already ended" }
+        return change(event).also {
+            events[index] = it
+            persist()
+        }
     }
 
     private fun cleanupPastEvents() {
@@ -78,20 +103,8 @@ class EventManager(
             .filterIsInstance<OngoingEvent>()
         return if (ongoingEventsForMonitor.isNotEmpty()) {
             ongoingEventsForMonitor.forEach { event ->
-                val past = PastEvent(
-                    id = event.id,
-                    monitorId = event.monitorId,
-                    monitoredItemId = event.monitoredItemId,
-                    startTime = event.startTime,
-                    endTime = clock.instant(),
-                    type = event.monitorType,
-                    threshold = event.threshold,
-                    endValue = event.value,
-                    startValue = event.value,
-                    severity = event.severity
-                )
                 remove(event.id)
-                add(past)
+                add(event.endedNow())
             }
             persist()
             true
@@ -112,35 +125,86 @@ class EventManager(
         persist()
     }
 
-    private fun Event.withMonitoredItemId(monitoredItemId: String): Event {
+    private fun Event.continuing(previous: OngoingEvent?, notified: Boolean): Event {
+        if (previous == null) {
+            return if (this is OngoingEvent) copy(notified = notified) else this
+        }
         return when (this) {
-            is OngoingEvent -> OngoingEvent(
-                id = id,
-                monitorId = monitorId,
-                monitoredItemId = monitoredItemId,
-                monitorType = monitorType,
-                startTime = startTime,
-                threshold = threshold,
-                value = value,
-                severity = severity
+            is OngoingEvent -> copy(
+                acknowledgedAt = previous.acknowledgedAt,
+                acknowledgementNote = previous.acknowledgementNote,
+                notified = notified || previous.notified
             )
 
-            is PastEvent -> PastEvent(
-                id = id,
-                monitorId = monitorId,
-                monitoredItemId = monitoredItemId,
-                startTime = startTime,
-                endTime = endTime,
-                type = monitorType,
-                threshold = threshold,
-                endValue = value,
-                startValue = startValue,
-                severity = severity
+            is PastEvent -> copy(
+                acknowledgedAt = previous.acknowledgedAt,
+                acknowledgementNote = previous.acknowledgementNote
             )
 
             else -> this
         }
     }
+
+    private fun Event.withMonitoredItemId(monitoredItemId: String): Event {
+        return when (this) {
+            is OngoingEvent -> copy(monitoredItemId = monitoredItemId)
+            is PastEvent -> copy(monitoredItemId = monitoredItemId)
+            else -> this
+        }
+    }
+
+    private fun OngoingEvent.copy(
+        monitoredItemId: String? = this.monitoredItemId,
+        acknowledgedAt: Instant? = this.acknowledgedAt,
+        acknowledgementNote: String? = this.acknowledgementNote,
+        notified: Boolean = this.notified
+    ) = OngoingEvent(
+        id = id,
+        monitorId = monitorId,
+        monitoredItemId = monitoredItemId,
+        monitorType = monitorType,
+        startTime = startTime,
+        threshold = threshold,
+        value = value,
+        severity = severity,
+        acknowledgedAt = acknowledgedAt,
+        acknowledgementNote = acknowledgementNote,
+        notified = notified
+    )
+
+    private fun PastEvent.copy(
+        monitoredItemId: String? = this.monitoredItemId,
+        acknowledgedAt: Instant? = this.acknowledgedAt,
+        acknowledgementNote: String? = this.acknowledgementNote
+    ) = PastEvent(
+        id = id,
+        monitorId = monitorId,
+        monitoredItemId = monitoredItemId,
+        startTime = startTime,
+        endTime = endTime,
+        type = monitorType,
+        threshold = threshold,
+        endValue = value,
+        startValue = startValue,
+        severity = severity,
+        acknowledgedAt = acknowledgedAt,
+        acknowledgementNote = acknowledgementNote
+    )
+
+    private fun OngoingEvent.endedNow() = PastEvent(
+        id = id,
+        monitorId = monitorId,
+        monitoredItemId = monitoredItemId,
+        startTime = startTime,
+        endTime = clock.instant(),
+        type = monitorType,
+        threshold = threshold,
+        endValue = value,
+        startValue = value,
+        severity = severity,
+        acknowledgedAt = acknowledgedAt,
+        acknowledgementNote = acknowledgementNote
+    )
 
     private fun persist() = repository.write(events)
 
@@ -174,18 +238,7 @@ class EventManager(
         events.forEach { event ->
             if (event is OngoingEvent) {
                 logger.info("Shutting down - Ending ongoing event ${event.monitorType} (${event.id})")
-                newEvents += PastEvent(
-                    event.id,
-                    event.monitorId,
-                    event.monitoredItemId,
-                    event.startTime,
-                    clock.instant(),
-                    event.monitorType,
-                    event.threshold,
-                    event.value,
-                    event.value,
-                    event.severity
-                )
+                newEvents += event.endedNow()
             } else {
                 newEvents += event
             }

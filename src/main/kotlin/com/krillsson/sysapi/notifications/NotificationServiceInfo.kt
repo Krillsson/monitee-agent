@@ -6,7 +6,8 @@ data class NotificationServiceInfo(
     val ntfy: NtfyInfo,
     val webhooks: List<WebhookInfo>,
     val mqtt: MqttInfo,
-    val snooze: SnoozeNotificationsInfo
+    val snooze: SnoozeNotificationsInfo,
+    val policy: NotificationPolicy
 )
 
 data class NtfyInfo(

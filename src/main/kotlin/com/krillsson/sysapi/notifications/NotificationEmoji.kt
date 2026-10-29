@@ -34,6 +34,7 @@ object NotificationEmoji {
         NotificationEventType.MONITORED_ITEM_MISSING -> Emoji("❓", "question")
         NotificationEventType.CONTAINER_IMAGE_UPDATE_AVAILABLE -> Emoji("🐳", "whale")
         NotificationEventType.CONTAINER_IMAGE_UPDATE_DIGEST -> Emoji("🐳", "whale")
+        NotificationEventType.QUIET_HOURS_SUMMARY -> Emoji("🌙", "crescent_moon")
     }
 
     private fun Monitor.Type.emoji() = when (this) {

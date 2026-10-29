@@ -20,6 +20,7 @@ class DeeplinkCreator(
             is Notification.GenericEvent.UpdateAvailable -> githubRelease()
             is Notification.GenericEvent.ContainerImageUpdateAvailable -> container(notification.containerId)
             is Notification.GenericEvent.ContainerImageUpdateDigest -> events()
+            is Notification.GenericEvent.QuietHoursSummary -> events()
             is Notification.OngoingEvent -> ongoingEvent(notification.monitorId)
             is Notification.ResolvedEvent -> ongoingEvent(notification.monitorId)
         }
@@ -48,6 +49,14 @@ class DeeplinkCreator(
     fun snooze(): String {
         return createMoniteeDeeplink {
             addPathSegment("snooze")
+        }
+    }
+
+    fun acknowledge(eventId: UUID): String {
+        return createMoniteeDeeplink {
+            addPathSegment("event")
+            addPathSegment(eventId.toString())
+            addPathSegment("acknowledge")
         }
     }
 

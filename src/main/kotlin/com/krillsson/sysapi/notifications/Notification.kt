@@ -63,6 +63,11 @@ sealed interface Notification {
             val timestamp: Instant,
             val containerNames: List<String>
         ) : GenericEvent
+
+        class QuietHoursSummary(
+            val timestamp: Instant,
+            val events: List<OngoingEvent>
+        ) : GenericEvent
     }
 }
 

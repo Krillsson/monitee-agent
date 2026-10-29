@@ -38,6 +38,10 @@ class NotificationFormatter(
             is Notification.GenericEvent.ContainerImageUpdateDigest -> genericEventFormatter.formatContainerImageUpdateDigestTitle(
                 serverName
             ) to genericEventFormatter.formatContainerImageUpdateDigestDescription(notification)
+
+            is Notification.GenericEvent.QuietHoursSummary -> genericEventFormatter.formatQuietHoursSummaryTitle(
+                serverName
+            ) to notification.events.joinToString("\n") { ongoingEventFormatter.formatOngoingEventDescription(it) }
         }
     }
 }

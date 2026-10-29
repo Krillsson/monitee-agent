@@ -71,11 +71,12 @@ Without a `body` the agent posts this JSON, which is enough for anything that ca
   "monitorType": "CPU_LOAD",
   "timestamp": "2026-08-05T12:34:56Z",
   "serverName": "MyServer",
-  "serverId": "<server id>"
+  "serverId": "<server id>",
+  "eventId": "<event id>"
 }
 ```
 
-`eventType` is one of `ONGOING_EVENT`, `RESOLVED_EVENT`, `UPDATE_AVAILABLE`, `MONITORED_ITEM_MISSING`, `CONTAINER_IMAGE_UPDATE_AVAILABLE` or `CONTAINER_IMAGE_UPDATE_DIGEST`. `monitorType` is null for the events that do not come from a monitor.
+`eventType` is one of `ONGOING_EVENT`, `RESOLVED_EVENT`, `UPDATE_AVAILABLE`, `MONITORED_ITEM_MISSING`, `CONTAINER_IMAGE_UPDATE_AVAILABLE`, `CONTAINER_IMAGE_UPDATE_DIGEST` or `QUIET_HOURS_SUMMARY`. `monitorType` is null for the events that do not come from a monitor. `eventId` is the id to pass to the `acknowledgeEvent` mutation, and null for the container update digest and the quiet hours summary.
 
 ### Emoji
 
@@ -89,6 +90,7 @@ about, so an alert is recognisable before reading it:
 | 🆕 | a new monitee-agent release |
 | 🐳 | container image updates |
 | ❓ | a monitored item is gone |
+| 🌙 | what happened during quiet hours |
 
 Messages from a monitor carry the metric instead: 🖥️ cpu, 🧠 memory, 💾 file system, 💽 disk,
 🌡️ temperature, 🩺 SMART health, 📈 load average, 🌐 network, 🌍 web server, 📡 connectivity,
@@ -103,7 +105,7 @@ ntfy gets the same emoji as tags rather than as text, since that is how ntfy doe
 
 Services that expect their own shape get a `body` template instead. These placeholders are substituted:
 
-`{{title}}` `{{message}}` `{{priority}}` `{{clickUrl}}` `{{eventType}}` `{{monitorType}}` `{{timestamp}}` `{{serverName}}` `{{serverId}}`
+`{{title}}` `{{message}}` `{{priority}}` `{{clickUrl}}` `{{eventType}}` `{{monitorType}}` `{{timestamp}}` `{{serverName}}` `{{serverId}}` `{{eventId}}`
 
 Values are escaped for the `contentType`, so a message containing quotes or newlines will not break a JSON body. Placeholders in `url` are escaped for use in a url. Anything the agent does not recognise is left alone.
 
@@ -164,6 +166,20 @@ Values are escaped for the `contentType`, so a message containing quotes or newl
     - name: Home Assistant
       url: "https://ha.example.com/api/webhook/WEBHOOK_ID"
 ```
+
+## Quiet hours, cooldown and recovery
+
+These are set from the app, next to Snooze, rather than in `configuration.yml`, and apply to ntfy, webhooks and MQTT alike. Home Assistant users who want MQTT unfiltered can leave quiet hours off and set their own quiet time in Home Assistant.
+
+- **Quiet hours** drop notifications between a start and an end time, on the days you pick, in a time zone you pick. A window may cross midnight. `allowCritical` lets critical events through. When the window closes, one notification titled *While quiet on MyServer* lists the events that were raised inside it and are still ongoing and unacknowledged, and nothing is sent when there are none.
+- **Cooldown** stops a flapping monitor from paging repeatedly: after a notification for an event on a monitor, further events on that monitor send nothing for `cooldownMinutes` (5 by default, 0 turns it off). The events are still recorded and shown in the app, and the recovery of an event whose notification was dropped is dropped too.
+- **notifyOnRecovery** set to false stops the "back to normal" notifications.
+
+Events stay visible in the app either way, and `notified` on an ongoing event says whether a notification went out for it. `notificationServices.policy` in the GraphQL API reports the settings and how many notifications each of them has dropped since the agent started.
+
+## Acknowledging an event
+
+Acknowledging an ongoing event, from the app or from the **Acknowledge** action on the ntfy notification (shown after Snooze when `actions` is on), says you have seen it. It then sends nothing more unless a warning escalates to critical, which clears the acknowledgement and notifies, and it is left out of the quiet hours summary. Its recovery is still sent.
 
 ## Troubleshooting
 

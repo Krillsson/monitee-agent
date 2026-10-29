@@ -35,7 +35,10 @@ class EventRepository(private val store: EventStore) {
                 startTime = startTime.toInstant(),
                 threshold = mapValueToMonitorValue { it.threshold },
                 value = mapValueToMonitorValue { it.value },
-                severity = severity ?: EventSeverity.CRITICAL
+                severity = severity ?: EventSeverity.CRITICAL,
+                acknowledgedAt = acknowledgedAt?.toInstant(),
+                acknowledgementNote = acknowledgementNote,
+                notified = notified ?: true
             )
 
             EventStore.StoredEvent.Type.PAST -> PastEvent(
@@ -48,7 +51,9 @@ class EventRepository(private val store: EventStore) {
                 threshold = mapValueToMonitorValue { it.threshold },
                 endValue = mapValueToMonitorValue { it.value },
                 startValue = mapValueToMonitorValue { it.startValue ?: 0.0 },
-                severity = severity ?: EventSeverity.CRITICAL
+                severity = severity ?: EventSeverity.CRITICAL,
+                acknowledgedAt = acknowledgedAt?.toInstant(),
+                acknowledgementNote = acknowledgementNote
             )
         }
     }
@@ -80,7 +85,9 @@ class EventRepository(private val store: EventStore) {
                 value = value.asDouble(),
                 startValue = startValue.asDouble(),
                 type = EventStore.StoredEvent.Type.PAST,
-                severity = severity
+                severity = severity,
+                acknowledgedAt = acknowledgedAt?.toOffsetDateTime(),
+                acknowledgementNote = acknowledgementNote
             )
 
             is OngoingEvent -> EventStore.StoredEvent(
@@ -94,7 +101,10 @@ class EventRepository(private val store: EventStore) {
                 value = value.asDouble(),
                 startValue = null,
                 type = EventStore.StoredEvent.Type.ONGOING,
-                severity = severity
+                severity = severity,
+                acknowledgedAt = acknowledgedAt?.toOffsetDateTime(),
+                acknowledgementNote = acknowledgementNote,
+                notified = notified
             )
 
             else -> throw IllegalArgumentException("Unknown event type encountered $this")
