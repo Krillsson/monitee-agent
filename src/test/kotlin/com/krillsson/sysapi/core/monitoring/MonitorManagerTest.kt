@@ -3,7 +3,9 @@ package com.krillsson.sysapi.core.monitoring
 import com.krillsson.sysapi.core.check.CHECK_ID
 import com.krillsson.sysapi.core.check.CheckResult
 import com.krillsson.sysapi.core.check.CheckType
+import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.monitoring.event.EventManager
+import com.krillsson.sysapi.notifications.NotificationManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -15,6 +17,8 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 class MonitorManagerTest {
 
@@ -23,15 +27,17 @@ class MonitorManagerTest {
     private fun manager(
         repository: MonitorRepository,
         eventManager: EventManager = mockk(relaxed = true),
-        monitorInputCreator: MonitorInputCreator = mockk(relaxed = true)
+        monitorInputCreator: MonitorInputCreator = mockk(relaxed = true),
+        notificationManager: NotificationManager = mockk(relaxed = true),
+        clock: Clock = Clock.systemUTC()
     ) = MonitorManager(
         metrics = mockk(relaxed = true),
         eventManager = eventManager,
         repository = repository,
         monitoredItemMissingChecker = mockk(relaxed = true),
-        clock = Clock.systemUTC(),
+        clock = clock,
         monitorInputCreator = monitorInputCreator,
-        notificationManager = mockk(relaxed = true),
+        notificationManager = notificationManager,
         monitorFactory = MonitorFactory()
     ).also { it.start() }
 
@@ -257,5 +263,36 @@ class MonitorManagerTest {
 
         // Then
         thrown.message shouldBe "warningThreshold and clearWarningThreshold cannot be combined"
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `records whether the notification manager sent the raise on the ongoing event`(sent: Boolean) {
+        // Given
+        val repository = mockk<MonitorRepository>(relaxed = true)
+        every { repository.read() } returns emptyList()
+        val eventManager = mockk<EventManager>(relaxed = true)
+        val notificationManager = mockk<NotificationManager>()
+        every { notificationManager.notify(any()) } returns sent
+        var now = Instant.parse("2026-09-08T12:00:00Z")
+        val clock = mockk<Clock>()
+        every { clock.instant() } answers { now }
+        val manager = manager(
+            repository,
+            eventManager,
+            inputWithCertificateExpiringIn(3),
+            notificationManager,
+            clock
+        )
+        manager.add(Duration.ZERO, Monitor.Type.CHECK_CERTIFICATE_EXPIRY, 7L.toNumericalValue(), CHECK_ID.toString())
+
+        // When
+        manager.run()
+        now = now.plusSeconds(15)
+        manager.run()
+
+        // Then
+        verify(exactly = 1) { notificationManager.notify(any()) }
+        verify { eventManager.add(match { it is OngoingEvent }, sent) }
     }
 }

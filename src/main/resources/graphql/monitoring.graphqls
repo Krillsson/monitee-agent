@@ -29,6 +29,9 @@ extend type Mutation {
     deleteEventsForMonitor(input: DeleteEventsForMonitorInput) : DeleteEventOutput
     deletePastEventsForMonitor(input: DeleteEventsForMonitorInput): DeleteEventOutput
     closeOngoingEventForMonitor(input: DeleteEventsForMonitorInput): DeleteEventOutput
+    "Marks an ongoing event as seen. It sends no further notifications unless it escalates from WARNING to CRITICAL"
+    acknowledgeEvent(input: AcknowledgeEventInput!): AcknowledgeEventOutput!
+    unacknowledgeEvent(input: UnacknowledgeEventInput!): AcknowledgeEventOutput!
     deleteGenericEvent(input: DeleteGenericEventInput): DeleteGenericEventOutput
     addWebServerCheck(input: AddWebServerCheckInput): AddWebServerCheckOutput @deprecated(reason: "Replaced by createHttpCheck 2026-08-08")
     deleteWebServerCheck(input: DeleteWebServerCheckInput): DeleteWebServerCheckOutput @deprecated(reason: "Replaced by deleteCheck 2026-08-08")
@@ -155,6 +158,27 @@ type DeleteEventOutput {
 
 type DeleteGenericEventOutput {
     removed: Boolean!
+}
+
+input AcknowledgeEventInput {
+    eventId: UUID!
+    "Optional free text shown by clients, e.g. 'Rebuilding the array'"
+    note: String
+}
+
+input UnacknowledgeEventInput {
+    eventId: UUID!
+}
+
+union AcknowledgeEventOutput = AcknowledgeEventOutputSucceeded | AcknowledgeEventOutputFailed
+
+type AcknowledgeEventOutputSucceeded {
+    event: OngoingEvent!
+}
+
+type AcknowledgeEventOutputFailed {
+    "Why it failed, e.g. the event is unknown or has already ended"
+    reason: String!
 }
 
 input DeleteGenericEventInput{
@@ -417,6 +441,8 @@ interface Event {
     startTime: String!
     startTimestamp: Instant!
     severity: EventSeverity!
+    acknowledgedAt: Instant
+    acknowledgementNote: String
 }
 
 type OngoingEvent implements Event {
@@ -428,6 +454,11 @@ type OngoingEvent implements Event {
     # The level the incident sits at right now. An incident that escalates from WARNING to
     # CRITICAL keeps its id and changes this instead of opening a second event
     severity: EventSeverity!
+    "When someone acknowledged the event. Null when nobody has, or the acknowledgement was cleared by an escalation"
+    acknowledgedAt: Instant
+    acknowledgementNote: String
+    "True when a notification went out for the event, false when snooze, cooldown or quiet hours withheld it"
+    notified: Boolean!
 }
 
 type PastEvent implements Event {
@@ -441,6 +472,9 @@ type PastEvent implements Event {
     startValue: MonitoredValue!
     # The highest level the incident reached before it resolved
     severity: EventSeverity!
+    "Carried over from the ongoing event"
+    acknowledgedAt: Instant
+    acknowledgementNote: String
 }
 
 interface GenericEvent {

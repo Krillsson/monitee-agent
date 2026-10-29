@@ -44,6 +44,7 @@ class MqttNotificationService(
         severity = severity?.name,
         timestamp = timestamp.toString(),
         serverName = serverName,
-        serverId = serverId
+        serverId = serverId,
+        eventId = eventId
     )
 }

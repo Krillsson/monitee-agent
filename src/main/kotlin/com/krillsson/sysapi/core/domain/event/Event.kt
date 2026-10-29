@@ -13,5 +13,7 @@ abstract class Event(
     val startTime: Instant,
     val threshold: MonitoredValue,
     val value: MonitoredValue,
-    val severity: EventSeverity
+    val severity: EventSeverity,
+    val acknowledgedAt: Instant? = null,
+    val acknowledgementNote: String? = null
 )

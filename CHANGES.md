@@ -1,5 +1,13 @@
 ### Unreleased
 
+- Notification policy, set from the app with `updateNotificationPolicy` and applied to ntfy, webhooks and MQTT:
+  - Quiet hours drop notifications inside a daily window, with an option to let critical events through.
+  - A cooldown stops a monitor from sending a notification for a new event within a few minutes of the last one.
+  - `notifyOnRecovery` turns the recovery notifications off.
+- When quiet hours end, one notification lists the events raised inside them that are still ongoing and unacknowledged.
+- Ongoing events can be acknowledged with `acknowledgeEvent`, from the app or an Acknowledge action on ntfy, after which they send no more notifications unless they escalate to critical.
+- Webhook and MQTT event payloads carry an `eventId`, also available as the `{{eventId}}` placeholder.
+- The cooldown is on by default at five minutes, so a flapping monitor sends fewer notifications while still recording every event.
 - HTTPS check results record the expiry, issue date, issuer and subject of the leaf certificate, also exposed as `HttpCheck.certificate` with `daysUntilExpiry`.
 - New `CHECK_CERTIFICATE_EXPIRY` monitor type alerts when an HTTPS check's certificate has fewer days left than its warning and critical thresholds.
 - Fix: Warning notifications show the warning threshold that was crossed and the critical threshold, and the title says high/low or critical.

@@ -15,5 +15,6 @@ data class NotificationParameters(
     val timestamp: Instant,
     val serverName: String,
     val serverId: String,
+    val eventId: String? = null,
     val actions: List<NotificationAction> = emptyList()
 )

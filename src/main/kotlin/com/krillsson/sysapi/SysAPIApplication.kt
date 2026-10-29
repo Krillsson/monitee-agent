@@ -120,6 +120,17 @@ import com.krillsson.sysapi.notifications.MqttInfo
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.notifications.WebhookInfo
 import com.krillsson.sysapi.notifications.webhook.WebhookPayload
+import com.krillsson.sysapi.notifications.NotificationPolicy
+import com.krillsson.sysapi.notifications.NotificationPolicyStore
+import com.krillsson.sysapi.notifications.QuietHours
+import java.time.DayOfWeek
+import com.krillsson.sysapi.notifications.SuppressedNotificationCounts
+import com.krillsson.sysapi.graphql.mutations.NotificationPolicyInput
+import com.krillsson.sysapi.graphql.mutations.QuietHoursInput
+import com.krillsson.sysapi.graphql.mutations.AcknowledgeEventInput
+import com.krillsson.sysapi.graphql.mutations.UnacknowledgeEventInput
+import com.krillsson.sysapi.graphql.mutations.AcknowledgeEventOutputSucceeded
+import com.krillsson.sysapi.graphql.mutations.AcknowledgeEventOutputFailed
 import com.krillsson.sysapi.core.monitoring.MonitorStore
 import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.event.EventStore
@@ -282,6 +293,18 @@ import kotlin.system.exitProcess
     MqttConfiguration.HomeAssistantConfiguration::class,
     MqttInfo::class,
     MqttEventPayload::class,
+    NotificationPolicy::class,
+    NotificationPolicyStore.StoredNotificationPolicy::class,
+    NotificationPolicyStore.StoredNotificationPolicy.StoredQuietHours::class,
+    QuietHours::class,
+    DayOfWeek::class,
+    SuppressedNotificationCounts::class,
+    NotificationPolicyInput::class,
+    QuietHoursInput::class,
+    AcknowledgeEventInput::class,
+    UnacknowledgeEventInput::class,
+    AcknowledgeEventOutputSucceeded::class,
+    AcknowledgeEventOutputFailed::class,
     CheckType::class,
     HttpMethod::class,
     HttpHeader::class,

@@ -7,7 +7,10 @@ import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -38,19 +41,23 @@ class EventManagerTest {
         manager = EventManager(repository, clock, config)
     }
 
-    private fun ongoingEvent(monitorId: UUID) = OngoingEvent(
-        id = UUID.randomUUID(),
+    private fun ongoingEvent(
+        monitorId: UUID,
+        id: UUID = UUID.randomUUID(),
+        severity: EventSeverity = EventSeverity.CRITICAL
+    ) = OngoingEvent(
+        id = id,
         monitorId = monitorId,
         monitoredItemId = monitorId.toString(),
         monitorType = Monitor.Type.WEBSERVER_UP,
         startTime = Instant.parse("2026-08-01T09:00:00Z"),
         threshold = MonitoredValue.ConditionalValue(true),
         value = MonitoredValue.ConditionalValue(false),
-        severity = EventSeverity.CRITICAL
+        severity = severity
     )
 
-    private fun pastEvent(monitorId: UUID) = PastEvent(
-        id = UUID.randomUUID(),
+    private fun pastEvent(monitorId: UUID, id: UUID = UUID.randomUUID()) = PastEvent(
+        id = id,
         monitorId = monitorId,
         monitoredItemId = monitorId.toString(),
         startTime = Instant.parse("2026-08-01T08:00:00Z"),
@@ -95,5 +102,139 @@ class EventManagerTest {
         removed shouldBe false
         manager.getAll().size shouldBe 2
         verify(exactly = 0) { repository.write(any()) }
+    }
+
+    @Test
+    fun `acknowledges an ongoing event with a note`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val event = ongoingEvent(survivingMonitorId)
+        manager.add(event)
+
+        // When
+        val acknowledged = manager.acknowledge(event.id, "Rebuilding the array")
+
+        // Then
+        acknowledged.acknowledgedAt shouldBe clock.instant()
+        acknowledged.acknowledgementNote shouldBe "Rebuilding the array"
+        manager.ongoingEventById(event.id).shouldNotBeNull().acknowledgedAt shouldBe clock.instant()
+        verify { repository.write(match { stored -> stored.single().acknowledgedAt == clock.instant() }) }
+    }
+
+    @Test
+    fun `unacknowledges an ongoing event`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val event = ongoingEvent(survivingMonitorId)
+        manager.add(event)
+        manager.acknowledge(event.id, "Rebuilding the array")
+
+        // When
+        val unacknowledged = manager.unacknowledge(event.id)
+
+        // Then
+        unacknowledged.acknowledgedAt shouldBe null
+        unacknowledged.acknowledgementNote shouldBe null
+    }
+
+    @Test
+    fun `refuses to acknowledge an unknown event`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val unknownId = UUID.randomUUID()
+
+        // When
+        val failure = shouldThrow<IllegalArgumentException> { manager.acknowledge(unknownId, null) }
+
+        // Then
+        failure.message shouldBe "No event with id $unknownId"
+    }
+
+    @Test
+    fun `refuses to acknowledge an event that has already ended`() {
+        // Given
+        val past = pastEvent(survivingMonitorId)
+        every { repository.read() } returns listOf(past)
+        manager.start()
+
+        // When
+        val failure = shouldThrow<IllegalArgumentException> { manager.acknowledge(past.id, null) }
+
+        // Then
+        failure.message shouldBe "Event ${past.id} has already ended"
+    }
+
+    @Test
+    fun `keeps the acknowledgement when the monitor escalates the event`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val id = UUID.randomUUID()
+        manager.add(ongoingEvent(survivingMonitorId, id, EventSeverity.WARNING))
+        manager.acknowledge(id, "Rebuilding the array")
+
+        // When
+        manager.add(ongoingEvent(survivingMonitorId, id, EventSeverity.CRITICAL))
+
+        // Then
+        val escalated = manager.ongoingEventById(id).shouldNotBeNull()
+        escalated.severity shouldBe EventSeverity.CRITICAL
+        escalated.acknowledgedAt shouldBe clock.instant()
+        escalated.acknowledgementNote shouldBe "Rebuilding the array"
+    }
+
+    @Test
+    fun `carries the acknowledgement over to the past event when the monitor resolves it`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val id = UUID.randomUUID()
+        manager.add(ongoingEvent(survivingMonitorId, id))
+        manager.acknowledge(id, "Rebuilding the array")
+
+        // When
+        manager.add(pastEvent(survivingMonitorId, id))
+
+        // Then
+        val resolved = manager.getAll().single().shouldBeInstanceOf<PastEvent>()
+        resolved.acknowledgedAt shouldBe clock.instant()
+        resolved.acknowledgementNote shouldBe "Rebuilding the array"
+    }
+
+    @Test
+    fun `carries the acknowledgement over when an ongoing event is closed by hand`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val event = ongoingEvent(survivingMonitorId)
+        manager.add(event)
+        manager.acknowledge(event.id, "Rebuilding the array")
+
+        // When
+        manager.removeOngoingEventsForMonitorId(survivingMonitorId)
+
+        // Then
+        manager.getAll().single().shouldBeInstanceOf<PastEvent>().acknowledgementNote shouldBe "Rebuilding the array"
+    }
+
+    @Test
+    fun `stays notified once a notification went out for the event`() {
+        // Given
+        every { repository.read() } returns emptyList()
+        manager.start()
+        val id = UUID.randomUUID()
+        manager.add(ongoingEvent(survivingMonitorId, id, EventSeverity.WARNING), notified = false)
+        val withheld = manager.ongoingEventById(id).shouldNotBeNull().notified
+
+        // When
+        manager.add(ongoingEvent(survivingMonitorId, id, EventSeverity.CRITICAL), notified = true)
+        manager.add(ongoingEvent(survivingMonitorId, id, EventSeverity.WARNING), notified = false)
+
+        // Then
+        withheld shouldBe false
+        manager.ongoingEventById(id).shouldNotBeNull().notified shouldBe true
     }
 }

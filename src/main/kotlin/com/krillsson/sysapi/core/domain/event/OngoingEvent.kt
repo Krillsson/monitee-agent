@@ -13,5 +13,19 @@ class OngoingEvent(
     startTime: Instant,
     threshold: MonitoredValue,
     value: MonitoredValue,
-    severity: EventSeverity
-) : Event(id, monitorId, monitoredItemId, monitorType, startTime, threshold, value, severity)
+    severity: EventSeverity,
+    acknowledgedAt: Instant? = null,
+    acknowledgementNote: String? = null,
+    val notified: Boolean = true
+) : Event(
+    id,
+    monitorId,
+    monitoredItemId,
+    monitorType,
+    startTime,
+    threshold,
+    value,
+    severity,
+    acknowledgedAt,
+    acknowledgementNote
+)

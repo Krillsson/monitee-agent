@@ -114,7 +114,8 @@ class WebhookService(
         severity = severity?.name,
         timestamp = timestamp.toString(),
         serverName = serverName,
-        serverId = serverId
+        serverId = serverId,
+        eventId = eventId
     )
 
     private fun WebhookConfiguration.hasUsableUrl(): Boolean {

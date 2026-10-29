@@ -15,5 +15,18 @@ class PastEvent(
     threshold: MonitoredValue,
     endValue: MonitoredValue,
     val startValue: MonitoredValue,
-    severity: EventSeverity
-) : Event(id, monitorId, monitoredItemId, type, startTime, threshold, endValue, severity)
+    severity: EventSeverity,
+    acknowledgedAt: Instant? = null,
+    acknowledgementNote: String? = null
+) : Event(
+    id,
+    monitorId,
+    monitoredItemId,
+    type,
+    startTime,
+    threshold,
+    endValue,
+    severity,
+    acknowledgedAt,
+    acknowledgementNote
+)

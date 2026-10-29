@@ -279,6 +279,24 @@ class MutationResolver(
     }
 
     @MutationMapping
+    fun acknowledgeEvent(@Argument input: AcknowledgeEventInput): AcknowledgeEventOutput {
+        return try {
+            AcknowledgeEventOutputSucceeded(eventManager.acknowledge(input.eventId, input.note))
+        } catch (exception: IllegalArgumentException) {
+            AcknowledgeEventOutputFailed(exception.message ?: "Unknown reason")
+        }
+    }
+
+    @MutationMapping
+    fun unacknowledgeEvent(@Argument input: UnacknowledgeEventInput): AcknowledgeEventOutput {
+        return try {
+            AcknowledgeEventOutputSucceeded(eventManager.unacknowledge(input.eventId))
+        } catch (exception: IllegalArgumentException) {
+            AcknowledgeEventOutputFailed(exception.message ?: "Unknown reason")
+        }
+    }
+
+    @MutationMapping
     fun createHttpCheck(@Argument input: CreateHttpCheckInput): CreateCheckOutput {
         return checkService.create(input.asSpec()).asOutput()
     }

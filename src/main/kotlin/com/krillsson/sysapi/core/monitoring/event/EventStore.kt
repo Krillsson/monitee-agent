@@ -25,7 +25,10 @@ class EventStore(objectMapper: ObjectMapper) :
         val value: Double,
         val startValue: Double?,
         val type: Type,
-        val severity: EventSeverity? = null
+        val severity: EventSeverity? = null,
+        val acknowledgedAt: OffsetDateTime? = null,
+        val acknowledgementNote: String? = null,
+        val notified: Boolean? = null
     ) {
         enum class Type {
             ONGOING,

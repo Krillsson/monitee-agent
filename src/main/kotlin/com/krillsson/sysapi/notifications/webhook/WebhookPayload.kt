@@ -10,5 +10,6 @@ data class WebhookPayload(
     val severity: String?,
     val timestamp: String,
     val serverName: String,
-    val serverId: String
+    val serverId: String,
+    val eventId: String?
 )

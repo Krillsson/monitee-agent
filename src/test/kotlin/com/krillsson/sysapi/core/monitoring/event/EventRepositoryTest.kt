@@ -1,11 +1,14 @@
 package com.krillsson.sysapi.core.monitoring.event
 
+import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MONITOR_ID
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.toNumericalValue
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
@@ -105,5 +108,105 @@ class EventRepositoryTest {
 
         // Then
         written.captured.single().severity shouldBe EventSeverity.WARNING
+    }
+
+    private val mapper = jacksonObjectMapper().registerModule(JavaTimeModule())
+
+    private fun roundTrip(events: List<Event>): List<Event> {
+        val written = slot<List<EventStore.StoredEvent>>()
+        every { store.write(capture(written)) } returns Unit
+        repository.write(events)
+        val json = mapper.writeValueAsString(written.captured)
+        every { store.read() } returns mapper.readValue(json, EventStore.MONITORS_TYPE_REFERENCE)
+        return repository.read()
+    }
+
+    @Test
+    fun `keeps the acknowledgement and notified flag of an ongoing event through events json`() {
+        // Given
+        val acknowledgedAt = Instant.parse("2026-08-01T09:30:00Z")
+
+        // When
+        val event = roundTrip(
+            listOf(
+                OngoingEvent(
+                    id = eventId,
+                    monitorId = MONITOR_ID,
+                    monitoredItemId = "sda",
+                    monitorType = Monitor.Type.CPU_TEMP,
+                    startTime = Instant.parse("2026-08-01T09:00:00Z"),
+                    threshold = 80L.toNumericalValue(),
+                    value = 95L.toNumericalValue(),
+                    severity = EventSeverity.WARNING,
+                    acknowledgedAt = acknowledgedAt,
+                    acknowledgementNote = "Replacing the fan",
+                    notified = false
+                )
+            )
+        ).single().shouldBeInstanceOf<OngoingEvent>()
+
+        // Then
+        event.acknowledgedAt shouldBe acknowledgedAt
+        event.acknowledgementNote shouldBe "Replacing the fan"
+        event.notified shouldBe false
+    }
+
+    @Test
+    fun `keeps the acknowledgement of a past event through events json`() {
+        // Given
+        val acknowledgedAt = Instant.parse("2026-08-01T09:30:00Z")
+
+        // When
+        val event = roundTrip(
+            listOf(
+                PastEvent(
+                    id = eventId,
+                    monitorId = MONITOR_ID,
+                    monitoredItemId = "sda",
+                    startTime = Instant.parse("2026-08-01T09:00:00Z"),
+                    endTime = Instant.parse("2026-08-01T10:00:00Z"),
+                    type = Monitor.Type.CPU_TEMP,
+                    threshold = 80L.toNumericalValue(),
+                    endValue = 70L.toNumericalValue(),
+                    startValue = 95L.toNumericalValue(),
+                    severity = EventSeverity.CRITICAL,
+                    acknowledgedAt = acknowledgedAt,
+                    acknowledgementNote = "Replacing the fan"
+                )
+            )
+        ).single()
+
+        // Then
+        event.acknowledgedAt shouldBe acknowledgedAt
+        event.acknowledgementNote shouldBe "Replacing the fan"
+    }
+
+    @Test
+    fun `loads an events json written before acknowledgement existed`() {
+        // Given
+        val json = """
+            [{
+              "id": "$eventId",
+              "monitorId": "$MONITOR_ID",
+              "monitoredItemId": "sda",
+              "startTime": "2026-08-01T09:00:00Z",
+              "endTime": null,
+              "monitorType": "CPU_TEMP",
+              "threshold": 80.0,
+              "value": 95.0,
+              "startValue": null,
+              "type": "ONGOING",
+              "severity": "WARNING"
+            }]
+        """.trimIndent()
+        every { store.read() } returns mapper.readValue(json, EventStore.MONITORS_TYPE_REFERENCE)
+
+        // When
+        val event = repository.read().single().shouldBeInstanceOf<OngoingEvent>()
+
+        // Then
+        event.acknowledgedAt shouldBe null
+        event.acknowledgementNote shouldBe null
+        event.notified shouldBe true
     }
 }

@@ -48,6 +48,7 @@ class WebhookTemplate(private val mapper: ObjectMapper) {
         "timestamp" -> timestamp.toString()
         "serverName" -> serverName
         "serverId" -> serverId
+        "eventId" -> eventId.orEmpty()
         else -> null
     }
 
