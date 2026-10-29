@@ -4,13 +4,14 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import java.time.Clock
 import java.time.Duration
 import org.junit.jupiter.api.Test
 
 class MonitorRepositoryTest {
 
     private val store = mockk<MonitorStore>(relaxed = true)
-    private val repository = MonitorRepository(store, MonitorFactory())
+    private val repository = MonitorRepository(store, MonitorFactory(Clock.systemUTC()))
 
     private val inertia: Duration = Duration.ofMinutes(5)
 
@@ -49,7 +50,7 @@ class MonitorRepositoryTest {
         // Given
         val written = slot<List<MonitorStore.StoredMonitor>>()
         every { store.write(capture(written)) } returns Unit
-        val monitor = MonitorFactory().createMonitor(
+        val monitor = MonitorFactory(Clock.systemUTC()).createMonitor(
             Monitor.Type.CPU_LOAD,
             MONITOR_ID,
             MonitorConfig<MonitoredValue>(null, 90f.toFractionalValue(), inertia, 70f.toFractionalValue())
