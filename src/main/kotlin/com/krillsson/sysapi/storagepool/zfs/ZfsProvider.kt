@@ -27,22 +27,26 @@ class ZfsProvider(
     override fun supported(): Boolean = kstatReader.exists()
 
     override fun pools(): List<StoragePool> {
-        if (!supported()) return emptyList()
-        return kstatReader.readPools().map { pool ->
-            StoragePool(
-                id = "zfs:${pool.name}",
-                name = pool.name,
-                kind = StoragePoolKind.ZFS,
-                state = deriveState(pool.state),
-                statusMessage = pool.state,
-                redundancy = null,
-                sizeBytes = null,
-                allocatedBytes = null,
-                freeBytes = null,
-                devices = emptyList(),
-                scan = null,
-                dataSource = StoragePoolDataSource.KERNEL_INTERFACE
-            )
+        return when {
+            supported() -> kstatReader.readPools().map(::toStoragePool)
+            else -> emptyList()
         }
+    }
+
+    private fun toStoragePool(pool: ZfsKstatPool): StoragePool {
+        return StoragePool(
+            id = "zfs:${pool.name}",
+            name = pool.name,
+            kind = StoragePoolKind.ZFS,
+            state = deriveState(pool.state),
+            statusMessage = pool.state,
+            redundancy = null,
+            sizeBytes = null,
+            allocatedBytes = null,
+            freeBytes = null,
+            devices = emptyList(),
+            scan = null,
+            dataSource = StoragePoolDataSource.KERNEL_INTERFACE
+        )
     }
 }

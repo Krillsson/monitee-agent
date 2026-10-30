@@ -37,25 +37,37 @@ class BtrfsSysfsReader(private val btrfsRoot: File = File("/sys/fs/btrfs")) {
         private const val SECTOR_SIZE_BYTES = 512L
         private val fsidRegex = Regex("""^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$""")
 
+        private val errorCounterNames = setOf("write_errs", "read_errs", "flush_errs", "corruption_errs", "generation_errs")
+
         fun parseErrorStats(raw: String): BtrfsErrorStats? {
-            val values = raw.lines().mapNotNull { line ->
-                val parts = line.trim().split(Regex("\\s+"))
-                if (parts.size != 2) null else parts[0] to parts[1].toLongOrNull()
-            }.toMap()
-            return BtrfsErrorStats(
-                writeErrors = values["write_errs"] ?: return null,
-                readErrors = values["read_errs"] ?: return null,
-                flushErrors = values["flush_errs"] ?: return null,
-                corruptionErrors = values["corruption_errs"] ?: return null,
-                generationErrors = values["generation_errs"] ?: return null
-            )
+            val counters = raw.lines().mapNotNull(::parseErrorCounter).toMap()
+            return when {
+                counters.keys.containsAll(errorCounterNames) -> BtrfsErrorStats(
+                    writeErrors = counters.getValue("write_errs"),
+                    readErrors = counters.getValue("read_errs"),
+                    flushErrors = counters.getValue("flush_errs"),
+                    corruptionErrors = counters.getValue("corruption_errs"),
+                    generationErrors = counters.getValue("generation_errs")
+                )
+
+                else -> null
+            }
+        }
+
+        private fun parseErrorCounter(line: String): Pair<String, Long>? {
+            val parts = line.trim().split(Regex("\\s+"))
+            val count = parts.getOrNull(1)?.toLongOrNull()
+            return when {
+                parts.size != 2 || count == null -> null
+                else -> parts[0] to count
+            }
         }
     }
 
     fun exists(): Boolean = btrfsRoot.isDirectory
 
     fun readFilesystems(): List<BtrfsFilesystem> {
-        val fsDirs = btrfsRoot.listFiles { file -> file.isDirectory && fsidRegex.matches(file.name) } ?: return emptyList()
+        val fsDirs = btrfsRoot.listFiles { file -> file.isDirectory && fsidRegex.matches(file.name) }.orEmpty()
         return fsDirs.map(::readFilesystem).sortedBy { it.fsid }
     }
 
@@ -79,13 +91,15 @@ class BtrfsSysfsReader(private val btrfsRoot: File = File("/sys/fs/btrfs")) {
     }
 
     private fun readDevice(devDir: File): BtrfsDevice? {
-        val devid = devDir.name.toLongOrNull() ?: return null
-        return BtrfsDevice(
-            devid = devid,
-            missing = devDir.readAttribute("missing") == "1",
-            replaceTarget = devDir.readAttribute("replace_target") == "1",
-            errorStats = devDir.readAttribute("error_stats")?.let(::parseErrorStats)
-        )
+        return when (val devid = devDir.name.toLongOrNull()) {
+            null -> null
+            else -> BtrfsDevice(
+                devid = devid,
+                missing = devDir.readAttribute("missing") == "1",
+                replaceTarget = devDir.readAttribute("replace_target") == "1",
+                errorStats = devDir.readAttribute("error_stats")?.let(::parseErrorStats)
+            )
+        }
     }
 
     private fun File.readAttribute(name: String): String? =
