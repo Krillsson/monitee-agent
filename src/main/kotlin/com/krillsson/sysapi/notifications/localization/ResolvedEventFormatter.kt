@@ -10,6 +10,7 @@ class ResolvedEventFormatter(
     private val monitoredValueFormatter: MonitoredValueFormatter,
     private val durationFormatter: DurationFormatter,
     private val checkEventFormatter: CheckEventFormatter,
+    private val storagePoolEventFormatter: StoragePoolEventFormatter,
 ) {
     fun formatResolvedEventTitle(
         notification: Notification.ResolvedEvent,
@@ -87,7 +88,11 @@ class ResolvedEventFormatter(
                 Monitor.Type.DISK_READ_RATE -> "Read rate on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.DISK_WRITE_RATE -> "Write rate on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.DISK_SMART_HEALTH -> "Health on $monitoredItemId is back to $formattedValue after $formattedDuration"
-                Monitor.Type.STORAGE_POOL_HEALTH -> "Pool $monitoredItemId is back to $formattedValue after $formattedDuration"
+                Monitor.Type.STORAGE_POOL_HEALTH -> storagePoolEventFormatter.formatResolvedDescription(
+                    monitoredItemId,
+                    formattedValue,
+                    formattedDuration
+                )
                 Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> "1m load average is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> "5m load average is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "15m load average is back below $formattedThreshold at $formattedValue after $formattedDuration"

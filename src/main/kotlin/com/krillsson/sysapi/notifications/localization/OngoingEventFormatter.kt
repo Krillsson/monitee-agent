@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component
 class OngoingEventFormatter(
     private val monitoredValueFormatter: MonitoredValueFormatter,
     private val checkEventFormatter: CheckEventFormatter,
+    private val storagePoolEventFormatter: StoragePoolEventFormatter,
 ) {
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
@@ -98,7 +99,7 @@ class OngoingEventFormatter(
                 Monitor.Type.DISK_READ_RATE -> "Read rate on $monitoredItemId $wentAbove"
                 Monitor.Type.DISK_WRITE_RATE -> "Write rate on $monitoredItemId $wentAbove"
                 Monitor.Type.DISK_SMART_HEALTH -> "Health on $monitoredItemId went above $formattedThreshold to $formattedValue"
-                Monitor.Type.STORAGE_POOL_HEALTH -> "Pool $monitoredItemId is $formattedValue"
+                Monitor.Type.STORAGE_POOL_HEALTH -> storagePoolEventFormatter.formatOngoingDescription(monitoredItemId, formattedValue)
                 Monitor.Type.LOAD_AVERAGE_ONE_MINUTE -> "1m load average $wentAbove"
                 Monitor.Type.LOAD_AVERAGE_FIVE_MINUTES -> "5m load average $wentAbove"
                 Monitor.Type.LOAD_AVERAGE_FIFTEEN_MINUTES -> "15m load average $wentAbove"

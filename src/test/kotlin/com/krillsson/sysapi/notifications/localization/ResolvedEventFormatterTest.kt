@@ -18,7 +18,8 @@ class ResolvedEventFormatterTest {
     private val formatter = ResolvedEventFormatter(
         MonitoredValueFormatter(mockk(), mockk()),
         DurationFormatter(),
-        CheckEventFormatter(checkService)
+        CheckEventFormatter(checkService),
+        StoragePoolEventFormatter(mockk())
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
