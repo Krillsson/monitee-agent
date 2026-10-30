@@ -9,6 +9,8 @@ data class MdStatMember(
 data class MdStatResync(
     val action: String,
     val percentComplete: Float,
+    val doneBlocks: Long?,
+    val totalBlocks: Long?,
     val finishEtaMinutes: Float?,
     val speedKbPerSec: Long?
 )
@@ -30,7 +32,7 @@ object MdStatParser {
     private val blocksRegex = Regex("""^(\d+)\s+blocks""")
     private val bitmapRegex = Regex("""\[[U_]+]""")
     private val resyncRegex =
-        Regex("""(resync|recovery|check|reshape)\s*=\s*([\d.]+)%(?:.*?finish=([\d.]+)min)?(?:.*?speed=(\d+)K/sec)?""")
+        Regex("""(resync|recovery|check|reshape)\s*=\s*([\d.]+)%(?:\s*\((\d+)/(\d+)\))?(?:.*?finish=([\d.]+)min)?(?:.*?speed=(\d+)K/sec)?""")
 
     fun parse(text: String): List<MdStatArray> {
         val lines = text.lines()
@@ -71,8 +73,10 @@ object MdStatParser {
                     resync = MdStatResync(
                         action = it.groupValues[1],
                         percentComplete = it.groupValues[2].toFloat(),
-                        finishEtaMinutes = it.groupValues[3].toFloatOrNull(),
-                        speedKbPerSec = it.groupValues[4].toLongOrNull()
+                        doneBlocks = it.groupValues[3].toLongOrNull(),
+                        totalBlocks = it.groupValues[4].toLongOrNull(),
+                        finishEtaMinutes = it.groupValues[5].toFloatOrNull(),
+                        speedKbPerSec = it.groupValues[6].toLongOrNull()
                     )
                 }
                 j++

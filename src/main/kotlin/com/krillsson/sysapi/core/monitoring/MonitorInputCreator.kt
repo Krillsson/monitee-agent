@@ -323,8 +323,11 @@ class MonitorInputCreator(
                 }
 
                 Monitor.Type.STORAGE_POOL_HEALTH -> {
-                    val pool = storagePoolService.pools().first { it.id == monitor.config.monitoredItemId }
-                    createStoragePoolHealthMonitorableItem(pool)
+                    val poolId = monitor.config.monitoredItemId.orEmpty()
+                    when (val pool = storagePoolService.poolById(poolId)) {
+                        null -> createUnavailableStoragePoolHealthMonitorableItem(poolId)
+                        else -> createStoragePoolHealthMonitorableItem(pool)
+                    }
                 }
 
                 Monitor.Type.GPU_VRAM_USAGE -> {
@@ -710,6 +713,15 @@ class MonitorInputCreator(
         description = pool.statusMessage,
         maxValue = StoragePoolState.UNAVAIL.toEnumValue(),
         currentValue = pool.state.toEnumValue(),
+        type = Monitor.Type.STORAGE_POOL_HEALTH
+    )
+
+    private fun createUnavailableStoragePoolHealthMonitorableItem(poolId: String) = MonitorableItem(
+        id = poolId,
+        name = poolId,
+        description = null,
+        maxValue = StoragePoolState.UNAVAIL.toEnumValue(),
+        currentValue = StoragePoolState.UNAVAIL.toEnumValue(),
         type = Monitor.Type.STORAGE_POOL_HEALTH
     )
 
