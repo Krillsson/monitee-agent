@@ -96,6 +96,40 @@ class MdSysfsReaderTest {
     }
 
     @Test
+    fun `reads each member's slot and treats none as no slot`() {
+        // Given
+        val md0 = mdDir("md0")
+        md0.writeAttribute("array_state", "clean\n")
+        val rebuilding = File(md0, "dev-loop5").apply { mkdirs() }
+        rebuilding.writeAttribute("state", "spare\n")
+        rebuilding.writeAttribute("slot", "1\n")
+        val hotSpare = File(md0, "dev-loop6").apply { mkdirs() }
+        hotSpare.writeAttribute("state", "spare\n")
+        hotSpare.writeAttribute("slot", "none\n")
+
+        // When
+        val array = MdSysfsReader(sysRoot).readArrays().single()
+
+        // Then
+        array.devices.first { it.kname == "loop5" }.slot shouldBe 1
+        array.devices.first { it.kname == "loop6" }.slot shouldBe null
+    }
+
+    @Test
+    fun `treats the all-zero uuid of an inactive array as no uuid`() {
+        // Given
+        val md5 = mdDir("md5")
+        md5.writeAttribute("array_state", "inactive\n")
+        md5.writeAttribute("uuid", "00000000-0000-0000-0000-000000000000\n")
+
+        // When
+        val array = MdSysfsReader(sysRoot).readArrays().single()
+
+        // Then
+        array.uuid shouldBe null
+    }
+
+    @Test
     fun `returns nothing when there is no block directory`() {
         // Given / When
         val arrays = MdSysfsReader(sysRoot).readArrays()

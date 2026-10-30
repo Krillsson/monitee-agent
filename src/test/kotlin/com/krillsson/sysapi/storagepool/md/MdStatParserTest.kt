@@ -114,6 +114,8 @@ class MdStatParserTest {
         val resync = array.resync.shouldNotBeNull()
         resync.action shouldBe "resync"
         resync.percentComplete shouldBe 50.0f
+        resync.doneBlocks shouldBe 488315232L
+        resync.totalBlocks shouldBe 976630464L
         resync.finishEtaMinutes shouldBe 120.5f
         resync.speedKbPerSec shouldBe 60000L
     }
