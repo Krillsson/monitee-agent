@@ -37,7 +37,13 @@ class MdProvider(
 
         fun deriveScan(stat: MdStatArray, sysfs: MdSysfsArray?): StoragePoolScan? {
             val syncAction = sysfs?.syncAction
-            if (syncAction == null || syncAction == "idle") return null
+            return when {
+                sysfs == null || syncAction == null || syncAction == "idle" -> null
+                else -> runningScan(stat, sysfs, syncAction)
+            }
+        }
+
+        private fun runningScan(stat: MdStatArray, sysfs: MdSysfsArray, syncAction: String): StoragePoolScan {
             val kind = when (syncAction) {
                 "resync", "reshape" -> StoragePoolScanKind.RESILVER
                 "recover" -> StoragePoolScanKind.RESILVER
@@ -76,9 +82,21 @@ class MdProvider(
     override fun supported(): Boolean = procMdstatFile.isFile
 
     override fun pools(): List<StoragePool> {
-        if (!supported()) return emptyList()
-        val statArrays = MdStatParser.parse(procMdstatFile.readText())
-        if (statArrays.isEmpty()) return emptyList()
+        val statArrays = readStatArrays()
+        return when {
+            statArrays.isEmpty() -> emptyList()
+            else -> toStoragePools(statArrays)
+        }
+    }
+
+    private fun readStatArrays(): List<MdStatArray> {
+        return when {
+            supported() -> MdStatParser.parse(procMdstatFile.readText())
+            else -> emptyList()
+        }
+    }
+
+    private fun toStoragePools(statArrays: List<MdStatArray>): List<StoragePool> {
         val sysfsArrays = sysfsReader.readArrays().associateBy { it.device }
         return statArrays.map { stat -> toStoragePool(stat, sysfsArrays[stat.device]) }
     }

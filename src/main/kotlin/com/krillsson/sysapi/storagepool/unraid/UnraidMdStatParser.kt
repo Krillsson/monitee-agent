@@ -28,13 +28,21 @@ object UnraidMdStatParser {
     private val slotRegex = Regex("""^rdevStatus\.(\d+)$""")
 
     fun parse(text: String): UnraidArray? {
-        val values = text.lines().mapNotNull { line ->
+        val values = parseKeyValues(text)
+        return when {
+            values["mdState"] == null -> null
+            else -> toArray(values)
+        }
+    }
+
+    private fun parseKeyValues(text: String): Map<String, String> {
+        return text.lines().mapNotNull { line ->
             val idx = line.indexOf('=')
             if (idx <= 0) null else line.substring(0, idx).trim() to line.substring(idx + 1).trim()
         }.toMap()
+    }
 
-        if (values["mdState"] == null) return null
-
+    private fun toArray(values: Map<String, String>): UnraidArray {
         val slots = values.keys.mapNotNull { key -> slotRegex.matchEntire(key)?.groupValues?.get(1)?.toIntOrNull() }
             .toSortedSet()
 

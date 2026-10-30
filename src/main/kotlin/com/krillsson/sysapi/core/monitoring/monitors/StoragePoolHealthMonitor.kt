@@ -31,7 +31,9 @@ class StoragePoolHealthMonitor(
         value: MonitoredValue.EnumValue<StoragePoolState>,
         threshold: MonitoredValue.EnumValue<StoragePoolState>
     ): Boolean {
-        if (value.value == StoragePoolState.UNKNOWN) return false
-        return super.isPastThreshold(value, threshold)
+        return when (value.value) {
+            StoragePoolState.UNKNOWN -> false
+            else -> super.isPastThreshold(value, threshold)
+        }
     }
 }
