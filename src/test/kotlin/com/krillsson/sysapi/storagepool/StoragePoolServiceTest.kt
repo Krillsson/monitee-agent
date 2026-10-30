@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 
 class StoragePoolServiceTest {
 
-    private class FakeProvider(var isSupported: Boolean, private val pools: List<StoragePool>) : StoragePoolProvider {
+    private class FakeProvider(var isSupported: Boolean, var pools: List<StoragePool>) : StoragePoolProvider {
         override fun supported(): Boolean = isSupported
         override fun pools(): List<StoragePool> = pools
     }
@@ -45,5 +45,28 @@ class StoragePoolServiceTest {
         // When / Then
         service.status().shouldBeInstanceOf<StoragePoolService.Status.Disabled>()
         service.pools().shouldBeEmpty()
+    }
+
+    @Test
+    fun `remembers the name of a pool after it disappears`() {
+        // Given
+        val provider = FakeProvider(isSupported = true, pools = listOf(storagePool(id = "md:589f91b1", name = "md5")))
+        val service = service(provider)
+        service.pools()
+
+        // When
+        provider.pools = emptyList()
+
+        // Then
+        service.displayName("md:589f91b1") shouldBe "md5"
+    }
+
+    @Test
+    fun `has no name for a pool it has never seen`() {
+        // Given
+        val service = service(FakeProvider(isSupported = true, pools = emptyList()))
+
+        // When / Then
+        service.displayName("md:589f91b1") shouldBe null
     }
 }

@@ -7,6 +7,7 @@ import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.storagepool.StoragePoolService
 import com.krillsson.sysapi.storagepool.StoragePoolState
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -21,12 +22,16 @@ import java.util.UUID
 class OngoingEventFormatterTest {
 
     private val checkService: CheckService = mockk()
+    private val storagePoolService: StoragePoolService = mockk {
+        every { displayName("md:md5") } returns "md5"
+    }
     private val temperatureFormatter: TemperatureFormatter = mockk {
         every { format(any()) } answers { "${firstArg<Int>()}°C" }
     }
     private val formatter = OngoingEventFormatter(
         MonitoredValueFormatter(temperatureFormatter, ByteFormatter()),
-        CheckEventFormatter(checkService)
+        CheckEventFormatter(checkService),
+        StoragePoolEventFormatter(storagePoolService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -79,9 +84,9 @@ class OngoingEventFormatterTest {
 
     @ParameterizedTest
     @CsvSource(
-        "DEGRADED, Storage pool degraded on server, Pool md:md5 is degraded",
-        "FAULTED, Storage pool faulted on server, Pool md:md5 is faulted",
-        "UNAVAIL, Storage pool unavailable on server, Pool md:md5 is unavailable",
+        "DEGRADED, Storage pool degraded on server, Pool md5 is degraded",
+        "FAULTED, Storage pool faulted on server, Pool md5 is faulted",
+        "UNAVAIL, Storage pool unavailable on server, Pool md5 is unavailable",
     )
     fun `names the state a storage pool is in`(state: StoragePoolState, expectedTitle: String, expectedDescription: String) {
         // Given

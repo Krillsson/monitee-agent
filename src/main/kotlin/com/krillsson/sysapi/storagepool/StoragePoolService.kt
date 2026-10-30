@@ -2,6 +2,7 @@ package com.krillsson.sysapi.storagepool
 
 import com.krillsson.sysapi.config.YAMLConfigFile
 import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
 
 @Service
 class StoragePoolService(
@@ -10,6 +11,8 @@ class StoragePoolService(
 ) {
 
     private val config = configuration.storagePools
+
+    private val lastKnownNameById = ConcurrentHashMap<String, String>()
 
     sealed class Status {
         object Available : Status()
@@ -29,10 +32,12 @@ class StoragePoolService(
 
     fun pools(): List<StoragePool> {
         return when {
-            config.enabled -> supportedProviders().flatMap { it.pools() }
+            config.enabled -> supportedProviders().flatMap { it.pools() }.onEach { lastKnownNameById[it.id] = it.name }
             else -> emptyList()
         }
     }
 
     fun poolById(id: String): StoragePool? = pools().firstOrNull { it.id == id }
+
+    fun displayName(id: String): String? = poolById(id)?.name ?: lastKnownNameById[id]
 }

@@ -2,10 +2,11 @@ package com.krillsson.sysapi.storagepool
 
 fun storagePool(
     id: String = "md:abcd",
+    name: String = id.substringAfter(':'),
     state: StoragePoolState = StoragePoolState.ONLINE
 ) = StoragePool(
     id = id,
-    name = id.substringAfter(':'),
+    name = name,
     kind = StoragePoolKind.MDADM,
     state = state,
     statusMessage = null,
