@@ -43,7 +43,13 @@ class UnraidProvider(
 
         fun deriveScan(array: UnraidArray): StoragePoolScan? {
             val total = array.resyncTotalK ?: 0L
-            if (total <= 0L) return null
+            return when {
+                total <= 0L -> null
+                else -> scan(array, total)
+            }
+        }
+
+        private fun scan(array: UnraidArray, total: Long): StoragePoolScan {
             val position = array.resyncPosK ?: 0L
             val isRunning = array.syncCompletedAtEpochSeconds == 0L
             return StoragePoolScan(
@@ -82,21 +88,28 @@ class UnraidProvider(
     override fun supported(): Boolean = readArray() != null
 
     override fun pools(): List<StoragePool> {
-        val array = readArray() ?: return emptyList()
-        return listOf(toStoragePool(array))
+        return when (val array = readArray()) {
+            null -> emptyList()
+            else -> listOf(toStoragePool(array))
+        }
     }
 
     private fun readArray(): UnraidArray? {
-        if (!procMdstatFile.isFile) return null
-        return UnraidMdStatParser.parse(procMdstatFile.readText())
+        return when {
+            procMdstatFile.isFile -> UnraidMdStatParser.parse(procMdstatFile.readText())
+            else -> null
+        }
     }
 
     private fun readDiskInfoBySlotName(): Map<String, UnraidDiskInfo> {
-        if (!disksIniFile.isFile) return emptyMap()
-        return runCatching { UnraidDisksIniParser.parse(disksIniFile.readText()) }
-            .getOrDefault(emptyList())
-            .associateBy { it.slotName }
+        return when {
+            disksIniFile.isFile -> parseDisksIni().associateBy { it.slotName }
+            else -> emptyMap()
+        }
     }
+
+    private fun parseDisksIni(): List<UnraidDiskInfo> =
+        runCatching { UnraidDisksIniParser.parse(disksIniFile.readText()) }.getOrDefault(emptyList())
 
     private fun toStoragePool(array: UnraidArray): StoragePool {
         val diskInfoBySlotName = readDiskInfoBySlotName()
