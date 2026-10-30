@@ -55,6 +55,10 @@ import java.util.concurrent.Executor
 const val USER_CONFIG = "configuration.yml"
 const val SPRING_CONFIG = "application.properties"
 
+fun configFileParser(): ObjectMapper = ObjectMapper(YAMLFactory())
+    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    .findAndRegisterModules()
+
 @Configuration
 @EnableTransactionManagement
 @EnableScheduling
@@ -74,9 +78,7 @@ class SysApiConfiguration : AsyncConfigurer {
 
     @Bean
     fun userConfigFile(): YAMLConfigFile {
-        val yamlParser = ObjectMapper(YAMLFactory())
-        yamlParser.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        yamlParser.findAndRegisterModules()
+        val yamlParser = configFileParser()
         val configFile = File(FileSystem.config, USER_CONFIG)
         val fallbackConfigFile = javaClass.getResourceAsStream("/config/$USER_CONFIG")
         return if (configFile.exists()) {
