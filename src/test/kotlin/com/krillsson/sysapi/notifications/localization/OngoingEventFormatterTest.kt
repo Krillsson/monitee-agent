@@ -7,6 +7,7 @@ import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.storagepool.StoragePoolState
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -62,6 +63,38 @@ class OngoingEventFormatterTest {
         inertia = Duration.ZERO,
         severity = severity
     )
+
+    private fun storagePoolEvent(state: StoragePoolState) = Notification.OngoingEvent(
+        id = UUID.randomUUID(),
+        monitorId = UUID.randomUUID(),
+        monitoredItemId = "md:md5",
+        monitorType = Monitor.Type.STORAGE_POOL_HEALTH,
+        startTime = Instant.now(),
+        threshold = MonitoredValue.EnumValue(StoragePoolState.ONLINE),
+        warningThreshold = null,
+        value = MonitoredValue.EnumValue(state),
+        inertia = Duration.ZERO,
+        severity = EventSeverity.CRITICAL
+    )
+
+    @ParameterizedTest
+    @CsvSource(
+        "DEGRADED, Storage pool degraded on server, Pool md:md5 is degraded",
+        "FAULTED, Storage pool faulted on server, Pool md:md5 is faulted",
+        "UNAVAIL, Storage pool unavailable on server, Pool md:md5 is unavailable",
+    )
+    fun `names the state a storage pool is in`(state: StoragePoolState, expectedTitle: String, expectedDescription: String) {
+        // Given
+        val notification = storagePoolEvent(state)
+
+        // When
+        val title = formatter.formatOngoingEventTitle(notification, "server")
+        val description = formatter.formatOngoingEventDescription(notification)
+
+        // Then
+        title shouldBe expectedTitle
+        description shouldBe expectedDescription
+    }
 
     @ParameterizedTest
     @CsvSource(

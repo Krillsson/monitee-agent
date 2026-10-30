@@ -68,15 +68,20 @@ class MonitoredValueFormatter(
                 (value as MonitoredValue.EnumValue<HealthStatus>).value.name.lowercase()
             }
 
-            Monitor.Type.STORAGE_POOL_HEALTH -> {
-                (value as MonitoredValue.EnumValue<StoragePoolState>).value.name.lowercase()
-            }
+            Monitor.Type.STORAGE_POOL_HEALTH -> formatStoragePoolState((value as MonitoredValue.EnumValue<StoragePoolState>).value)
 
             Monitor.Type.UPS_LOAD_WATT -> "${(value as MonitoredValue.NumericalValue).value}W"
             Monitor.Type.GPU_VRAM_USAGE -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.GPU_TEMPERATURE -> temperatureFormatter.format((value as MonitoredValue.NumericalValue).value.toInt())
             Monitor.Type.GPU_UTILIZATION -> formatPercent((value as MonitoredValue.FractionalValue).value)
             Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> if ((value as MonitoredValue.ConditionalValue).value) "up to date" else "outdated"
+        }
+    }
+
+    private fun formatStoragePoolState(state: StoragePoolState): String {
+        return when (state) {
+            StoragePoolState.UNAVAIL -> "unavailable"
+            else -> state.name.lowercase()
         }
     }
 
