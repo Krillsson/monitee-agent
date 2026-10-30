@@ -29,19 +29,24 @@ class BtrfsProvider(
         )
 
         fun deriveState(filesystem: BtrfsFilesystem): StoragePoolState {
-            if (filesystem.devices.isEmpty()) return StoragePoolState.UNKNOWN
             val missing = filesystem.devices.count { it.missing }
-            if (missing == 0) return StoragePoolState.ONLINE
             val profiles = filesystem.profilesByAllocationType.values.flatten()
-            if (profiles.isEmpty()) return StoragePoolState.DEGRADED
-            val tolerated = profiles.minOf { missingDevicesToleratedByProfile[it] ?: 0 }
-            return if (missing > tolerated) StoragePoolState.FAULTED else StoragePoolState.DEGRADED
+            return when {
+                filesystem.devices.isEmpty() -> StoragePoolState.UNKNOWN
+                missing == 0 -> StoragePoolState.ONLINE
+                profiles.isEmpty() -> StoragePoolState.DEGRADED
+                missing > missingDevicesTolerated(profiles) -> StoragePoolState.FAULTED
+                else -> StoragePoolState.DEGRADED
+            }
         }
+
+        private fun missingDevicesTolerated(profiles: List<String>): Int =
+            profiles.minOf { missingDevicesToleratedByProfile[it] ?: 0 }
 
         fun redundancy(filesystem: BtrfsFilesystem): String? {
             val profiles = filesystem.profilesByAllocationType["data"]
                 ?: filesystem.profilesByAllocationType["mixed"]
-                ?: return null
+                ?: emptySet()
             return profiles.sorted().joinToString(",").takeIf { it.isNotEmpty() }
         }
 
@@ -57,8 +62,10 @@ class BtrfsProvider(
     override fun supported(): Boolean = sysfsReader.exists()
 
     override fun pools(): List<StoragePool> {
-        if (!supported()) return emptyList()
-        return sysfsReader.readFilesystems().map(::toStoragePool)
+        return when {
+            supported() -> sysfsReader.readFilesystems().map(::toStoragePool)
+            else -> emptyList()
+        }
     }
 
     private fun toStoragePool(filesystem: BtrfsFilesystem): StoragePool {
