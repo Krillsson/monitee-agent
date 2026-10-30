@@ -27,16 +27,21 @@ data class MdSysfsArray(
 class MdSysfsReader(private val sysRoot: File = File("/sys")) {
 
     fun readArrays(): List<MdSysfsArray> {
-        val blockDir = File(sysRoot, "block")
-        val arrayDirs = blockDir.listFiles { file -> file.isDirectory && file.name.startsWith("md") } ?: return emptyList()
+        val arrayDirs = File(sysRoot, "block").listFiles { file -> file.isDirectory && file.name.startsWith("md") }.orEmpty()
         return arrayDirs.mapNotNull { readArray(it) }.sortedBy { it.device }
     }
 
     private fun readArray(deviceDir: File): MdSysfsArray? {
         val mdDir = File(deviceDir, "md")
-        if (!mdDir.isDirectory) return null
+        return when {
+            mdDir.isDirectory -> readMdDirectory(deviceDir.name, mdDir)
+            else -> null
+        }
+    }
+
+    private fun readMdDirectory(device: String, mdDir: File): MdSysfsArray {
         return MdSysfsArray(
-            device = deviceDir.name,
+            device = device,
             arrayState = mdDir.readAttribute("array_state"),
             degraded = mdDir.readAttribute("degraded")?.toIntOrNull(),
             level = mdDir.readAttribute("level"),
@@ -69,11 +74,13 @@ class MdSysfsReader(private val sysRoot: File = File("/sys")) {
     }
 
     private fun parseSyncCompleted(raw: String): Pair<Long, Long>? {
-        val parts = raw.split("/")
-        if (parts.size != 2) return null
-        val done = parts[0].trim().toLongOrNull() ?: return null
-        val total = parts[1].trim().toLongOrNull() ?: return null
-        return done to total
+        val numbers = raw.split("/").map { it.trim().toLongOrNull() }
+        val done = numbers.getOrNull(0)
+        val total = numbers.getOrNull(1)
+        return when {
+            numbers.size != 2 || done == null || total == null -> null
+            else -> done to total
+        }
     }
 
     private fun File.readAttribute(name: String): String? =
