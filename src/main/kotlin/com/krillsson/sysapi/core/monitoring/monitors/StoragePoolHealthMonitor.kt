@@ -15,7 +15,10 @@ class StoragePoolHealthMonitor(
 
     companion object {
         fun value(pools: List<StoragePool>, monitoredItemId: String?) =
-            pools.firstOrNull { it.id == monitoredItemId }?.state?.let { MonitoredValue.EnumValue(it) }
+            MonitoredValue.EnumValue(stateOf(pools, monitoredItemId))
+
+        private fun stateOf(pools: List<StoragePool>, monitoredItemId: String?): StoragePoolState =
+            pools.firstOrNull { it.id == monitoredItemId }?.state ?: StoragePoolState.UNAVAIL
     }
 
     override val type: Type = Type.STORAGE_POOL_HEALTH

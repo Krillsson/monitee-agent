@@ -17,19 +17,19 @@ class StoragePoolService(
         data class Unavailable(val error: RuntimeException) : Status()
     }
 
-    private val supportedProviders: List<StoragePoolProvider> by lazy { providers.filter { it.supported() } }
+    private fun supportedProviders(): List<StoragePoolProvider> = providers.filter { it.supported() }
 
     fun status(): Status {
         return when {
             !config.enabled -> Status.Disabled
-            supportedProviders.isEmpty() -> Status.Unavailable(RuntimeException("No supported storage pool backend was found"))
+            supportedProviders().isEmpty() -> Status.Unavailable(RuntimeException("No supported storage pool backend was found"))
             else -> Status.Available
         }
     }
 
     fun pools(): List<StoragePool> {
-        return when (status()) {
-            Status.Available -> supportedProviders.flatMap { it.pools() }
+        return when {
+            config.enabled -> supportedProviders().flatMap { it.pools() }
             else -> emptyList()
         }
     }

@@ -5,6 +5,7 @@ import java.io.File
 data class MdSysfsDevice(
     val kname: String,
     val state: Set<String>,
+    val slot: Int?,
     val errors: Long?
 )
 
@@ -25,6 +26,10 @@ data class MdSysfsArray(
 )
 
 class MdSysfsReader(private val sysRoot: File = File("/sys")) {
+
+    companion object {
+        private const val UNASSIGNED_UUID = "00000000-0000-0000-0000-000000000000"
+    }
 
     fun readArrays(): List<MdSysfsArray> {
         val arrayDirs = File(sysRoot, "block").listFiles { file -> file.isDirectory && file.name.startsWith("md") }.orEmpty()
@@ -48,7 +53,7 @@ class MdSysfsReader(private val sysRoot: File = File("/sys")) {
             raidDisks = mdDir.readAttribute("raid_disks")?.toIntOrNull(),
             chunkSizeBytes = mdDir.readAttribute("chunk_size")?.toLongOrNull(),
             metadataVersion = mdDir.readAttribute("metadata_version"),
-            uuid = mdDir.readAttribute("uuid"),
+            uuid = mdDir.readAttribute("uuid")?.takeUnless { it == UNASSIGNED_UUID },
             syncAction = mdDir.readAttribute("sync_action"),
             syncCompletedSectors = mdDir.readAttribute("sync_completed")?.let(::parseSyncCompleted),
             syncSpeedKbPerSec = mdDir.readAttribute("sync_speed")?.toLongOrNull(),
@@ -69,6 +74,7 @@ class MdSysfsReader(private val sysRoot: File = File("/sys")) {
         return MdSysfsDevice(
             kname = devDir.name.removePrefix("dev-"),
             state = state,
+            slot = devDir.readAttribute("slot")?.toIntOrNull(),
             errors = devDir.readAttribute("errors")?.toLongOrNull()
         )
     }

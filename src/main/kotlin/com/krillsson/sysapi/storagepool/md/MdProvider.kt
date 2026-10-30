@@ -13,6 +13,7 @@ import com.krillsson.sysapi.storagepool.StoragePoolScanState
 import com.krillsson.sysapi.storagepool.StoragePoolState
 import org.springframework.stereotype.Component
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class MdProvider(
@@ -22,6 +23,7 @@ class MdProvider(
 
     companion object {
         private const val SECTOR_SIZE_BYTES = 512L
+        private const val BLOCK_SIZE_BYTES = 1024L
 
         fun deriveState(stat: MdStatArray, sysfs: MdSysfsArray?): StoragePoolState {
             return when {
@@ -50,17 +52,13 @@ class MdProvider(
                 "check", "repair" -> StoragePoolScanKind.SCRUB
                 else -> StoragePoolScanKind.SCRUB
             }
-            val (doneSectors, totalSectors) = sysfs.syncCompletedSectors ?: (null to null)
-            val percent = stat.resync?.percentComplete
-                ?: if (doneSectors != null && totalSectors != null && totalSectors > 0) {
-                    (doneSectors * 100f) / totalSectors
-                } else null
+            val (bytesProcessed, bytesTotal) = syncProgressBytes(stat.resync, sysfs.syncCompletedSectors) ?: (null to null)
             return StoragePoolScan(
                 kind = kind,
                 state = StoragePoolScanState.SCANNING,
-                percentComplete = percent,
-                bytesProcessed = doneSectors?.times(SECTOR_SIZE_BYTES),
-                bytesTotal = totalSectors?.times(SECTOR_SIZE_BYTES),
+                percentComplete = stat.resync?.percentComplete ?: percentOf(bytesProcessed, bytesTotal),
+                bytesProcessed = bytesProcessed,
+                bytesTotal = bytesTotal,
                 startedAt = null,
                 endedAt = null,
                 estimatedSecondsRemaining = stat.resync?.finishEtaMinutes?.let { (it * 60).toLong() },
@@ -68,16 +66,39 @@ class MdProvider(
             )
         }
 
-        private fun deviceState(sysfsDevice: MdSysfsDevice?, memberFlags: Set<Char>): StoragePoolDeviceState {
+        private fun syncProgressBytes(resync: MdStatResync?, syncCompletedSectors: Pair<Long, Long>?): Pair<Long, Long>? {
+            val doneBlocks = resync?.doneBlocks
+            val totalBlocks = resync?.totalBlocks
             return when {
+                doneBlocks != null && totalBlocks != null -> doneBlocks * BLOCK_SIZE_BYTES to totalBlocks * BLOCK_SIZE_BYTES
+                syncCompletedSectors != null -> syncCompletedSectors.first * SECTOR_SIZE_BYTES to syncCompletedSectors.second * SECTOR_SIZE_BYTES
+                else -> null
+            }
+        }
+
+        private fun percentOf(done: Long?, total: Long?): Float? {
+            return when {
+                done == null || total == null || total <= 0 -> null
+                else -> (done * 100f) / total
+            }
+        }
+
+        fun deviceState(sysfsDevice: MdSysfsDevice?, memberFlags: Set<Char>, arrayIsInactive: Boolean): StoragePoolDeviceState {
+            return when {
+                arrayIsInactive -> StoragePoolDeviceState.UNKNOWN
                 sysfsDevice == null -> StoragePoolDeviceState.MISSING
                 "faulty" in sysfsDevice.state || 'F' in memberFlags -> StoragePoolDeviceState.FAULTY
+                isRebuildTarget(sysfsDevice) -> StoragePoolDeviceState.REBUILDING
                 "spare" in sysfsDevice.state || 'S' in memberFlags -> StoragePoolDeviceState.SPARE
                 "in_sync" in sysfsDevice.state -> StoragePoolDeviceState.ONLINE
                 else -> StoragePoolDeviceState.UNKNOWN
             }
         }
+
+        private fun isRebuildTarget(device: MdSysfsDevice): Boolean = "spare" in device.state && device.slot != null
     }
+
+    private val lastKnownUuidByDevice = ConcurrentHashMap<String, String>()
 
     override fun supported(): Boolean = procMdstatFile.isFile
 
@@ -101,8 +122,16 @@ class MdProvider(
         return statArrays.map { stat -> toStoragePool(stat, sysfsArrays[stat.device]) }
     }
 
+    private fun rememberedUuid(device: String, uuid: String?): String? {
+        return when (uuid) {
+            null -> lastKnownUuidByDevice[device]
+            else -> uuid.also { lastKnownUuidByDevice[device] = it }
+        }
+    }
+
     private fun toStoragePool(stat: MdStatArray, sysfs: MdSysfsArray?): StoragePool {
         val sysfsDevicesByKname = sysfs?.devices?.associateBy { it.kname } ?: emptyMap()
+        val arrayIsInactive = sysfs?.arrayState == "inactive"
         val devices = stat.members.map { member ->
             val sysfsDevice = sysfsDevicesByKname[member.name]
             StoragePoolDevice(
@@ -110,7 +139,7 @@ class MdProvider(
                 name = member.name,
                 path = "/dev/${member.name}",
                 role = StoragePoolDeviceRole.DATA,
-                state = deviceState(sysfsDevice, member.flags),
+                state = deviceState(sysfsDevice, member.flags, arrayIsInactive),
                 readErrors = null,
                 writeErrors = null,
                 checksumErrors = sysfsDevice?.errors,
@@ -118,7 +147,7 @@ class MdProvider(
             )
         }
         return StoragePool(
-            id = "md:${sysfs?.uuid ?: stat.device}",
+            id = "md:${rememberedUuid(stat.device, sysfs?.uuid) ?: stat.device}",
             name = stat.device,
             kind = StoragePoolKind.MDADM,
             state = deriveState(stat, sysfs),

@@ -6,6 +6,7 @@ import com.krillsson.sysapi.core.monitoring.MonitorConfig
 import com.krillsson.sysapi.core.monitoring.MonitorMaxValueInput
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.storagepool.StoragePoolState
+import com.krillsson.sysapi.storagepool.storagePool
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
@@ -48,6 +49,30 @@ class StoragePoolHealthMonitorTest {
 
         // When / Then
         onlineThreshold.isPastThreshold(MonitoredValue.EnumValue(StoragePoolState.DEGRADED), onlineThreshold.config.threshold) shouldBe true
+    }
+
+    @Test
+    fun `reads a pool that has disappeared as unavailable so its monitor fires instead of being removed`() {
+        // Given
+        val pools = listOf(storagePool(id = "md:other"))
+
+        // When
+        val value = StoragePoolHealthMonitor.value(pools, "md:abcd")
+
+        // Then
+        value shouldBe MonitoredValue.EnumValue(StoragePoolState.UNAVAIL)
+    }
+
+    @Test
+    fun `reads the state of a pool that is present`() {
+        // Given
+        val pools = listOf(storagePool(id = "md:abcd", state = StoragePoolState.DEGRADED))
+
+        // When
+        val value = StoragePoolHealthMonitor.value(pools, "md:abcd")
+
+        // Then
+        value shouldBe MonitoredValue.EnumValue(StoragePoolState.DEGRADED)
     }
 
     @Test
