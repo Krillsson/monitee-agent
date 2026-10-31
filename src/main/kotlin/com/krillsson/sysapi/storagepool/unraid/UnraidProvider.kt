@@ -23,6 +23,7 @@ class UnraidProvider(
     companion object {
         private const val PARITY_SLOT = 0
         private const val PARITY2_SLOT = 29
+        private const val KIB = 1024L
 
         fun isAssigned(disk: UnraidDisk): Boolean {
             val notPresent = disk.status == "DISK_NP" || disk.status == "DISK_NP_DSBL"
@@ -83,6 +84,11 @@ class UnraidProvider(
         }
 
         private fun isParity(slot: Int) = slot == PARITY_SLOT || slot == PARITY2_SLOT
+
+        private fun <T> List<T>.sumOfKibOrNull(selector: (T) -> Long?): Long? {
+            val values = mapNotNull(selector)
+            return if (values.isEmpty()) null else values.sum() * KIB
+        }
     }
 
     override fun supported(): Boolean = readArray() != null
@@ -125,9 +131,12 @@ class UnraidProvider(
                 readErrors = null,
                 writeErrors = null,
                 checksumErrors = disk.numErrors ?: info?.numErrors,
-                sizeBytes = null
+                sizeBytes = (disk.diskSizeK?.takeIf { it > 0 } ?: info?.sizeK)?.times(KIB)
             )
         }
+        val dataDisks = array.disks.filter(::isAssigned).filterNot { isParity(it.slot) }
+        val dataDiskInfo = dataDisks.mapNotNull { diskInfoBySlotName[slotName(it.slot)] }
+        val fsSizeBytes = dataDiskInfo.sumOfKibOrNull { it.fsSizeK }
         return StoragePool(
             id = "unraid:array",
             name = "Unraid array",
@@ -135,9 +144,9 @@ class UnraidProvider(
             state = deriveState(array),
             statusMessage = array.mdState,
             redundancy = "parity",
-            sizeBytes = null,
-            allocatedBytes = null,
-            freeBytes = null,
+            sizeBytes = fsSizeBytes ?: dataDisks.sumOfKibOrNull { it.diskSizeK },
+            allocatedBytes = dataDiskInfo.sumOfKibOrNull { it.fsUsedK },
+            freeBytes = dataDiskInfo.sumOfKibOrNull { it.fsFreeK },
             devices = devices,
             scan = deriveScan(array),
             dataSource = StoragePoolDataSource.KERNEL_INTERFACE

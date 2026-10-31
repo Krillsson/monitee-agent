@@ -21,9 +21,13 @@ class UnraidDisksIniParserTest {
             ["disk1"]
             device="sdc"
             id="WDC_WD20"
+            size="11708591084"
             status="DISK_OK"
             numErrors="2"
             temp="34"
+            fsSize="11706504172"
+            fsFree="2316868280"
+            fsUsed="9389635892"
         """.trimIndent()
 
         // When
@@ -41,6 +45,11 @@ class UnraidDisksIniParserTest {
         val disk1 = disks.first { it.slotName == "disk1" }
         disk1.device shouldBe "sdc"
         disk1.numErrors shouldBe 2L
+        disk1.sizeK shouldBe 11708591084L
+        disk1.fsSizeK shouldBe 11706504172L
+        disk1.fsFreeK shouldBe 2316868280L
+        disk1.fsUsedK shouldBe 9389635892L
+        parity.fsSizeK shouldBe null
     }
 
     @Test

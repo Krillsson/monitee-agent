@@ -29,11 +29,22 @@ class UnraidProviderTest {
     private fun assigned(slot: Int, device: String, status: String = "DISK_OK") =
         slot(slot, status, device, "WDC_WD80EFAX_$slot", 7814026532L)
 
-    private fun providerFor(vararg slots: String): UnraidProvider {
+    private fun providerFor(vararg slots: String, disksIni: String? = null): UnraidProvider {
         val mdstat = File(tempDir, "mdstat")
         mdstat.writeText((listOf("mdState=STARTED", "mdNumDisks=4", "sbNumDisks=30") + slots).joinToString("\n"))
-        return UnraidProvider(mdstat, File(tempDir, "absent.ini"))
+        val ini = File(tempDir, "disks.ini")
+        disksIni?.let { ini.writeText(it) }
+        return UnraidProvider(mdstat, ini)
     }
+
+    private fun iniSection(slotName: String, fsSizeK: Long, fsFreeK: Long, fsUsedK: Long) = """
+        ["$slotName"]
+        device="sdx"
+        size="7814026532"
+        fsSize="$fsSizeK"
+        fsFree="$fsFreeK"
+        fsUsed="$fsUsedK"
+    """.trimIndent()
 
     private fun emptySlots(range: IntRange) = range.map { slot(it, "DISK_NP") }.toTypedArray()
 
@@ -203,5 +214,64 @@ class UnraidProviderTest {
 
         // Then
         scan.kind shouldBe StoragePoolScanKind.REBUILD
+    }
+
+    @Test
+    fun `the array is sized by the data disks' filesystems and leaves parity out`() {
+        // Given
+        val provider = providerFor(
+            assigned(0, "sdo"),
+            assigned(1, "sdd"),
+            assigned(2, "sdae"),
+            *emptySlots(3..28),
+            slot(29, "DISK_NP_DSBL"),
+            disksIni = listOf(
+                """["parity"]""",
+                """device="sdo"""",
+                """size="7814026532"""",
+                iniSection("disk1", fsSizeK = 7_000_000L, fsFreeK = 1_000_000L, fsUsedK = 6_000_000L),
+                iniSection("disk2", fsSizeK = 5_000_000L, fsFreeK = 2_000_000L, fsUsedK = 3_000_000L)
+            ).joinToString("\n")
+        )
+
+        // When
+        val pool = provider.pools().single()
+
+        // Then
+        pool.sizeBytes shouldBe 12_000_000L * 1024
+        pool.allocatedBytes shouldBe 9_000_000L * 1024
+        pool.freeBytes shouldBe 3_000_000L * 1024
+    }
+
+    @Test
+    fun `without disks ini the array size is the raw size of the data disks`() {
+        // Given
+        val provider = providerFor(
+            assigned(0, "sdo"),
+            assigned(1, "sdd"),
+            assigned(2, "sdae"),
+            *emptySlots(3..28),
+            slot(29, "DISK_NP_DSBL")
+        )
+
+        // When
+        val pool = provider.pools().single()
+
+        // Then
+        pool.sizeBytes shouldBe 2 * 7814026532L * 1024
+        pool.allocatedBytes.shouldBeNull()
+        pool.freeBytes.shouldBeNull()
+    }
+
+    @Test
+    fun `each disk reports its size from mdstat`() {
+        // Given
+        val provider = providerFor(assigned(0, "sdo"), assigned(1, "sdd"), *emptySlots(2..28), slot(29, "DISK_NP_DSBL"))
+
+        // When
+        val pool = provider.pools().single()
+
+        // Then
+        pool.devices.map { it.sizeBytes } shouldBe listOf(7814026532L * 1024, 7814026532L * 1024)
     }
 }

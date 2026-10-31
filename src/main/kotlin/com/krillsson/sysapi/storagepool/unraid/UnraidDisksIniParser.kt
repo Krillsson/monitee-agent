@@ -6,7 +6,11 @@ data class UnraidDiskInfo(
     val id: String?,
     val status: String?,
     val numErrors: Long?,
-    val temperatureCelsius: Int?
+    val temperatureCelsius: Int?,
+    val sizeK: Long? = null,
+    val fsSizeK: Long? = null,
+    val fsFreeK: Long? = null,
+    val fsUsedK: Long? = null
 )
 
 object UnraidDisksIniParser {
@@ -38,7 +42,11 @@ object UnraidDisksIniParser {
                 id = values["id"],
                 status = values["status"],
                 numErrors = values["numErrors"]?.toLongOrNull(),
-                temperatureCelsius = values["temp"]?.toIntOrNull()
+                temperatureCelsius = values["temp"]?.toIntOrNull(),
+                sizeK = values["size"]?.toLongOrNull(),
+                fsSizeK = values["fsSize"]?.toLongOrNull(),
+                fsFreeK = values["fsFree"]?.toLongOrNull(),
+                fsUsedK = values["fsUsed"]?.toLongOrNull()
             )
         }
     }
