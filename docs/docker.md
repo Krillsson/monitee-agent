@@ -1,7 +1,7 @@
-Let’s create a installation directory in our servers home folder
+Let’s create an installation directory under a docker folder in our servers home folder
 
 ```bash
-mkdir -p ~/monitee-agent/{config,data} && cd ~/monitee-agent
+mkdir -p ~/docker/monitee-agent/{config,data} && cd ~/docker/monitee-agent
 ```
 
 The server expects a *configuration.yml* in the configuration directory. Let’s download the latest one using wget
@@ -33,15 +33,11 @@ docker run -d \
     --pid=host \
     --name monitee-agent \
     --cap-add SYS_RAWIO \
-    -v ~/monitee-agent/data:/data \
-    -v ~/monitee-agent/config:/config \
+    -v ~/docker/monitee-agent/data:/data \
+    -v ~/docker/monitee-agent/config:/config \
     -v /etc/localtime:/etc/localtime:ro \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v /run/udev:/run/udev:ro \
-    -v /run/systemd:/run/systemd \
-    -v /etc/machine-id:/etc/machine-id:ro \
-    -v /run/systemd/journal/socket:/run/systemd/journal/socket:ro \
-    -v /run/log/journal:/run/log/journal:ro \
     -v /dev:/dev:ro \
     -v /srv:/srv:ro \
     -v /etc/os-release:/etc/os-release:ro \
@@ -58,6 +54,22 @@ Want to monitor a nvidia GPU? Also add this to the command:
 or substitute all with the specific gpu index (e.g “0”)
 
 The agent runs the native build, which uses less memory, and falls back to Java on hosts it can't run on. Want to choose for yourself? Add `-e SYSAPI_RUNTIME=jvm` to always run Java, or `-e SYSAPI_RUNTIME=native` to run the native build without falling back.
+
+### Systemd services and the journal
+
+To manage systemd services and read the journal from the app, the host has to run systemd and the
+container needs these mounts as well. They are left out above because not every Docker host uses
+systemd. Add them to the command:
+
+```bash
+    -v /run/systemd:/run/systemd \
+    -v /etc/machine-id:/etc/machine-id:ro \
+    -v /run/systemd/journal/socket:/run/systemd/journal/socket:ro \
+    -v /run/log/journal:/run/log/journal:ro \
+```
+
+Hosts that don't use systemd can skip this. The agent turns the features off on its own when
+systemd isn't reachable. They can also be switched off under `linux` in `configuration.yml`.
 
 ### Browsing files
 

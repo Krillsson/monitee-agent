@@ -1,7 +1,7 @@
-Let’s create a installation directory in our servers home folder
+Let’s create an installation directory under a docker folder in our servers home folder
 
 ```bash
-mkdir ~/sys-api && cd ~/sys-api
+mkdir -p ~/docker/monitee-agent && cd ~/docker/monitee-agent
 ```
 
 Then let’s create the *config*/ and *data*/ directories
@@ -17,8 +17,8 @@ cd config
 ```
 
 ```bash
-wget https://raw.githubusercontent.com/Krillsson/sys-API/refs/heads/master/config/configuration.yml
-wget https://raw.githubusercontent.com/Krillsson/sys-API/refs/heads/master/config/application.properties
+wget https://raw.githubusercontent.com/Krillsson/monitee-agent/refs/heads/master/config/configuration.yml
+wget https://raw.githubusercontent.com/Krillsson/monitee-agent/refs/heads/master/config/application.properties
 ```
 
 Use your favorite text editor to edit the user & password of the config
@@ -34,7 +34,7 @@ Then press **CTRL+X** to exit nano (and press **Y** to save)
 Now we can download the latest docker-compose.yml and make our edits to it using nano
 
 ```bash
-wget https://raw.githubusercontent.com/Krillsson/sys-API/master/docker-compose.yml
+wget https://raw.githubusercontent.com/Krillsson/monitee-agent/master/docker-compose.yml
 ```
 
 Remember to swap out the volume mounts for the *config*/ and *data*/ directories
@@ -44,6 +44,15 @@ Want to monitor the temperature of disks? Each disk you’d like to monitor has 
 ```yaml
 devices:
   - "/dev/sda:/dev/sda"
+```
+
+Want to manage systemd services and read the journal? Uncomment the systemd mounts in the volumes section of the compose file. They are off by default because not every Docker host uses systemd.
+
+```yaml
+- /run/systemd:/run/systemd
+- /etc/machine-id:/etc/machine-id:ro
+- /run/systemd/journal/socket:/run/systemd/journal/socket:ro
+- /run/log/journal:/run/log/journal:ro
 ```
 
 Then we can start the container

@@ -23,12 +23,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # to read device names from disks
       - /run/udev:/run/udev:ro
-      # to control systemd
-      - /run/systemd:/run/systemd
-      # to read journal logs
-      - /etc/machine-id:/etc/machine-id:ro
-      - /run/systemd/journal/socket:/run/systemd/journal/socket:ro
-      - /run/log/journal:/run/log/journal:ro
+      # systemd hosts only (not Alpine, Unraid, TrueNAS, ...). Uncomment to manage systemd services
+      # and read the journal.
+      #- /run/systemd:/run/systemd
+      #- /etc/machine-id:/etc/machine-id:ro
+      #- /run/systemd/journal/socket:/run/systemd/journal/socket:ro
+      #- /run/log/journal:/run/log/journal:ro
       # to allow sys-API access to read info about disks
       - /dev:/dev:ro
       # show correct os info in about server screen
