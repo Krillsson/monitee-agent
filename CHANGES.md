@@ -1,5 +1,7 @@
 ### Unreleased
 
+### 0.49.0
+
 - Feature: `storagePools` are now published to the API.
   - md/mdadm, Unraid array, zfs and btrfs are supported
   - A new `STORAGE_POOL_HEALTH` monitor type for a degraded pool
