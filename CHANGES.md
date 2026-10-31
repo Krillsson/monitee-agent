@@ -1,19 +1,20 @@
 ### Unreleased
 
-- Notification policy, set from the app with `updateNotificationPolicy` and applied to ntfy, webhooks and MQTT:
+- Feature: `storagePools` are now published to the API.
+  - md/mdadm, Unraid array, zfs and btrfs are supported
+  - A new `STORAGE_POOL_HEALTH` monitor type for a degraded pool
+  - Unraid template updated. Existing installs need to mount in "/var/local/emhttp" as read-only.
+- Feature: Notification policy, set from the app with `updateNotificationPolicy`:
   - Quiet hours drop notifications inside a daily window, with an option to let critical events through.
   - A cooldown stops a monitor from sending a notification for a new event within a few minutes of the last one.
   - `notifyOnRecovery` turns the recovery notifications off.
-- When quiet hours end, one notification lists the events raised inside them that are still ongoing and unacknowledged.
-- Ongoing events can be acknowledged with `acknowledgeEvent`, from the app or an Acknowledge action on ntfy, after which they send no more notifications unless they escalate to critical.
-- Webhook and MQTT event payloads carry an `eventId`, also available as the `{{eventId}}` placeholder.
-- The cooldown is on by default at five minutes, so a flapping monitor sends fewer notifications while still recording every event.
-- HTTPS check results record the expiry, issue date, issuer and subject of the leaf certificate, also exposed as `HttpCheck.certificate` with `daysUntilExpiry`.
-- New `CHECK_CERTIFICATE_EXPIRY` monitor type alerts when an HTTPS check's certificate has fewer days left than its warning and critical thresholds.
-- Fix: Warning notifications show the warning threshold that was crossed and the critical threshold, and the title says high/low or critical.
-- Fix: The `EXTERNAL_IP_CHANGED` monitor fires on a changed external IP also when its inertia is 5 minutes or longer.
-- `storagePools` reports md/mdadm and Unraid array state, member devices and parity/resync progress, plus a `STORAGE_POOL_HEALTH` monitor for a degraded pool. Read straight from /proc and /sys, no extra privileges needed.
-- `storagePools` also reports btrfs filesystems with their missing devices and error counters, and the state of every imported ZFS pool.
+  - Ongoing events can be acknowledged with `acknowledgeEvent`
+  - When quiet hours end, one notification lists the events raised inside them that are still ongoing and unacknowledged.
+- Feature: HTTPS check results record certificate details
+ - Exposed as `HttpCheck.certificate` with `daysUntilExpiry`. 
+ - New `CHECK_CERTIFICATE_EXPIRY` monitor type
+- Fix: Warning notifications now show the warning threshold instead of the critical one.
+- Fix: The `EXTERNAL_IP_CHANGED` wasnt working when delay were longer than 5m.
 
 ### 0.48.0
 
