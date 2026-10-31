@@ -64,7 +64,7 @@ docker compose -f docker-compose.yml up
 Let’s verify the server started correctly
 
 ```bash
-docker logs --follow --tail 200 sys-api
+docker logs --follow --tail 200 monitee-agent
 ```
 
 If you see this message without any error after it. That means the server is up and running
