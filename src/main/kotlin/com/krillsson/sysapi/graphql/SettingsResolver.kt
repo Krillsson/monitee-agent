@@ -15,6 +15,7 @@ import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.notifications.localization.TemperatureFormatter
 import org.springframework.graphql.data.method.annotation.QueryMapping
+import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
 import java.time.Duration
 import java.time.temporal.ChronoUnit
@@ -29,6 +30,10 @@ class SettingsResolver(
 
     @QueryMapping
     fun settings(): Settings = configFile.toSettings(temperatureFormatter.preferredTemperatureUnit.toSettings())
+
+    // Without this graphql-java calls Object.notify() on a native image, which can't create the lambda getter that finds getNotify() first.
+    @SchemaMapping(typeName = "ContainerUpdateCheckSettings", field = "notify")
+    fun notify(settings: ContainerUpdateCheckSettings): Boolean = settings.notify
 }
 
 data class Settings(

@@ -27,17 +27,67 @@ import com.krillsson.sysapi.config.UserConfiguration
 import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.WindowsEventLogConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
+import graphql.GraphQL
+import graphql.schema.PropertyDataFetcherHelper
+import graphql.schema.idl.RuntimeWiring
+import graphql.schema.idl.SchemaGenerator
+import graphql.schema.idl.SchemaParser
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotContain
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.graphql.data.method.annotation.support.AnnotatedControllerConfigurer
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 import com.krillsson.sysapi.config.TemperatureUnit as ConfiguredTemperatureUnit
 import com.krillsson.sysapi.notifications.localization.TemperatureUnit as ResolvedTemperatureUnit
 
 class SettingsResolverTest {
+
+    @Test
+    fun `resolves containerUpdateCheck notify when the lambda getter a native image lacks is unavailable`() {
+        // Given
+        val settings = ContainerUpdateCheckConfiguration(notify = true).toSettings()
+        val graphQl = graphQlServing(settings)
+        PropertyDataFetcherHelper.setUseLambdaFactory(false)
+        PropertyDataFetcherHelper.clearReflectionCache()
+
+        // When
+        val result = try {
+            graphQl.execute("{ containerUpdateCheck { notify } }")
+        } finally {
+            PropertyDataFetcherHelper.setUseLambdaFactory(true)
+            PropertyDataFetcherHelper.clearReflectionCache()
+        }
+
+        // Then
+        result.errors.shouldBeEmpty()
+        result.getData<Map<String, Map<String, Boolean>>>() shouldBe mapOf("containerUpdateCheck" to mapOf("notify" to true))
+    }
+
+    private fun graphQlServing(settings: ContainerUpdateCheckSettings): GraphQL {
+        val context = AnnotationConfigApplicationContext()
+        context.registerBean(SettingsResolver::class.java, Supplier { SettingsResolver(mockk(), mockk()) })
+        context.refresh()
+        val configurer = AnnotatedControllerConfigurer()
+        configurer.setApplicationContext(context)
+        configurer.afterPropertiesSet()
+        val wiring = RuntimeWiring.newRuntimeWiring()
+            .type("Query") { it.dataFetcher("containerUpdateCheck") { settings } }
+        configurer.configure(wiring)
+        val types = SchemaParser().parse(
+            """
+            type Query { containerUpdateCheck: ContainerUpdateCheckSettings! }
+            type ContainerUpdateCheckSettings { notify: Boolean! }
+            """
+        )
+        return GraphQL.newGraphQL(SchemaGenerator().makeExecutableSchema(types, wiring.build())).build()
+    }
 
     @Test
     fun `normalises a history interval in minutes to seconds`() {

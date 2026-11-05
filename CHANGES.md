@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: the `settings` query no longer fails on native images when `containerUpdateCheck.notify` is requested.
+
 ### 0.49.0
 
 - Feature: `storagePools` are now published to the API.
