@@ -1,6 +1,8 @@
 ### Unreleased
 
 - Fix: the `settings` query no longer fails on native images when `containerUpdateCheck.notify` is requested.
+- Fix: `history` and `historyBetweenTimestamps` no longer scan the whole metric series table.
+- Fix: Requests no longer time out while the hourly metric history roll-up runs.
 
 ### 0.49.0
 

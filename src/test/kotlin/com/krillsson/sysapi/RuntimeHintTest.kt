@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.aot.hint.RuntimeHints
 import org.springframework.aot.hint.TypeReference
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
+import org.springframework.jdbc.datasource.ConnectionProxy
 
 class RuntimeHintTest {
 
@@ -49,5 +50,17 @@ class RuntimeHintTest {
 
         // Then
         RuntimeHintsPredicates.reflection().onType(Guid.GUID::class.java).test(hints) shouldBe false
+    }
+
+    @Test
+    fun `registers the connection proxy the database routing hands out`() {
+        // Given
+        val hints = RuntimeHints()
+
+        // When
+        RuntimeHint(aotOnWindows = false).registerHints(hints, javaClass.classLoader)
+
+        // Then
+        RuntimeHintsPredicates.proxies().forInterfaces(ConnectionProxy::class.java).test(hints) shouldBe true
     }
 }
