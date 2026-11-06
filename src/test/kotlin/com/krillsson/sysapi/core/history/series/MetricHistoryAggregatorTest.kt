@@ -2,23 +2,33 @@ package com.krillsson.sysapi.core.history.series
 
 import com.krillsson.sysapi.config.RetentionConfiguration
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainOnlyNulls
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotContainNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.transaction.support.SimpleTransactionStatus
+import org.springframework.transaction.support.TransactionCallback
+import org.springframework.transaction.support.TransactionOperations
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.Optional
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 class MetricHistoryAggregatorTest {
 
     private val repository = mockk<MetricSeriesBucketRepository>(relaxed = true)
     private val series = seriesKey(MetricId.CPU_USAGE_PERCENT)
     private val saved = mutableListOf<MetricSeriesBucketEntity>()
+    private val transactions = RecordingTransactions()
 
     private val openFiveMinutes = MetricSeriesBuckets.startOf(Instant.now(), MetricResolution.FIVE_MINUTE)
 
@@ -63,7 +73,7 @@ class MetricHistoryAggregatorTest {
         }
     }
 
-    private fun aggregator() = MetricHistoryAggregator(repository, configWithSeriesRetention())
+    private fun aggregator() = MetricHistoryAggregator(repository, transactions, configWithSeriesRetention())
 
     @Test
     fun `merges closed five minute windows and leaves the one in progress alone`() {
@@ -180,6 +190,7 @@ class MetricHistoryAggregatorTest {
         // Given
         val aggregator = MetricHistoryAggregator(
             repository,
+            transactions,
             configWithSeriesRetention(
                 raw = RetentionConfiguration(12, ChronoUnit.HOURS),
                 fiveMinute = RetentionConfiguration(72, ChronoUnit.HOURS),
@@ -240,5 +251,103 @@ class MetricHistoryAggregatorTest {
         hourly.minValue shouldBe 1.0
         hourly.maxValue shouldBe 20.0
         hourly.avgValue shouldBe 5.0
+    }
+
+    @Test
+    fun `rolls up each series in a transaction of its own`() {
+        // Given
+        val window = openFiveMinutes.minus(Duration.ofMinutes(5))
+        val cpu = seriesKey(MetricId.CPU_USAGE_PERCENT)
+        val memory = seriesKey(MetricId.MEMORY_USED_PERCENT)
+        val seriesLookedUpIn = mutableListOf<Int?>()
+        every { repository.findDistinctSeries(any()) } answers {
+            seriesLookedUpIn += transactions.current
+            if (firstArg<MetricResolution>() == MetricResolution.RAW) listOf(cpu, memory) else emptyList()
+        }
+        every {
+            repository.findFirstByMetricAndItemIdAndResolutionOrderByBucketStartAsc(any(), any(), MetricResolution.RAW)
+        } answers { Optional.of(rawBucket(window, value = 1.0)) }
+        every {
+            repository.findByMetricAndItemIdAndResolutionAndBucketStartGreaterThanEqualAndBucketStartLessThanOrderByBucketStartAsc(
+                any(), any(), MetricResolution.RAW, any(), any()
+            )
+        } answers { listOf(rawBucket(window, value = 1.0)) }
+        val savedIn = mutableListOf<Int?>()
+        every { repository.saveAll(any<Iterable<MetricSeriesBucketEntity>>()) } answers {
+            savedIn += transactions.current
+            firstArg<Iterable<MetricSeriesBucketEntity>>().toMutableList()
+        }
+
+        // When
+        aggregator().rollUpClosedPeriods()
+
+        // Then
+        seriesLookedUpIn.shouldContainOnlyNulls()
+        savedIn shouldHaveSize 2
+        savedIn.shouldNotContainNull()
+        savedIn.distinct() shouldHaveSize 2
+    }
+
+    @Test
+    fun `purges each tier in a transaction of its own`() {
+        // Given
+        val purgedIn = mutableListOf<Int?>()
+        every { repository.deleteOlderThan(any(), any()) } answers {
+            purgedIn += transactions.current
+            0
+        }
+
+        // When
+        aggregator().rollUpClosedPeriods()
+
+        // Then
+        purgedIn shouldHaveSize 4
+        purgedIn.shouldNotContainNull()
+        purgedIn.distinct() shouldHaveSize 4
+    }
+
+    @Test
+    fun `waits for a roll-up in progress before starting another`() {
+        // Given
+        val firstStarted = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val lookups = AtomicInteger()
+        every { repository.findDistinctSeries(any()) } answers {
+            if (lookups.incrementAndGet() == 1) {
+                firstStarted.countDown()
+                releaseFirst.await(5, TimeUnit.SECONDS)
+            }
+            emptyList()
+        }
+        val aggregator = aggregator()
+        val first = thread { aggregator.rollUpExistingHistory() }
+        firstStarted.await(5, TimeUnit.SECONDS) shouldBe true
+
+        // When
+        val second = thread { aggregator.rollUpClosedPeriods() }
+        second.join(300)
+
+        // Then
+        lookups.get() shouldBe 1
+        releaseFirst.countDown()
+        first.join(5_000)
+        second.join(5_000)
+        lookups.get() shouldBe 6
+    }
+
+    private class RecordingTransactions : TransactionOperations {
+        private var started = 0
+        var current: Int? = null
+            private set
+
+        override fun <T> execute(action: TransactionCallback<T>): T? {
+            check(current == null) { "transactions must not nest" }
+            current = ++started
+            try {
+                return action.doInTransaction(SimpleTransactionStatus())
+            } finally {
+                current = null
+            }
+        }
     }
 }

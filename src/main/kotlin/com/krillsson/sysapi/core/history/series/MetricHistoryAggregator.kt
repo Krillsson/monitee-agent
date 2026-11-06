@@ -6,30 +6,30 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionOperations
 import java.time.Instant
 import java.util.UUID
 
 @Component
 class MetricHistoryAggregator(
     private val repository: MetricSeriesBucketRepository,
+    private val transactions: TransactionOperations,
     yamlConfigFile: YAMLConfigFile
 ) {
     private val logger by logger()
     private val retention = yamlConfigFile.metricsConfig.history.series
 
     @EventListener(ApplicationReadyEvent::class)
-    @Transactional
     fun rollUpExistingHistory() {
         aggregate()
     }
 
     @Scheduled(cron = "0 10 * * * *")
-    @Transactional
     fun rollUpClosedPeriods() {
         aggregate()
     }
 
+    @Synchronized
     private fun aggregate() {
         val now = Instant.now()
         val written = MERGE_TARGETS.sumOf { rollUp(it, now) }
@@ -43,7 +43,7 @@ class MetricHistoryAggregator(
         val source = requireNotNull(MetricSeriesBuckets.below(target))
         val cutoff = MetricSeriesBuckets.startOf(now, target)
         return repository.findDistinctSeries(source).sumOf { series ->
-            rollUpSeries(series, source, target, cutoff)
+            transactions.execute { rollUpSeries(series, source, target, cutoff) } ?: 0
         }
     }
 
@@ -129,33 +129,22 @@ class MetricHistoryAggregator(
         return entities.size
     }
 
-    private fun purge(now: Instant): Int {
-        val raw = repository.deleteOlderThan(
-            MetricResolution.RAW,
-            now.minus(retention.raw.olderThan, retention.raw.unit)
+    private fun purge(now: Instant): Int = listOf(
+        MetricResolution.RAW to now.minus(retention.raw.olderThan, retention.raw.unit),
+        MetricResolution.FIVE_MINUTE to MetricSeriesBuckets.startOf(
+            now.minus(retention.fiveMinute.olderThan, retention.fiveMinute.unit),
+            MetricResolution.FIVE_MINUTE
+        ),
+        MetricResolution.HOURLY to MetricSeriesBuckets.startOf(
+            now.minus(retention.hourly.olderThan, retention.hourly.unit),
+            MetricResolution.HOURLY
+        ),
+        MetricResolution.DAILY to MetricSeriesBuckets.startOf(
+            now.minus(retention.daily.olderThan, retention.daily.unit),
+            MetricResolution.DAILY
         )
-        val fiveMinute = repository.deleteOlderThan(
-            MetricResolution.FIVE_MINUTE,
-            MetricSeriesBuckets.startOf(
-                now.minus(retention.fiveMinute.olderThan, retention.fiveMinute.unit),
-                MetricResolution.FIVE_MINUTE
-            )
-        )
-        val hourly = repository.deleteOlderThan(
-            MetricResolution.HOURLY,
-            MetricSeriesBuckets.startOf(
-                now.minus(retention.hourly.olderThan, retention.hourly.unit),
-                MetricResolution.HOURLY
-            )
-        )
-        val daily = repository.deleteOlderThan(
-            MetricResolution.DAILY,
-            MetricSeriesBuckets.startOf(
-                now.minus(retention.daily.olderThan, retention.daily.unit),
-                MetricResolution.DAILY
-            )
-        )
-        return raw + fiveMinute + hourly + daily
+    ).sumOf { (resolution, before) ->
+        transactions.execute { repository.deleteOlderThan(resolution, before) } ?: 0
     }
 
     companion object {
