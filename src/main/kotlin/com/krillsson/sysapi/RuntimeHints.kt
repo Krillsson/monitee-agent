@@ -16,6 +16,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar
 import org.springframework.aot.hint.TypeReference
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.core.type.classreading.CachingMetadataReaderFactory
+import org.springframework.jdbc.datasource.ConnectionProxy
 import org.springframework.util.ClassUtils
 import com.sun.jna.Callback
 import com.sun.jna.Library
@@ -71,6 +72,7 @@ class RuntimeHint(
         registerNvmlHints(hints)
         registerDockerJsonHints(hints, classLoader)
         registerPahoHints(hints)
+        hints.proxies().registerJdkProxy(ConnectionProxy::class.java)
         if (aotOnWindows) {
             registerWindowsJnaHints(hints, classLoader)
         }
