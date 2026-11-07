@@ -130,6 +130,7 @@ import com.krillsson.sysapi.mqtt.MqttEventPayload
 import com.krillsson.sysapi.notifications.MqttInfo
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.notifications.WebhookInfo
+import com.krillsson.sysapi.notifications.ntfy.NtfyApi
 import com.krillsson.sysapi.notifications.webhook.WebhookPayload
 import com.krillsson.sysapi.notifications.NotificationPolicy
 import com.krillsson.sysapi.notifications.NotificationPolicyStore
@@ -312,6 +313,8 @@ import kotlin.system.exitProcess
     NotificationsConfiguration.WebhookConfiguration::class,
     WebhookInfo::class,
     WebhookPayload::class,
+    NtfyApi.Notification::class,
+    NtfyApi.Notification.Action::class,
     MqttConfiguration::class,
     MqttConfiguration.HomeAssistantConfiguration::class,
     MqttInfo::class,
