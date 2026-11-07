@@ -90,15 +90,21 @@ class NotificationManager(
         logger.info("Dropping {} - {}", notification, suppression.description)
     }
 
-    private fun send(notification: Notification) {
+    fun sendTest(): List<String> {
+        return send(Notification.GenericEvent.Test(clock.instant()))
+    }
+
+    private fun send(notification: Notification): List<String> {
         if (notification is Notification.OngoingEvent) {
             lastRaiseByMonitor[notification.monitorId] = SentRaise(notification.id, clock.instant())
             withheldRaises.remove(notification.id)
         }
-        notificationServices.filter { it.enabled }.forEach { service ->
+        val enabledServices = notificationServices.filter { it.enabled }
+        enabledServices.forEach { service ->
             logger.info("Sending {} to {}", notification, service::class.simpleName)
             service.notify(notification.asNotificationParameters())
         }
+        return enabledServices.flatMap { it.channels }
     }
 
     @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES)
@@ -232,6 +238,7 @@ class NotificationManager(
         is Notification.GenericEvent.ContainerImageUpdateAvailable -> NotificationEventType.CONTAINER_IMAGE_UPDATE_AVAILABLE
         is Notification.GenericEvent.ContainerImageUpdateDigest -> NotificationEventType.CONTAINER_IMAGE_UPDATE_DIGEST
         is Notification.GenericEvent.QuietHoursSummary -> NotificationEventType.QUIET_HOURS_SUMMARY
+        is Notification.GenericEvent.Test -> NotificationEventType.TEST
     }
 
     private fun Notification.monitorType() = when (this) {
@@ -249,6 +256,7 @@ class NotificationManager(
         is Notification.GenericEvent.ContainerImageUpdateAvailable -> id
         is Notification.GenericEvent.ContainerImageUpdateDigest -> null
         is Notification.GenericEvent.QuietHoursSummary -> null
+        is Notification.GenericEvent.Test -> null
     }
 
     private fun Notification.timestamp(): Instant = when (this) {
@@ -259,6 +267,7 @@ class NotificationManager(
         is Notification.GenericEvent.ContainerImageUpdateAvailable -> timestamp
         is Notification.GenericEvent.ContainerImageUpdateDigest -> timestamp
         is Notification.GenericEvent.QuietHoursSummary -> timestamp
+        is Notification.GenericEvent.Test -> timestamp
     }
 
     private data class SentRaise(val eventId: UUID, val at: Instant)

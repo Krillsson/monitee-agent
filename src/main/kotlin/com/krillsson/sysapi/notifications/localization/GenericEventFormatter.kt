@@ -59,6 +59,14 @@ class GenericEventFormatter {
         return "While quiet on $serverName"
     }
 
+    fun formatTestTitle(serverName: String): String {
+        return "Test notification from $serverName"
+    }
+
+    fun formatTestDescription(): String {
+        return "Notifications from this server reach you here"
+    }
+
     fun formatMonitoredItemMissingTitle(event: Notification.GenericEvent.MonitoredItemMissing, serverName: String): String {
         return "Monitored item missing from ${EnvironmentUtils.hostName}"
     }

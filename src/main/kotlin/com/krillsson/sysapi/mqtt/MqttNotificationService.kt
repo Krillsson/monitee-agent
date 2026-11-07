@@ -21,6 +21,9 @@ class MqttNotificationService(
     override val enabled: Boolean
         get() = connection.enabled
 
+    override val channels: List<String>
+        get() = listOf("MQTT")
+
     override fun notify(notification: NotificationParameters) {
         val parameters = if (config.emoji) NotificationEmoji.decorate(notification) else notification
         connection.publish(topics.event, mapper.writeValueAsString(parameters.asPayload()), retain = false)

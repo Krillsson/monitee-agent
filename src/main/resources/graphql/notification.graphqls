@@ -9,6 +9,19 @@ extend type Mutation {
     resumeNotifications: SnoozeNotificationsInfo!
     "Changes the quiet hours, cooldown and recovery settings. Omitted fields keep their current value"
     updateNotificationPolicy(input: NotificationPolicyInput!): NotificationPolicy!
+    "Sends a test notification to every enabled channel at once, ignoring snooze and quiet hours. At most 20 an hour"
+    sendTestNotification: TestNotificationResult!
+}
+
+type TestNotificationResult {
+    "False when no channel is enabled, or when the hourly limit is used up and nothing was sent"
+    sent: Boolean!
+    "Where the notification went: ntfy, each webhook by name, and MQTT. Delivery failures only show up in the agent log"
+    channels: [String!]!
+    "Test notifications left in the current hour"
+    remaining: Int!
+    "When the next test notification is allowed. Null while remaining is above 0"
+    retryAfter: Instant
 }
 
 type NotificationServicesInfo{

@@ -42,6 +42,10 @@ class NotificationFormatter(
             is Notification.GenericEvent.QuietHoursSummary -> genericEventFormatter.formatQuietHoursSummaryTitle(
                 serverName
             ) to notification.events.joinToString("\n") { ongoingEventFormatter.formatOngoingEventDescription(it) }
+
+            is Notification.GenericEvent.Test -> genericEventFormatter.formatTestTitle(
+                serverName
+            ) to genericEventFormatter.formatTestDescription()
         }
     }
 }

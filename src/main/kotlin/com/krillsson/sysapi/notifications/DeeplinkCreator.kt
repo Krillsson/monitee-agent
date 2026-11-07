@@ -21,6 +21,7 @@ class DeeplinkCreator(
             is Notification.GenericEvent.ContainerImageUpdateAvailable -> container(notification.containerId)
             is Notification.GenericEvent.ContainerImageUpdateDigest -> events()
             is Notification.GenericEvent.QuietHoursSummary -> events()
+            is Notification.GenericEvent.Test -> events()
             is Notification.OngoingEvent -> ongoingEvent(notification.monitorId)
             is Notification.ResolvedEvent -> ongoingEvent(notification.monitorId)
         }

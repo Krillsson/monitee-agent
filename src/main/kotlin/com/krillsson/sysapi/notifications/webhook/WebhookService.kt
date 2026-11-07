@@ -44,6 +44,9 @@ class WebhookService(
     override val enabled: Boolean
         get() = webhooks.isNotEmpty()
 
+    override val channels: List<String>
+        get() = webhooks.map { (config, _) -> config.displayName() }
+
     override fun notify(notification: NotificationParameters) {
         for ((config, client) in webhooks) {
             send(config, client, notification)

@@ -27,6 +27,9 @@ class NtfyService(
     override val enabled: Boolean
         get() = config.enabled
 
+    override val channels: List<String>
+        get() = listOf("ntfy")
+
     private val topic = config.topic ?: "$TOPIC_PREFIX-${serverIdService.serverId}"
 
     private val authorization: String? = when {
