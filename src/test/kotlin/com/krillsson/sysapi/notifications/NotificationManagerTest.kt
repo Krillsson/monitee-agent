@@ -660,4 +660,37 @@ class NotificationManagerTest {
         // Then
         notified shouldBe true
     }
+
+    @Test
+    fun `sends a test notification while snoozed and inside quiet hours`() {
+        // Given
+        snoozeNotificationsService.snooze(null, null)
+        enableQuietHours()
+        now = Instant.parse("2026-09-08T23:00:00Z")
+
+        // When
+        manager.sendTest()
+
+        // Then
+        sent.captured.eventType shouldBe NotificationEventType.TEST
+        verify(exactly = 1) { webhookService.notify(any()) }
+        verify(exactly = 1) { mqttNotificationService.notify(any()) }
+        snoozeNotificationsService.info().suppressedNotificationCount shouldBe 0
+    }
+
+    @Test
+    fun `names the channels of the enabled services the test notification went to`() {
+        // Given
+        every { ntfyService.channels } returns listOf("ntfy")
+        every { webhookService.channels } returns listOf("Home Assistant", "Discord")
+        every { mqttNotificationService.enabled } returns false
+        every { mqttNotificationService.channels } returns listOf("MQTT")
+
+        // When
+        val channels = manager.sendTest()
+
+        // Then
+        channels shouldBe listOf("ntfy", "Home Assistant", "Discord")
+        verify(exactly = 0) { mqttNotificationService.notify(any()) }
+    }
 }

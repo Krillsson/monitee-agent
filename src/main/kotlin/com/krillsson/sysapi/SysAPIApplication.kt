@@ -137,6 +137,7 @@ import com.krillsson.sysapi.notifications.NotificationPolicyStore
 import com.krillsson.sysapi.notifications.QuietHours
 import java.time.DayOfWeek
 import com.krillsson.sysapi.notifications.SuppressedNotificationCounts
+import com.krillsson.sysapi.notifications.TestNotificationResult
 import com.krillsson.sysapi.graphql.mutations.NotificationPolicyInput
 import com.krillsson.sysapi.graphql.mutations.QuietHoursInput
 import com.krillsson.sysapi.graphql.mutations.AcknowledgeEventInput
@@ -325,6 +326,7 @@ import kotlin.system.exitProcess
     QuietHours::class,
     DayOfWeek::class,
     SuppressedNotificationCounts::class,
+    TestNotificationResult::class,
     NotificationPolicyInput::class,
     QuietHoursInput::class,
     AcknowledgeEventInput::class,

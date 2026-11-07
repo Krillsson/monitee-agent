@@ -35,6 +35,7 @@ object NotificationEmoji {
         NotificationEventType.CONTAINER_IMAGE_UPDATE_AVAILABLE -> Emoji("🐳", "whale")
         NotificationEventType.CONTAINER_IMAGE_UPDATE_DIGEST -> Emoji("🐳", "whale")
         NotificationEventType.QUIET_HOURS_SUMMARY -> Emoji("🌙", "crescent_moon")
+        NotificationEventType.TEST -> Emoji("🔔", "bell")
     }
 
     private fun Monitor.Type.emoji() = when (this) {

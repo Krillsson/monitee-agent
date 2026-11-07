@@ -68,6 +68,10 @@ sealed interface Notification {
             val timestamp: Instant,
             val events: List<OngoingEvent>
         ) : GenericEvent
+
+        class Test(
+            val timestamp: Instant
+        ) : GenericEvent
     }
 }
 

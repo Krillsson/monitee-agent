@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Feature: `sendTestNotification` sends a test notification to every enabled channel, at most 20 an hour.
 - Fix: ntfy notifications are delivered again on native images.
 - Fix: the `settings` query no longer fails on native images when `containerUpdateCheck.notify` is requested.
 - Fix: `history` and `historyBetweenTimestamps` no longer scan the whole metric series table.

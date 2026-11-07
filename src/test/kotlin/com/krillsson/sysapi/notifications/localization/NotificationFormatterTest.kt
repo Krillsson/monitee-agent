@@ -48,4 +48,17 @@ class NotificationFormatterTest {
         title shouldBe "While quiet on MyServer"
         message shouldBe "Load went above 90% to 95%\nMemory usage went above 90% to 95%"
     }
+
+    @Test
+    fun `names the server in a test notification`() {
+        // When
+        val (title, message) = formatter.formatNotification(
+            Notification.GenericEvent.Test(Instant.parse("2026-11-07T12:00:00Z")),
+            "MyServer"
+        )
+
+        // Then
+        title shouldBe "Test notification from MyServer"
+        message shouldBe "Notifications from this server reach you here"
+    }
 }
