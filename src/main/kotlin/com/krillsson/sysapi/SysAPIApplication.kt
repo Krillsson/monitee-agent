@@ -161,6 +161,24 @@ import com.krillsson.sysapi.launcher.LaunchCommand
 import com.krillsson.sysapi.launcher.LauncherHandshake
 import com.krillsson.sysapi.launcher.NativeSelfTest
 import com.krillsson.sysapi.launcher.StartupFailure
+import com.krillsson.sysapi.config.ProxmoxConfiguration
+import com.krillsson.sysapi.graphql.domain.ProxmoxInfoUnavailable
+import com.krillsson.sysapi.proxmox.ProxmoxCluster
+import com.krillsson.sysapi.proxmox.ProxmoxNode
+import com.krillsson.sysapi.proxmox.ProxmoxNodeStatus
+import com.krillsson.sysapi.proxmox.ProxmoxGuest
+import com.krillsson.sysapi.proxmox.ProxmoxGuestKind
+import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
+import com.krillsson.sysapi.proxmox.ProxmoxGuestMetrics
+import com.krillsson.sysapi.proxmox.ProxmoxGuestCpuUsage
+import com.krillsson.sysapi.proxmox.ProxmoxGuestMemoryUsage
+import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkUsage
+import com.krillsson.sysapi.proxmox.ProxmoxGuestBlockIOUsage
+import com.krillsson.sysapi.proxmox.ProxmoxGuestDiskUsage
+import com.krillsson.sysapi.proxmox.ProxmoxGuestNetwork
+import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkInterface
+import com.krillsson.sysapi.proxmox.ProxmoxStorage
+import com.krillsson.sysapi.proxmox.ProxmoxStorageStatus
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration
@@ -259,6 +277,24 @@ import kotlin.system.exitProcess
     StoragePoolScanState::class,
     StoragePoolDataSource::class,
     StoragePoolInfoUnavailable::class,
+    ProxmoxConfiguration::class,
+    ProxmoxInfoUnavailable::class,
+    ProxmoxCluster::class,
+    ProxmoxNode::class,
+    ProxmoxNodeStatus::class,
+    ProxmoxGuest::class,
+    ProxmoxGuestKind::class,
+    ProxmoxGuestStatus::class,
+    ProxmoxGuestMetrics::class,
+    ProxmoxGuestCpuUsage::class,
+    ProxmoxGuestMemoryUsage::class,
+    ProxmoxGuestNetworkUsage::class,
+    ProxmoxGuestBlockIOUsage::class,
+    ProxmoxGuestDiskUsage::class,
+    ProxmoxGuestNetwork::class,
+    ProxmoxGuestNetworkInterface::class,
+    ProxmoxStorage::class,
+    ProxmoxStorageStatus::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,
     UpdateCheckConfiguration::class,

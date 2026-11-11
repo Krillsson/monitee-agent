@@ -10,6 +10,7 @@ import com.krillsson.sysapi.config.HistoryConfiguration
 import com.krillsson.sysapi.config.MqttConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.ProcessesConfiguration
+import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.UpsConfiguration
 import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
@@ -46,6 +47,7 @@ data class Settings(
     val discovery: DiscoverySettings,
     val docker: DockerSettings,
     val ups: UpsSettings,
+    val proxmox: ProxmoxSettings,
     val systemDaemon: SystemDaemonSettings,
     val windowsManagement: WindowsManagementSettings,
     val fileBrowser: FileBrowserSettings,
@@ -97,6 +99,14 @@ data class DockerSettings(val enabled: Boolean)
 
 data class UpsSettings(val enabled: Boolean)
 
+data class ProxmoxSettings(
+    val enabled: Boolean,
+    val port: Int,
+    val verifyTls: Boolean,
+    val pollIntervalSeconds: Long,
+    val includeTemplates: Boolean
+)
+
 data class SystemDaemonSettings(val enabled: Boolean)
 
 data class WindowsManagementSettings(val serviceManagementEnabled: Boolean)
@@ -120,6 +130,7 @@ fun YAMLConfigFile.toSettings(activeUnit: ActiveTemperatureUnit): Settings = Set
     discovery = DiscoverySettings(mdnsEnabled = mDNS.enabled, upnpEnabled = upnp.enabled),
     docker = docker.toSettings(),
     ups = ups.toSettings(),
+    proxmox = proxmox.toSettings(),
     systemDaemon = SystemDaemonSettings(enabled = linux.systemDaemonServiceManagement.enabled),
     windowsManagement = windows.toSettings(),
     fileBrowser = fileBrowser.toSettings(),
@@ -175,6 +186,14 @@ fun ContainerUpdateCheckConfiguration.toSettings() = ContainerUpdateCheckSetting
 fun DockerConfiguration.toSettings() = DockerSettings(enabled = enabled)
 
 fun UpsConfiguration.toSettings() = UpsSettings(enabled = enabled)
+
+fun ProxmoxConfiguration.toSettings() = ProxmoxSettings(
+    enabled = enabled,
+    port = port,
+    verifyTls = verifyTls,
+    pollIntervalSeconds = pollIntervalSeconds,
+    includeTemplates = includeTemplates
+)
 
 fun WindowsConfiguration.toSettings() = WindowsManagementSettings(serviceManagementEnabled = serviceManagement.enabled)
 

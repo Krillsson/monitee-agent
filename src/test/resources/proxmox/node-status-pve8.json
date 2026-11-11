@@ -1,0 +1,9 @@
+{"data":{
+"uptime":1000,
+"loadavg":["1.10","0.90","0.80"],
+"cpuinfo":{"model":"Intel(R) Core(TM) i5-8500T CPU @ 2.10GHz","cores":6,"cpus":6,"sockets":1},
+"memory":{"total":16000000000,"used":4000000000,"free":12000000000},
+"rootfs":{"total":50000000000,"used":5000000000,"avail":45000000000,"free":45000000000},
+"pveversion":"pve-manager/8.4.1/2a5fa54a8503f96d",
+"kversion":"Linux 6.8.12-10-pve #1 SMP PREEMPT_DYNAMIC PMX 6.8.12-10 (2025-04-18T07:39Z)"
+}}

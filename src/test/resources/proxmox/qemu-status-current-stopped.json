@@ -1,0 +1,1 @@
+{"data":{"vmid":102,"name":"db","status":"stopped","qmpstatus":"stopped","ha":{"managed":1,"state":"stopped"},"cpus":2,"cpu":0,"maxmem":8589934592,"mem":0,"uptime":0}}

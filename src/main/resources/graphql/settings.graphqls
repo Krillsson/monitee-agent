@@ -15,6 +15,8 @@ type Settings {
     docker: DockerSettings!
     "The configured intent. The upsInfo query reports whether the UPS is actually reachable"
     ups: UpsSettings!
+    "The configured intent. The proxmox query reports whether Proxmox is actually reachable"
+    proxmox: ProxmoxSettings!
     "The configured intent. The systemDaemon query reports whether it is actually reachable"
     systemDaemon: SystemDaemonSettings!
     windowsManagement: WindowsManagementSettings!
@@ -103,6 +105,15 @@ type DockerSettings {
 
 type UpsSettings {
     enabled: Boolean!
+}
+
+type ProxmoxSettings {
+    enabled: Boolean!
+    port: Int!
+    "False when the agent accepts any certificate from Proxmox"
+    verifyTls: Boolean!
+    pollIntervalSeconds: Long!
+    includeTemplates: Boolean!
 }
 
 type SystemDaemonSettings {

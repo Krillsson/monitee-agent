@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Feature: `proxmox` lists the nodes, VMs, containers and storage of a Proxmox VE host or cluster, see [docs/proxmox.md](docs/proxmox.md).
+
 ### 0.50.0
 
 - Feature: `sendTestNotification` sends a test notification to every enabled channel.

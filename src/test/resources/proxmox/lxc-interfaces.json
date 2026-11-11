@@ -1,0 +1,4 @@
+{"data":[
+{"name":"lo","hwaddr":"00:00:00:00:00:00","inet":"127.0.0.1/8","inet6":"::1/128","ip-addresses":[{"ip-address":"127.0.0.1","ip-address-type":"inet","prefix":"8"},{"ip-address":"::1","ip-address-type":"inet6","prefix":"128"}]},
+{"name":"eth0","hwaddr":"bc:24:11:11:22:33","inet":"192.168.1.53/24","inet6":"fe80::be24:11ff:fe11:2233/64","ip-addresses":[{"ip-address":"192.168.1.53","ip-address-type":"inet","prefix":"24"},{"ip-address":"fe80::be24:11ff:fe11:2233","ip-address-type":"inet6","prefix":"64"}]}
+]}

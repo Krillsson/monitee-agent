@@ -1,0 +1,5 @@
+{"data":{"result":[
+{"name":"lo","hardware-address":"00:00:00:00:00:00","ip-addresses":[{"ip-address":"127.0.0.1","ip-address-type":"ipv4","prefix":8},{"ip-address":"::1","ip-address-type":"ipv6","prefix":128}],"statistics":{"rx-bytes":100,"tx-bytes":100}},
+{"name":"ens18","hardware-address":"bc:24:11:aa:bb:cc","ip-addresses":[{"ip-address":"192.168.1.50","ip-address-type":"ipv4","prefix":24},{"ip-address":"fe80::be24:11ff:feaa:bbcc","ip-address-type":"ipv6","prefix":64}],"statistics":{"rx-bytes":123456789,"tx-bytes":987654321}},
+{"name":"docker0","hardware-address":"02:42:ac:11:00:01","ip-addresses":[{"ip-address":"172.17.0.1","ip-address-type":"ipv4","prefix":16}]}
+]}}

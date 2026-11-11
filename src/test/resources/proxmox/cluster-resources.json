@@ -1,0 +1,16 @@
+{"data":[
+{"id":"node/pve1","type":"node","node":"pve1","status":"online","cpu":0.0421,"maxcpu":16,"mem":13421772800,"maxmem":67108864000,"disk":10737418240,"maxdisk":100000000000,"uptime":864000,"level":"","cgroup-mode":2},
+{"id":"node/pve2","type":"node","node":"pve2","status":"online","cpu":0.11,"maxcpu":8,"mem":8589934592,"maxmem":34359738368,"uptime":432000,"level":""},
+{"id":"node/pve3","type":"node","node":"pve3","status":"offline"},
+{"id":"qemu/100","type":"qemu","vmid":100,"name":"web","node":"pve1","status":"running","template":0,"tags":"prod;web","cpu":0.25,"maxcpu":4,"mem":2147483648,"maxmem":4294967296,"memhost":2684354560,"disk":0,"maxdisk":34359738368,"netin":123456789,"netout":987654321,"diskread":5555555,"diskwrite":6666666,"uptime":3600},
+{"id":"lxc/101","type":"lxc","vmid":101,"name":"pihole","node":"pve1","status":"running","template":0,"tags":"","cpu":0.015,"maxcpu":1,"mem":134217728,"maxmem":536870912,"disk":1073741824,"maxdisk":8589934592,"netin":1000,"netout":2000,"diskread":3000,"diskwrite":4000,"uptime":7200},
+{"id":"qemu/102","type":"qemu","vmid":102,"name":"db","node":"pve2","status":"stopped","template":0,"hastate":"stopped","cpu":0,"maxcpu":2,"mem":0,"maxmem":8589934592,"disk":0,"maxdisk":68719476736,"netin":0,"netout":0,"diskread":0,"diskwrite":0,"uptime":0},
+{"id":"qemu/103","type":"qemu","vmid":103,"name":"backup-target","node":"pve2","status":"running","lock":"backup","template":0,"hastate":"started","cpu":0.5,"maxcpu":2,"mem":1073741824,"maxmem":2147483648,"disk":0,"maxdisk":0,"netin":10,"netout":20,"diskread":30,"diskwrite":40,"uptime":60},
+{"id":"qemu/9000","type":"qemu","vmid":9000,"name":"debian-template","node":"pve1","status":"stopped","template":1,"maxcpu":2,"maxmem":2147483648,"uptime":0},
+{"id":"lxc/104","type":"lxc","vmid":104,"name":"offline-ct","node":"pve3","status":"unknown"},
+{"id":"storage/pve1/local","type":"storage","storage":"local","node":"pve1","status":"available","plugintype":"dir","shared":0,"content":"iso,vztmpl,backup","disk":21474836480,"maxdisk":100000000000},
+{"id":"storage/pve1/nas","type":"storage","storage":"nas","node":"pve1","status":"available","plugintype":"nfs","shared":1,"content":"images,backup","disk":500000000000,"maxdisk":2000000000000},
+{"id":"storage/pve3/local","type":"storage","storage":"local","node":"pve3","status":"unknown"},
+{"id":"pool/prod","type":"pool","pool":"prod"},
+{"id":"sdn/pve1/localnetwork","type":"sdn","sdn":"localnetwork","node":"pve1","status":"ok"}
+]}

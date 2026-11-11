@@ -28,6 +28,9 @@ import com.krillsson.sysapi.mqtt.MqttUnits.CELSIUS
 import com.krillsson.sysapi.mqtt.MqttUnits.PERCENT
 import com.krillsson.sysapi.mqtt.MqttUnits.SECONDS
 import com.krillsson.sysapi.mqtt.MqttUnits.WATT
+import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
+import com.krillsson.sysapi.proxmox.ProxmoxNodeStatus
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
@@ -44,6 +47,7 @@ class MqttEntityCollector(
     private val containerService: ContainerService,
     private val containerUpdateChecker: ContainerUpdateChecker,
     private val upsService: UpsService,
+    private val proxmoxService: ProxmoxService,
     private val clock: Clock
 ) {
 
@@ -64,6 +68,7 @@ class MqttEntityCollector(
         entities.gpus(metrics.gpuMetrics().gpuLoads())
         entities.containers()
         entities.upsDevices()
+        entities.proxmox()
         entities.monitors()
         return entities.build()
     }
@@ -316,6 +321,35 @@ class MqttEntityCollector(
             metrics.realPowerLoadWatts?.let {
                 sensor("ups_${slug}_power", "$label power", it, unit = WATT, deviceClass = "power")
             }
+        }
+    }
+
+    private fun Entities.proxmox() {
+        val snapshot = proxmoxService.snapshot() ?: return
+        sensor(
+            "proxmox_guests_running",
+            "Proxmox guests running",
+            snapshot.guests.count { it.status == ProxmoxGuestStatus.RUNNING }
+        )
+        sensor(
+            "proxmox_nodes_online",
+            "Proxmox nodes online",
+            snapshot.nodes.count { it.status == ProxmoxNodeStatus.ONLINE }
+        )
+        if (snapshot.cluster.name != null) {
+            binarySensor("proxmox_quorum", "Proxmox quorum", !snapshot.cluster.quorate, deviceClass = "problem")
+        }
+        if (!config.proxmoxGuests) {
+            return
+        }
+        MqttKeys.uniqueSlugs(snapshot.guests) { "${it.name}_${it.vmid}" }.forEach { (slug, guest) ->
+            binarySensor(
+                key = "proxmox_guest_${slug}_running",
+                name = guest.name,
+                value = guest.status == ProxmoxGuestStatus.RUNNING,
+                deviceClass = "running",
+                attributes = mapOf("vmid" to guest.vmid, "node" to guest.node, "kind" to guest.kind.name)
+            )
         }
     }
 

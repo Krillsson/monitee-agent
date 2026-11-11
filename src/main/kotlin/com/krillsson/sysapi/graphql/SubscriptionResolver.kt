@@ -19,6 +19,7 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.InternetService
 import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.ups.UpsService
@@ -40,7 +41,8 @@ class SubscriptionResolver(
     val serverIdService: ServerIdService,
     val upsService: UpsService,
     val systemDaemonManager: SystemDaemonManager,
-    val fileOperations: FileOperationService
+    val fileOperations: FileOperationService,
+    val proxmoxService: ProxmoxService
 ) {
     @SubscriptionMapping
     fun fileOperationProgress(@Argument id: String): Flux<FileOperation> = fileOperations.events(id)
@@ -73,6 +75,9 @@ class SubscriptionResolver(
 
     @SubscriptionMapping
     fun upsMetricsById(@Argument id: String) = upsService.upsDevicesMetricsById(id)
+
+    @SubscriptionMapping
+    fun proxmoxGuestMetricsById(@Argument id: String) = proxmoxService.guestMetricsById(id)
 
     @SubscriptionMapping
     fun networkInterfaceMetrics(): Flux<List<NetworkInterfaceLoad>> {
