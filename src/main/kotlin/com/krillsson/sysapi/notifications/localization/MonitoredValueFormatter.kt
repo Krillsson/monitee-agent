@@ -22,7 +22,8 @@ class MonitoredValueFormatter(
             Monitor.Type.NETWORK_UP -> if ((value as MonitoredValue.ConditionalValue).value) "up" else "down"
             Monitor.Type.NETWORK_UPLOAD_RATE -> byteFormatter.formatNetworkRate((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.NETWORK_DOWNLOAD_RATE -> byteFormatter.formatNetworkRate((value as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_RUNNING -> if ((value as MonitoredValue.ConditionalValue).value) "running" else "stopped"
+            Monitor.Type.CONTAINER_RUNNING,
+            Monitor.Type.PROXMOX_GUEST_RUNNING -> if ((value as MonitoredValue.ConditionalValue).value) "running" else "stopped"
             Monitor.Type.PROCESS_MEMORY_SPACE -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.PROCESS_CPU_LOAD -> formatPercent(
                 (value as MonitoredValue.FractionalValue).value
@@ -50,8 +51,10 @@ class MonitoredValueFormatter(
             )
 
             Monitor.Type.MEMORY_USED -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_MEMORY_SPACE -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
-            Monitor.Type.CONTAINER_CPU_LOAD -> formatPercent(
+            Monitor.Type.CONTAINER_MEMORY_SPACE,
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
+            Monitor.Type.CONTAINER_CPU_LOAD,
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> formatPercent(
                 (value as MonitoredValue.FractionalValue).value
             )
 

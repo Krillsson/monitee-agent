@@ -11,6 +11,7 @@ class OngoingEventFormatter(
     private val monitoredValueFormatter: MonitoredValueFormatter,
     private val checkEventFormatter: CheckEventFormatter,
     private val storagePoolEventFormatter: StoragePoolEventFormatter,
+    private val proxmoxEventFormatter: ProxmoxEventFormatter,
 ) {
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
@@ -40,6 +41,9 @@ class OngoingEventFormatter(
                 Monitor.Type.CONTAINER_RUNNING -> "Container stopped on $serverName"
                 Monitor.Type.CONTAINER_MEMORY_SPACE -> "Container memory usage $level on $serverName"
                 Monitor.Type.CONTAINER_CPU_LOAD -> "Container CPU load $level on $serverName"
+                Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox guest stopped on $serverName"
+                Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox guest CPU load $level on $serverName"
+                Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox guest memory usage $level on $serverName"
                 Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory usage $level on $serverName"
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage $level on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process stopped on $serverName"
@@ -130,6 +134,9 @@ class OngoingEventFormatter(
                     formattedThreshold
                 ) + criticalAt
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId $wentAbove"
+                Monitor.Type.PROXMOX_GUEST_RUNNING -> proxmoxEventFormatter.formatGuestRunningOngoingDescription(monitoredItemId, formattedValue)
+                Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> proxmoxEventFormatter.formatGuestUsageOngoingDescription(monitoredItemId, "CPU", wentAbove)
+                Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxEventFormatter.formatGuestUsageOngoingDescription(monitoredItemId, "memory", wentAbove)
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load $wentAbove"
                 Monitor.Type.UPS_LOAD_WATT -> "UPS $monitoredItemId load $wentAbove"

@@ -11,6 +11,7 @@ class ResolvedEventFormatter(
     private val durationFormatter: DurationFormatter,
     private val checkEventFormatter: CheckEventFormatter,
     private val storagePoolEventFormatter: StoragePoolEventFormatter,
+    private val proxmoxEventFormatter: ProxmoxEventFormatter,
 ) {
     fun formatResolvedEventTitle(
         notification: Notification.ResolvedEvent,
@@ -35,6 +36,9 @@ class ResolvedEventFormatter(
                 Monitor.Type.CONTAINER_RUNNING -> "Container running again on $serverName"
                 Monitor.Type.CONTAINER_MEMORY_SPACE -> "Container memory usage back to normal on $serverName"
                 Monitor.Type.CONTAINER_CPU_LOAD -> "Container CPU load back to normal on $serverName"
+                Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox guest running again on $serverName"
+                Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox guest CPU load back to normal on $serverName"
+                Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox guest memory usage back to normal on $serverName"
                 Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory usage back to normal on $serverName"
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage back to normal on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process running again on $serverName"
@@ -128,6 +132,25 @@ class ResolvedEventFormatter(
                     formattedDuration
                 )
                 Monitor.Type.DISK_TEMPERATURE -> "Temperature on $monitoredItemId is back below $formattedThreshold at $formattedValue after $formattedDuration"
+                Monitor.Type.PROXMOX_GUEST_RUNNING -> proxmoxEventFormatter.formatGuestRunningResolvedDescription(
+                    monitoredItemId,
+                    formattedValue,
+                    formattedDuration
+                )
+                Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> proxmoxEventFormatter.formatGuestUsageResolvedDescription(
+                    monitoredItemId,
+                    "CPU",
+                    formattedThreshold,
+                    formattedValue,
+                    formattedDuration
+                )
+                Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxEventFormatter.formatGuestUsageResolvedDescription(
+                    monitoredItemId,
+                    "memory",
+                    formattedThreshold,
+                    formattedValue,
+                    formattedDuration
+                )
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is operating normally again after $formattedDuration"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load is back below $formattedThreshold at $formattedValue after $formattedDuration"
                 Monitor.Type.UPS_LOAD_WATT -> "UPS $monitoredItemId load is back below $formattedThreshold at $formattedValue after $formattedDuration"
