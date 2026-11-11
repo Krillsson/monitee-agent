@@ -69,6 +69,9 @@ object MonitorMetrics {
         Monitor.Type.UPS_LOAD_PERCENTAGE -> MetricId.UPS_LOAD_PERCENT
         Monitor.Type.UPS_LOAD_WATT -> MetricId.UPS_LOAD_WATTS
         Monitor.Type.UPS_OPERATING_NORMALLY -> MetricId.UPS_OPERATING_NORMALLY
+        Monitor.Type.PROXMOX_GUEST_RUNNING -> MetricId.PROXMOX_GUEST_RUNNING
+        Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> MetricId.PROXMOX_GUEST_CPU_PERCENT
+        Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> MetricId.PROXMOX_GUEST_MEMORY_USED_BYTES
 
         Monitor.Type.DISK_SMART_HEALTH,
         Monitor.Type.STORAGE_POOL_HEALTH,

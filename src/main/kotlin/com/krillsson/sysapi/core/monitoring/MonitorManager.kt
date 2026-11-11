@@ -50,6 +50,9 @@ class MonitorManager(
 
     private fun checkMonitors(metricQueryEvent: MonitorInput) {
         activeMonitors.values.forEach { (mechanism, monitor) ->
+            if (!monitor.canEvaluate(metricQueryEvent)) {
+                return@forEach
+            }
             val value = monitor.selectValue(metricQueryEvent)
             if (value != null) {
                 val outcome = mechanism.check(

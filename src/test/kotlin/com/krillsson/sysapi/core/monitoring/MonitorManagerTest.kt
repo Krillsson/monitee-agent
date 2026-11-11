@@ -295,4 +295,43 @@ class MonitorManagerTest {
         verify(exactly = 1) { notificationManager.notify(any()) }
         verify { eventManager.add(match { it is OngoingEvent }, sent) }
     }
+
+    @Test
+    fun `keeps a proxmox monitor while proxmox is unavailable and drops it once its guest is gone`() {
+        // Given
+        val monitor = MonitorFactory(Clock.systemUTC()).createMonitor(
+            Monitor.Type.PROXMOX_GUEST_RUNNING,
+            UUID.randomUUID(),
+            MonitorConfig("100", true.toConditionalValue(), inertia)
+        )
+        val repository = mockk<MonitorRepository>(relaxed = true)
+        every { repository.read() } returns listOf(monitor)
+        val missingChecker = mockk<MonitoredItemMissingChecker>(relaxed = true)
+        val creator = mockk<MonitorInputCreator>(relaxed = true)
+        val unavailable = mockk<MonitorInput>(relaxed = true)
+        every { unavailable.proxmoxGuests } returns null
+        val withoutGuest = mockk<MonitorInput>(relaxed = true)
+        every { withoutGuest.proxmoxGuests } returns emptyList()
+        every { creator.createInput(any()) } returnsMany listOf(unavailable, withoutGuest)
+        val manager = MonitorManager(
+            metrics = mockk(relaxed = true),
+            eventManager = mockk(relaxed = true),
+            repository = repository,
+            monitoredItemMissingChecker = missingChecker,
+            clock = Clock.systemUTC(),
+            monitorInputCreator = creator,
+            notificationManager = mockk(relaxed = true),
+            monitorFactory = MonitorFactory(Clock.systemUTC())
+        ).also { it.start() }
+
+        // When
+        manager.run()
+        val keptWhileUnavailable = manager.getById(monitor.id)
+        manager.run()
+
+        // Then
+        keptWhileUnavailable shouldBe monitor
+        manager.getById(monitor.id) shouldBe null
+        verify(exactly = 1) { missingChecker.reportItemMissing(monitor) }
+    }
 }

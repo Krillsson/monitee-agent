@@ -29,6 +29,9 @@ import com.krillsson.sysapi.core.check.CheckType
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.updates.ContainerUpdateChecker
 import com.krillsson.sysapi.notifications.localization.ByteFormatter
+import com.krillsson.sysapi.proxmox.ProxmoxGuest
+import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.storagepool.StoragePool
 import com.krillsson.sysapi.storagepool.StoragePoolService
@@ -51,6 +54,7 @@ class MonitorInputCreator(
     private val upsService: UpsService,
     private val containerUpdateChecker: ContainerUpdateChecker,
     private val storagePoolService: StoragePoolService,
+    private val proxmoxService: ProxmoxService,
 ) {
 
     companion object {
@@ -104,6 +108,12 @@ class MonitorInputCreator(
         Monitor.Type.CONTAINER_UPDATE_AVAILABLE
     )
 
+    private val proxmoxGuestTypes = listOf(
+        Monitor.Type.PROXMOX_GUEST_RUNNING,
+        Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
+        Monitor.Type.PROXMOX_GUEST_MEMORY_USED
+    )
+
     private fun List<Monitor<*>>.idsSubset(types: List<Monitor.Type>) =
         filter { types.contains(it.type) }
             .mapNotNull { it.config.monitoredItemId }
@@ -117,6 +127,7 @@ class MonitorInputCreator(
             upsDevices = upsService.upsDevices(),
             gpus = metrics.gpuMetrics().gpus(),
             checks = checkService.getAll(),
+            proxmoxGuests = proxmoxService.guests(),
         )
     }
 
@@ -168,6 +179,7 @@ class MonitorInputCreator(
 
         val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
         val storagePools = storagePoolService.pools()
+        val proxmoxGuests = if (activeTypes.any { proxmoxGuestTypes.contains(it.type) }) proxmoxService.snapshot()?.guests else null
         return MonitorInput(
             load,
             containers,
@@ -176,7 +188,8 @@ class MonitorInputCreator(
             checkResults,
             upsDeviceMetrics,
             storagePools,
-            checkCertificateResults
+            checkCertificateResults,
+            proxmoxGuests
         )
     }
 
@@ -266,6 +279,12 @@ class MonitorInputCreator(
                         requireNotNull(containerService.container(requireNotNull(monitor.config.monitoredItemId)))
                     createContainerUpdateAvailableMonitorableItem(container)
                 }
+
+                Monitor.Type.PROXMOX_GUEST_RUNNING,
+                Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
+                Monitor.Type.PROXMOX_GUEST_MEMORY_USED ->
+                    proxmoxService.guest(requireNotNull(monitor.config.monitoredItemId))
+                        ?.let { createProxmoxGuestMonitorableItem(it, monitor.type) }
 
                 Monitor.Type.PROCESS_MEMORY_SPACE -> {
                     metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
@@ -503,6 +522,12 @@ class MonitorInputCreator(
                         createContainerCpuLoadMonitorableItem(statistics, container)
                     }
                 }
+            }
+
+            Monitor.Type.PROXMOX_GUEST_RUNNING,
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxService.guests().map {
+                createProxmoxGuestMonitorableItem(it, type)
             }
 
             Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> {
@@ -860,6 +885,23 @@ class MonitorInputCreator(
         currentValue = (containerUpdateChecker.updateForContainer(container.id)?.status != ImageUpdateStatus.OUTDATED)
             .toConditionalValue(),
         type = Monitor.Type.CONTAINER_UPDATE_AVAILABLE
+    )
+
+    private fun createProxmoxGuestMonitorableItem(guest: ProxmoxGuest, type: Monitor.Type) = MonitorableItem(
+        id = guest.id,
+        name = guest.name,
+        description = "${guest.kind.name} ${guest.vmid} on ${guest.node}",
+        maxValue = when (type) {
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> (100f).toFractionalValue()
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> guest.memoryTotalBytes.toNumericalValue()
+            else -> true.toConditionalValue()
+        },
+        currentValue = when (type) {
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> (guest.metrics?.cpuUsage?.usagePercentTotal ?: 0.0).toFractionalValue()
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> (guest.metrics?.memoryUsage?.usageBytes ?: 0L).toNumericalValue()
+            else -> (guest.status == ProxmoxGuestStatus.RUNNING).toConditionalValue()
+        },
+        type = type
     )
 
     private fun createContainerRunningMonitorableItem(it: Container) = MonitorableItem(
