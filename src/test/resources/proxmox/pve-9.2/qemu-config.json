@@ -1,0 +1,23 @@
+{
+ "data": {
+  "name": "web-test",
+  "tags": "prod;web",
+  "vmgenid": "f4424e32-4eea-4078-a7a9-5dc4daeafd45",
+  "cores": 1,
+  "scsi0": "local-lvm:vm-100-disk-0,size=3G",
+  "agent": "1,fstrim_cloned_disks=1",
+  "net0": "virtio=BC:24:11:57:FA:95,bridge=vmbr0",
+  "ostype": "l26",
+  "serial0": "socket",
+  "boot": "order=scsi0",
+  "vga": "serial0",
+  "ipconfig0": "ip=dhcp",
+  "scsihw": "virtio-scsi-single",
+  "ide2": "local-lvm:vm-100-cloudinit,media=cdrom",
+  "memory": "512",
+  "cpu": "host",
+  "smbios1": "uuid=bc2f9214-2676-467e-b78a-20dfbb0ea25b",
+  "digest": "c5556489762a00bb3fc48cba00ef66c997458877",
+  "meta": "creation-qemu=11.0.0,ctime=1794401218"
+ }
+}
