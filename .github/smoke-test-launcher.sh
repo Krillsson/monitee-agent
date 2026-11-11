@@ -18,7 +18,7 @@ while [ "$SECONDS" -lt "$deadline" ]; do
     if curl --fail --silent "$health_url" > health.json 2>/dev/null && grep -q "Started SysAPIApplicationKt" "$log_file"; then
         if ! grep -q "\[launcher\] runtime=$expected_runtime\b" "$log_file"; then
             echo "The agent is up, but the launcher did not pick runtime=$expected_runtime."
-            grep "\[launcher\]" "$log_file"
+            cat "$log_file"
             exit 1
         fi
         echo "Healthy on $expected_runtime after ${SECONDS}s: $(cat health.json)"
