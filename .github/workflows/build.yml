@@ -211,8 +211,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ./build/distributions/*.deb
+          sudo journalctl -f -n 0 -u sys-api > service.log 2>&1 &
+          sleep 1
           sudo systemctl start sys-api
-          sudo journalctl -f -u sys-api > service.log 2>&1 &
           ./.github/smoke-test-launcher.sh service.log native
           sudo systemctl stop sys-api
           if pgrep -f /opt/sys-api/native/; then echo "The native agent survived systemctl stop"; exit 1; fi
