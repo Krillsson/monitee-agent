@@ -206,4 +206,34 @@ class ProxmoxClientTest {
         // Then
         result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>()
     }
+
+    @Test
+    fun `posts the form with the api token and reads the task id proxmox answers with`() {
+        // Given
+        server.enqueue(MockResponse().setBody("""{"data":"UPID:pve1:00001A2B:0003C4D5:6731F0A0:qmshutdown:100:monitee@pve!agent:"}"""))
+
+        // When
+        val result = client().post("/nodes/pve1/qemu/100/status/shutdown", mapOf("timeout" to "60", "forceStop" to "0"), String::class.java)
+
+        // Then
+        val request = server.takeRequest()
+        request.method shouldBe "POST"
+        request.path shouldBe "/api2/json/nodes/pve1/qemu/100/status/shutdown"
+        request.getHeader("Authorization") shouldBe "PVEAPIToken=monitee@pve!agent=0b6a1c1e-5c2f-4c5d-9c1e-3d2f1a0b9c8d"
+        request.getHeader("Content-Type") shouldStartWith "application/x-www-form-urlencoded"
+        request.body.readUtf8() shouldBe "timeout=60&forceStop=0"
+        result shouldBe ProxmoxClient.Result.Ok("UPID:pve1:00001A2B:0003C4D5:6731F0A0:qmshutdown:100:monitee@pve!agent:")
+    }
+
+    @Test
+    fun `reports a refused post with the reason proxmox gives`() {
+        // Given
+        server.enqueue(MockResponse().setResponseCode(500).setStatus("HTTP/1.1 500 VM 100 not running").setBody("""{"data":null}"""))
+
+        // When
+        val result = client().post("/nodes/pve1/qemu/100/status/shutdown", emptyMap(), String::class.java)
+
+        // Then
+        result shouldBe ProxmoxClient.Result.Failed(500, "VM 100 not running")
+    }
 }

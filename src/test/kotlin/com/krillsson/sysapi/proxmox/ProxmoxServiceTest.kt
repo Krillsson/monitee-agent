@@ -2,6 +2,7 @@ package com.krillsson.sysapi.proxmox
 
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
@@ -419,5 +420,60 @@ class ProxmoxServiceTest {
 
         // Then
         network shouldBe ProxmoxGuestNetworkResult.Unavailable("The guest is not running")
+    }
+
+    @Test
+    fun `offers resume once a vm is paused, reading its run state again after a command`() {
+        // Given
+        respond("/nodes/pve1/qemu/100/status/current", "qemu-status-current.json")
+        respond("/nodes/pve1/qemu/100/config", "qemu-config.json")
+        val service = service()
+        service.poll()
+        val before = service.supportedCommands(service.guest("100")!!)
+        val paused = fixtureData("qemu-status-current.json").deepCopy<JsonNode>()
+        (paused as ObjectNode).put("qmpstatus", "paused")
+        responses["/nodes/pve1/qemu/100/status/current"] = Result.Ok(paused)
+
+        // When
+        service.guestChanged(service.guest("100")!!)
+        val after = service.supportedCommands(service.guest("100")!!)
+
+        // Then
+        before shouldContainExactly listOf(
+            ProxmoxGuestCommand.SHUTDOWN,
+            ProxmoxGuestCommand.FORCE_STOP,
+            ProxmoxGuestCommand.REBOOT,
+            ProxmoxGuestCommand.SUSPEND
+        )
+        after shouldContainExactly listOf(ProxmoxGuestCommand.FORCE_STOP, ProxmoxGuestCommand.RESUME)
+    }
+
+    @Test
+    fun `offers no commands while the cluster has no quorum`() {
+        // Given
+        respond("/cluster/status", "cluster-status-no-quorum.json")
+        val service = service()
+        service.poll()
+
+        // When
+        val supported = service.supportedCommands(service.guest("101")!!)
+
+        // Then
+        supported.shouldBeEmpty()
+        service.commandRefusal(service.guest("101")!!, ProxmoxGuestCommand.SHUTDOWN) shouldBe "The cluster has no quorum"
+    }
+
+    @Test
+    fun `decides what a stopped vm accepts without asking for its run state`() {
+        // Given
+        val service = service()
+        service.poll()
+
+        // When
+        val supported = service.supportedCommands(service.guest("102")!!)
+
+        // Then
+        supported shouldContainExactly listOf(ProxmoxGuestCommand.START)
+        verify(exactly = 0) { client.get("/nodes/pve2/qemu/102/status/current", any<Class<Any>>()) }
     }
 }

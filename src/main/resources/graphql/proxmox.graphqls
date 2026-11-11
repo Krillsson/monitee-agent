@@ -5,6 +5,21 @@ extend type Query {
 extend type Subscription {
     # Live metrics for one guest, emitted every proxmox.pollIntervalSeconds while subscribed
     proxmoxGuestMetricsById(id: String!): ProxmoxGuestMetrics
+
+    # Follow a command started with performProxmoxGuestCommand
+    #
+    # Everything the job has emitted so far is replayed on subscribe, so subscribing after the
+    # mutation returned misses nothing. The stream completes after ProxmoxGuestCommandSucceeded or
+    # ProxmoxGuestCommandFailed. Finished jobs are forgotten after 30 minutes and do not survive a
+    # restart of the agent
+    proxmoxGuestCommand(jobId: UUID!): ProxmoxGuestCommandEvent!
+}
+
+extend type Mutation {
+    # Starts a power action on a guest and returns as soon as Proxmox has accepted it. Proxmox
+    # runs the action as a task, follow it with the proxmoxGuestCommand subscription. Needs
+    # VM.PowerMgmt for the API token, see docs/proxmox.md
+    performProxmoxGuestCommand(input: PerformProxmoxGuestCommandInput!): PerformProxmoxGuestCommandOutput!
 }
 
 union ProxmoxInfo = ProxmoxInfoAvailable | ProxmoxInfoUnavailable
@@ -31,6 +46,9 @@ type ProxmoxInfoAvailable {
     # in a row, until then the last answer is kept
     lastSuccessfulPoll: Instant!
     pveVersion: String!
+    # The most recently started command that is still running, if any. Pass jobId to look up a
+    # specific job instead, including one that finished in the last 30 minutes
+    guestCommandJob(jobId: UUID): ProxmoxGuestCommandJob
 }
 
 type ProxmoxCluster {
@@ -109,10 +127,17 @@ type ProxmoxGuest {
     memoryTotalBytes: Long!
     # Null unless the guest is running
     metrics: ProxmoxGuestMetrics
+    # The latest command started on this guest from the agent, running or finished in the last
+    # 30 minutes
+    commandJob: ProxmoxGuestCommandJob
 
     # The fields below are read from the guest's own status and config, one request per guest,
     # so ask for them on a detail screen rather than in a list
 
+    # The commands this guest accepts right now. Empty for templates, locked guests, guests in a
+    # failed HA state and while the cluster has no quorum. A suspended VM only accepts RESUME and
+    # FORCE_STOP
+    supportedCommands: [ProxmoxGuestCommand!]!
     # QEMU only: the QMP run state (running, paused, prelaunch, suspended, ...), or "stopped".
     # Null for LXC
     qmpStatus: String
@@ -206,4 +231,97 @@ type ProxmoxStorage {
     content: [String!]!
     usedBytes: Long
     totalBytes: Long
+}
+
+enum ProxmoxGuestCommand {
+    START
+    # The ACPI power button, or the guest agent when it answers. Waits proxmox.shutdownTimeoutSeconds
+    # and fails if the guest is still up, nothing is killed. Follow up with FORCE_STOP
+    SHUTDOWN
+    # Pulls the plug
+    FORCE_STOP
+    # A shutdown followed by a start, with the same timeout as SHUTDOWN. A VM that does not shut
+    # down in time fails the reboot, a container is killed
+    REBOOT
+    # VMs only, pauses the guest in memory
+    SUSPEND
+    # VMs only
+    RESUME
+}
+
+input PerformProxmoxGuestCommandInput {
+    guestId: String!
+    command: ProxmoxGuestCommand!
+}
+
+type PerformProxmoxGuestCommandOutputStarted {
+    # Pass this to the proxmoxGuestCommand subscription to follow the command
+    jobId: UUID!
+    guestId: String!
+    # The id of the Proxmox task running the command
+    upid: String!
+}
+
+# The command was refused before it ran: Proxmox is unavailable, there is no such guest, the
+# guest does not accept it right now (see supportedCommands), a command for it is already
+# running, or Proxmox refused it, e.g. because the API token lacks VM.PowerMgmt
+type PerformProxmoxGuestCommandOutputFailed {
+    reason: String!
+}
+
+union PerformProxmoxGuestCommandOutput = PerformProxmoxGuestCommandOutputStarted | PerformProxmoxGuestCommandOutputFailed
+
+interface ProxmoxGuestCommandEvent {
+    jobId: UUID!
+    guestId: String!
+    timestamp: Instant!
+}
+
+# Proxmox accepted the command and is running its task. Sent once, first
+type ProxmoxGuestCommandRunning implements ProxmoxGuestCommandEvent {
+    jobId: UUID!
+    guestId: String!
+    timestamp: Instant!
+    upid: String!
+}
+
+type ProxmoxGuestCommandSucceeded implements ProxmoxGuestCommandEvent {
+    jobId: UUID!
+    guestId: String!
+    timestamp: Instant!
+    upid: String!
+    # OK, or WARNINGS: n
+    exitStatus: String!
+}
+
+type ProxmoxGuestCommandFailed implements ProxmoxGuestCommandEvent {
+    jobId: UUID!
+    guestId: String!
+    timestamp: Instant!
+    upid: String!
+    # Proxmox's error, e.g. "VM quit/powerdown failed - got timeout", or why the agent stopped
+    # following the task
+    reason: String!
+    # The last lines of the task's log. Empty when the agent stopped following the task
+    log: [String!]!
+    # True when a SHUTDOWN or REBOOT timed out and FORCE_STOP would stop the guest
+    canForceStop: Boolean!
+}
+
+enum ProxmoxGuestCommandJobState {
+    RUNNING
+    SUCCEEDED
+    FAILED
+}
+
+type ProxmoxGuestCommandJob {
+    jobId: UUID!
+    guestId: String!
+    command: ProxmoxGuestCommand!
+    upid: String!
+    state: ProxmoxGuestCommandJobState!
+    startedAt: Instant!
+    finishedAt: Instant
+    # The last event the proxmoxGuestCommand subscription delivered
+    lastEvent: ProxmoxGuestCommandEvent!
 }

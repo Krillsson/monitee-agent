@@ -120,6 +120,11 @@ proxmox:
   verifyTls: true
   # caCertificatePath: "/config/pve-root-ca.pem"
   pollIntervalSeconds: 15
+  # how long a shutdown or reboot waits for the guest before the command fails. Nothing is killed,
+  # the app offers a force stop instead
+  shutdownTimeoutSeconds: 60
+  # how long the agent follows a command's task before reporting it failed
+  commandTimeoutSeconds: 120
   includeTemplates: false
 docker:
   enabled: true

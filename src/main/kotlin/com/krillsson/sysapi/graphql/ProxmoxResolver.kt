@@ -1,7 +1,9 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJob
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
+import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxNode
 import com.krillsson.sysapi.proxmox.ProxmoxService
@@ -10,11 +12,13 @@ import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.SchemaMapping
 import org.springframework.stereotype.Controller
 import java.time.Instant
+import java.util.UUID
 
 @Controller
 @SchemaMapping(typeName = "ProxmoxInfoAvailable")
 class ProxmoxResolver(
-    private val proxmoxService: ProxmoxService
+    private val proxmoxService: ProxmoxService,
+    private val proxmoxGuestCommandJobs: ProxmoxGuestCommandJobs
 ) {
 
     @SchemaMapping
@@ -40,6 +44,10 @@ class ProxmoxResolver(
 
     @SchemaMapping
     fun warnings(): List<String> = proxmoxService.snapshot()?.warnings.orEmpty()
+
+    @SchemaMapping
+    fun guestCommandJob(@Argument jobId: UUID?): ProxmoxGuestCommandJob? =
+        jobId?.let { proxmoxGuestCommandJobs.find(it) } ?: proxmoxGuestCommandJobs.current()
 
     @SchemaMapping
     fun lastSuccessfulPoll(): Instant? = proxmoxService.snapshot()?.lastSuccessfulPoll
