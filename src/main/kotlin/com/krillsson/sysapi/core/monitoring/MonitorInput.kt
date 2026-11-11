@@ -5,6 +5,7 @@ import com.krillsson.sysapi.core.domain.docker.ContainerImageUpdate
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.check.CheckResult
+import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.storagepool.StoragePool
 import com.krillsson.sysapi.ups.UpsDevice
 
@@ -17,4 +18,5 @@ class MonitorInput(
     val upsDeviceMetrics: List<UpsDevice.Metrics>,
     val storagePools: List<StoragePool>,
     val checkCertificateResults: List<CheckResult> = emptyList(),
+    val proxmoxGuests: List<ProxmoxGuest>? = null,
 )

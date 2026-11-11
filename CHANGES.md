@@ -2,6 +2,7 @@
 
 - Feature: `proxmox` lists the nodes, VMs, containers and storage of a Proxmox VE host or cluster, see [docs/proxmox.md](docs/proxmox.md).
 - Feature: `performProxmoxGuestCommand` starts, shuts down, reboots, suspends and resumes Proxmox VE guests.
+- Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for Proxmox VE guests.
 
 ### 0.50.0
 

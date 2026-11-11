@@ -5,6 +5,8 @@ import com.krillsson.sysapi.core.check.TcpCheck
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.proxmox.ProxmoxService
+import com.krillsson.sysapi.proxmox.guest
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -15,11 +17,15 @@ import java.util.UUID
 class ResolvedEventFormatterTest {
 
     private val checkService: CheckService = mockk()
+    private val proxmoxService: ProxmoxService = mockk {
+        every { guest("100") } returns guest(100, name = "web01")
+    }
     private val formatter = ResolvedEventFormatter(
         MonitoredValueFormatter(mockk(), mockk()),
         DurationFormatter(),
         CheckEventFormatter(checkService),
-        StoragePoolEventFormatter(mockk())
+        StoragePoolEventFormatter(mockk()),
+        ProxmoxEventFormatter(proxmoxService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -54,5 +60,23 @@ class ResolvedEventFormatterTest {
 
         // Then
         description shouldBe "nas.lan is passing its check again after 5 minutes"
+    }
+
+    @Test
+    fun `names a proxmox guest that is running again`() {
+        // Given
+        val notification = resolvedEvent("100").copy(
+            monitorType = Monitor.Type.PROXMOX_GUEST_RUNNING,
+            startValue = MonitoredValue.ConditionalValue(false),
+            endValue = MonitoredValue.ConditionalValue(true)
+        )
+
+        // When
+        val title = formatter.formatResolvedEventTitle(notification, "server")
+        val description = formatter.formatResolvedEventDescription(notification)
+
+        // Then
+        title shouldBe "Proxmox guest running again on server"
+        description shouldBe "web01 (100) is running again after 5 minutes"
     }
 }

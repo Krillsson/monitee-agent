@@ -7,6 +7,8 @@ import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
+import com.krillsson.sysapi.proxmox.ProxmoxService
+import com.krillsson.sysapi.proxmox.guest
 import com.krillsson.sysapi.storagepool.StoragePoolService
 import com.krillsson.sysapi.storagepool.StoragePoolState
 import io.kotest.matchers.shouldBe
@@ -25,13 +27,18 @@ class OngoingEventFormatterTest {
     private val storagePoolService: StoragePoolService = mockk {
         every { displayName("md:md5") } returns "md5"
     }
+    private val proxmoxService: ProxmoxService = mockk {
+        every { guest("100") } returns guest(100, name = "web01")
+        every { guest("999") } returns null
+    }
     private val temperatureFormatter: TemperatureFormatter = mockk {
         every { format(any()) } answers { "${firstArg<Int>()}°C" }
     }
     private val formatter = OngoingEventFormatter(
         MonitoredValueFormatter(temperatureFormatter, ByteFormatter()),
         CheckEventFormatter(checkService),
-        StoragePoolEventFormatter(storagePoolService)
+        StoragePoolEventFormatter(storagePoolService),
+        ProxmoxEventFormatter(proxmoxService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -81,6 +88,62 @@ class OngoingEventFormatterTest {
         inertia = Duration.ZERO,
         severity = EventSeverity.CRITICAL
     )
+
+    private fun proxmoxEvent(
+        monitorType: Monitor.Type,
+        monitoredItemId: String,
+        threshold: MonitoredValue,
+        value: MonitoredValue
+    ) = Notification.OngoingEvent(
+        id = UUID.randomUUID(),
+        monitorId = UUID.randomUUID(),
+        monitoredItemId = monitoredItemId,
+        monitorType = monitorType,
+        startTime = Instant.now(),
+        threshold = threshold,
+        warningThreshold = null,
+        value = value,
+        inertia = Duration.ZERO,
+        severity = EventSeverity.CRITICAL
+    )
+
+    @Test
+    fun `names a stopped proxmox guest by its name and vmid`() {
+        // Given
+        val notification = proxmoxEvent(
+            Monitor.Type.PROXMOX_GUEST_RUNNING,
+            "100",
+            MonitoredValue.ConditionalValue(true),
+            MonitoredValue.ConditionalValue(false)
+        )
+
+        // When
+        val title = formatter.formatOngoingEventTitle(notification, "server")
+        val description = formatter.formatOngoingEventDescription(notification)
+
+        // Then
+        title shouldBe "Proxmox guest stopped on server"
+        description shouldBe "web01 (100) is stopped"
+    }
+
+    @Test
+    fun `falls back to the vmid for a proxmox guest the agent no longer lists`() {
+        // Given
+        val notification = proxmoxEvent(
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
+            "999",
+            MonitoredValue.FractionalValue(80f),
+            MonitoredValue.FractionalValue(93f)
+        )
+
+        // When
+        val title = formatter.formatOngoingEventTitle(notification, "server")
+        val description = formatter.formatOngoingEventDescription(notification)
+
+        // Then
+        title shouldBe "Proxmox guest CPU load critical on server"
+        description shouldBe "Guest 999 CPU usage went above 80% to 93%"
+    }
 
     @ParameterizedTest
     @CsvSource(
