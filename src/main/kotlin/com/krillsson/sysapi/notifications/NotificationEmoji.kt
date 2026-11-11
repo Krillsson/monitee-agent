@@ -41,6 +41,7 @@ object NotificationEmoji {
     private fun Monitor.Type.emoji() = when (this) {
         Monitor.Type.CPU_LOAD,
         Monitor.Type.CONTAINER_CPU_LOAD,
+        Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
         Monitor.Type.PROCESS_CPU_LOAD -> Emoji("🖥️", "computer")
 
         Monitor.Type.LOAD_AVERAGE_ONE_MINUTE,
@@ -63,6 +64,7 @@ object NotificationEmoji {
         Monitor.Type.MEMORY_SPACE,
         Monitor.Type.MEMORY_USED,
         Monitor.Type.CONTAINER_MEMORY_SPACE,
+        Monitor.Type.PROXMOX_GUEST_MEMORY_USED,
         Monitor.Type.PROCESS_MEMORY_SPACE -> Emoji("🧠", "brain")
 
         Monitor.Type.GPU_VRAM_USAGE,

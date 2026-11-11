@@ -70,7 +70,10 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.UPS_LOAD_PERCENTAGE,
         Monitor.Type.GPU_VRAM_USAGE,
         Monitor.Type.GPU_TEMPERATURE,
-        Monitor.Type.GPU_UTILIZATION -> null
+        Monitor.Type.GPU_UTILIZATION,
+        Monitor.Type.PROXMOX_GUEST_RUNNING,
+        Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
+        Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> null
     }
 
 

@@ -6,6 +6,7 @@ import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.gpu.Gpu
 import com.krillsson.sysapi.core.domain.memory.MemoryInfo
 import com.krillsson.sysapi.core.domain.network.NetworkInterface
+import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.ups.UpsDevice
 
 data class MonitorMaxValueInput(
@@ -16,5 +17,6 @@ data class MonitorMaxValueInput(
     val upsDevices: List<UpsDevice>,
     val gpus: List<Gpu>,
     val checks: List<Check>,
+    val proxmoxGuests: List<ProxmoxGuest> = emptyList(),
 )
 

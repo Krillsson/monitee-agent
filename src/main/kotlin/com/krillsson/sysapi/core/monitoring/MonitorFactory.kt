@@ -162,6 +162,21 @@ class MonitorFactory(private val clock: Clock) {
                 id,
                 config as MonitorConfig<MonitoredValue.FractionalValue>
             )
+
+            Monitor.Type.PROXMOX_GUEST_RUNNING -> ProxmoxGuestRunningMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.ConditionalValue>
+            )
+
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> ProxmoxGuestCpuMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.FractionalValue>
+            )
+
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> ProxmoxGuestMemoryMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.NumericalValue>
+            )
         }
     }
 }

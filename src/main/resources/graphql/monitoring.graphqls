@@ -48,6 +48,7 @@ input CreateNumericalMonitorInput {
     # NIC's: name or MAC address (ignoring case)
     # Process: process ID
     # Docker: full container ID (ignoring case)
+    # Proxmox guest: the vmid, e.g. "100"
     monitoredItemId: String
 }
 
@@ -70,6 +71,7 @@ input CreateFractionMonitorInput {
     # NIC's: name or MAC address (ignoring case)
     # Process: process ID
     # Docker: full container ID (ignoring case)
+    # Proxmox guest: the vmid, e.g. "100"
     monitoredItemId: String
 }
 
@@ -81,6 +83,7 @@ input CreateConditionalMonitorInput {
     # NIC's: name or MAC address (ignoring case)
     # Process: process ID
     # Docker: full container ID (ignoring case)
+    # Proxmox guest: the vmid, e.g. "100"
     monitoredItemId: String
 }
 
@@ -432,7 +435,14 @@ enum MonitorType {
     STORAGE_POOL_HEALTH,
     GPU_VRAM_USAGE,
     GPU_TEMPERATURE,
-    GPU_UTILIZATION
+    GPU_UTILIZATION,
+    # The monitored item is the guest's vmid, e.g. "100". The three Proxmox types are not
+    # evaluated while Proxmox is unavailable, and cannot be created then
+    PROXMOX_GUEST_RUNNING,
+    # Percent of the guest's own cores, 0-100. A stopped guest reads 0
+    PROXMOX_GUEST_CPU_LOAD,
+    # Bytes. A stopped guest reads 0
+    PROXMOX_GUEST_MEMORY_USED
 }
 
 type MonitorableItem {

@@ -41,7 +41,10 @@ abstract class Monitor<out T : MonitoredValue> {
         UPS_LOAD_WATT(ValueType.Numerical),
         GPU_VRAM_USAGE(ValueType.Numerical),
         GPU_TEMPERATURE(ValueType.Numerical),
-        GPU_UTILIZATION(ValueType.Fractional)
+        GPU_UTILIZATION(ValueType.Fractional),
+        PROXMOX_GUEST_RUNNING(ValueType.Conditional),
+        PROXMOX_GUEST_CPU_LOAD(ValueType.Fractional),
+        PROXMOX_GUEST_MEMORY_USED(ValueType.Numerical)
     }
 
     enum class ValueType {
@@ -60,6 +63,8 @@ abstract class Monitor<out T : MonitoredValue> {
     abstract fun selectValue(event: MonitorInput): T?
     abstract fun maxValue(input: MonitorMaxValueInput): T?
     abstract fun isPastThreshold(value: @UnsafeVariance T, threshold: @UnsafeVariance T): Boolean
+
+    open fun canEvaluate(input: MonitorInput): Boolean = true
 
     fun levelFor(value: @UnsafeVariance T): Level {
         val warningThreshold = config.warningThreshold
