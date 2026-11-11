@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.proxmox
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -83,9 +84,7 @@ class ProxmoxClient(
         val body = response.body?.string().orEmpty()
         val json = runCatching { objectMapper.readTree(body) }.getOrNull()
         if (response.isSuccessful) {
-            return dataOf<T>(json, type)
-                ?.let { Result.Ok(it) }
-                ?: Result.Failed(response.code, "Proxmox sent an answer the agent could not read")
+            return dataOf(json, type, response.code)
         }
         val reason = reasonOf(response, json)
         return when (response.code) {
@@ -95,9 +94,15 @@ class ProxmoxClient(
         }
     }
 
-    private fun <T> dataOf(json: JsonNode?, type: JavaType): T? {
-        val data = json?.get("data")?.takeIf { !it.isNull } ?: return null
-        return runCatching { objectMapper.convertValue<T>(data, type) }.getOrNull()
+    private fun <T> dataOf(json: JsonNode?, type: JavaType, status: Int): Result<T> {
+        val data = json?.get("data")?.takeIf { !it.isNull }
+            ?: return Result.Failed(status, "Proxmox sent an answer without data")
+        return try {
+            Result.Ok(objectMapper.convertValue(data, type))
+        } catch (exception: IllegalArgumentException) {
+            val cause = (exception.cause as? JsonProcessingException)?.originalMessage ?: exception.message
+            Result.Failed(status, "Proxmox sent an answer the agent could not read as ${type.rawClass.simpleName}: $cause")
+        }
     }
 
     private fun reasonOf(response: Response, json: JsonNode?): String {
