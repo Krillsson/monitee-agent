@@ -1,0 +1,14 @@
+{
+ "data": [
+  {
+   "level": "",
+   "ip": "10.8.0.182",
+   "type": "node",
+   "nodeid": 0,
+   "name": "pve",
+   "online": 1,
+   "local": 1,
+   "id": "node/pve"
+  }
+ ]
+}

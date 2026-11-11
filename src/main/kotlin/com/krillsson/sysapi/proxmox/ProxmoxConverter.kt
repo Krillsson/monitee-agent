@@ -252,7 +252,7 @@ object ProxmoxConverter {
                 usageBytes = memoryUsed,
                 usagePercent = if (memoryTotal > 0) memoryUsed * 100.0 / memoryTotal else 0.0,
                 limitBytes = memoryTotal,
-                hostUsageBytes = resource.memHost
+                hostUsageBytes = resource.memHost.takeIf { kind == ProxmoxGuestKind.QEMU }
             ),
             networkUsage = ProxmoxGuestNetworkUsage(
                 bytesReceived = resource.netIn ?: 0,
