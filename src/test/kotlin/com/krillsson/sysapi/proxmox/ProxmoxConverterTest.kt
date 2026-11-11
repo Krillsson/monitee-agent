@@ -1,6 +1,5 @@
 package com.krillsson.sysapi.proxmox
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.doubles.plusOrMinus
@@ -11,9 +10,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class ProxmoxJsonTest {
+class ProxmoxConverterTest {
 
-    private val resources = ProxmoxJson.resources(fixtureData("cluster-resources.json"))
+    private val resources = ProxmoxConverter.resources(fixtureList("cluster-resources.json"))
 
     private fun guest(vmid: Int) = resources.guests.single { it.vmid == vmid }
 
@@ -152,17 +151,18 @@ class ProxmoxJsonTest {
     }
 
     @Test
-    fun `names a guest after its vmid when proxmox gives no name`() {
+    fun `names a guest after its vmid when proxmox gives no name, reading numbers sent as strings`() {
         // Given
-        val data = ObjectMapper().readTree(
-            """[{"type":"lxc","vmid":105,"node":"pve1","status":"stopped"}]"""
+        val resources = decodeList<ProxmoxApi.Resource>(
+            objectMapper.readTree("""[{"type":"lxc","vmid":"105","node":"pve1","status":"stopped","maxmem":"536870912"}]""")
         )
 
         // When
-        val guests = ProxmoxJson.resources(data).guests
+        val guests = ProxmoxConverter.resources(resources).guests
 
         // Then
         guests.single().name shouldBe "CT 105"
+        guests.single().memoryTotalBytes shouldBe 536870912
     }
 
     @Test
@@ -210,18 +210,18 @@ class ProxmoxJsonTest {
     @Test
     fun `reads the cluster name, quorum and members`() {
         // When
-        val status = ProxmoxJson.clusterStatus(fixtureData("cluster-status.json"))
+        val status = ProxmoxConverter.clusterStatus(fixtureList("cluster-status.json"))
 
         // Then
         status.cluster shouldBe ProxmoxCluster(name = "homelab", quorate = true, nodeCount = 3)
-        status.nodes["pve1"] shouldBe ProxmoxJson.ClusterNode(ip = "192.168.1.11", local = true)
-        status.nodes["pve2"] shouldBe ProxmoxJson.ClusterNode(ip = "192.168.1.12", local = false)
+        status.nodes["pve1"] shouldBe ProxmoxConverter.ClusterNode(ip = "192.168.1.11", local = true)
+        status.nodes["pve2"] shouldBe ProxmoxConverter.ClusterNode(ip = "192.168.1.12", local = false)
     }
 
     @Test
     fun `reports a lost quorum`() {
         // When
-        val status = ProxmoxJson.clusterStatus(fixtureData("cluster-status-no-quorum.json"))
+        val status = ProxmoxConverter.clusterStatus(fixtureList("cluster-status-no-quorum.json"))
 
         // Then
         status.cluster.quorate shouldBe false
@@ -230,7 +230,7 @@ class ProxmoxJsonTest {
     @Test
     fun `treats a status without a cluster row as a quorate standalone node`() {
         // When
-        val status = ProxmoxJson.clusterStatus(fixtureData("cluster-status-standalone.json"))
+        val status = ProxmoxConverter.clusterStatus(fixtureList("cluster-status-standalone.json"))
 
         // Then
         status.cluster shouldBe ProxmoxCluster(name = null, quorate = true, nodeCount = 1)
@@ -240,7 +240,7 @@ class ProxmoxJsonTest {
     @Test
     fun `reads node details including the load averages proxmox sends as strings`() {
         // When
-        val detail = ProxmoxJson.nodeStatus(fixtureData("node-status.json"))
+        val detail = ProxmoxConverter.nodeDetail(fixture("node-status.json"))
 
         // Then
         detail.loadAverages shouldBe listOf(0.42, 0.38, 0.35)
@@ -256,7 +256,7 @@ class ProxmoxJsonTest {
     @Test
     fun `falls back to kversion and leaves ksm null on a node that reports neither`() {
         // When
-        val detail = ProxmoxJson.nodeStatus(fixtureData("node-status-pve8.json"))
+        val detail = ProxmoxConverter.nodeDetail(fixture("node-status-pve8.json"))
 
         // Then
         detail.ksmSharedBytes.shouldBeNull()
@@ -266,7 +266,7 @@ class ProxmoxJsonTest {
     @Test
     fun `reads the version`() {
         // When
-        val version = ProxmoxJson.version(fixtureData("version.json"))
+        val version = ProxmoxConverter.version(fixture("version.json"))
 
         // Then
         version shouldBe "9.0.3"
@@ -275,10 +275,10 @@ class ProxmoxJsonTest {
     @Test
     fun `reads a vm's run state, agent and os type`() {
         // When
-        val detail = ProxmoxJson.guestDetail(
+        val detail = ProxmoxConverter.guestDetail(
             ProxmoxGuestKind.QEMU,
-            fixtureData("qemu-status-current.json"),
-            fixtureData("qemu-config.json")
+            fixture<ProxmoxApi.GuestStatus>("qemu-status-current.json"),
+            fixture<ProxmoxApi.GuestConfig>("qemu-config.json")
         )
 
         // Then
@@ -292,10 +292,10 @@ class ProxmoxJsonTest {
     @Test
     fun `reads a vm without an agent line as having no agent`() {
         // When
-        val detail = ProxmoxJson.guestDetail(
+        val detail = ProxmoxConverter.guestDetail(
             ProxmoxGuestKind.QEMU,
-            fixtureData("qemu-status-current-stopped.json"),
-            fixtureData("qemu-config-no-agent.json")
+            fixture<ProxmoxApi.GuestStatus>("qemu-status-current-stopped.json"),
+            fixture<ProxmoxApi.GuestConfig>("qemu-config-no-agent.json")
         )
 
         // Then
@@ -307,10 +307,10 @@ class ProxmoxJsonTest {
     @Test
     fun `reads a container's hostname, privileges and swap`() {
         // When
-        val detail = ProxmoxJson.guestDetail(
+        val detail = ProxmoxConverter.guestDetail(
             ProxmoxGuestKind.LXC,
-            fixtureData("lxc-status-current.json"),
-            fixtureData("lxc-config.json")
+            fixture<ProxmoxApi.GuestStatus>("lxc-status-current.json"),
+            fixture<ProxmoxApi.GuestConfig>("lxc-config.json")
         )
 
         // Then
@@ -334,7 +334,7 @@ class ProxmoxJsonTest {
     )
     fun `reads the agent option in each form proxmox accepts`(value: String, expected: Boolean) {
         // When
-        val enabled = ProxmoxJson.agentEnabled(value)
+        val enabled = ProxmoxConverter.agentEnabled(value)
 
         // Then
         enabled shouldBe expected
@@ -343,9 +343,9 @@ class ProxmoxJsonTest {
     @Test
     fun `reads a vm's addresses from the guest agent, without loopback`() {
         // When
-        val network = ProxmoxJson.qemuNetwork(
-            fixtureData("agent-network-get-interfaces.json"),
-            fixtureData("agent-get-host-name.json")
+        val network = ProxmoxConverter.qemuNetwork(
+            fixture("agent-network-get-interfaces.json"),
+            fixture("agent-get-host-name.json")
         )
 
         // Then
@@ -362,7 +362,7 @@ class ProxmoxJsonTest {
     @Test
     fun `reads a container's addresses, whose types are inet and inet6`() {
         // When
-        val network = ProxmoxJson.lxcNetwork(fixtureData("lxc-interfaces.json"), "pihole")
+        val network = ProxmoxConverter.lxcNetwork(fixtureList("lxc-interfaces.json"), "pihole")
 
         // Then
         network.hostname shouldBe "pihole"
@@ -379,7 +379,7 @@ class ProxmoxJsonTest {
     @Test
     fun `falls back to the inet fields on a container listing without ip-addresses`() {
         // When
-        val network = ProxmoxJson.lxcNetwork(fixtureData("lxc-interfaces-legacy.json"), null)
+        val network = ProxmoxConverter.lxcNetwork(fixtureList("lxc-interfaces-legacy.json"), null)
 
         // Then
         network.interfaces.single().ipv4 shouldContainExactly listOf("10.0.0.5")

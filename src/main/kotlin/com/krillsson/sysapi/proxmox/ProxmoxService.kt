@@ -16,7 +16,6 @@ import java.time.Duration
 import java.time.Instant
 import java.util.Optional
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLException
 
 @Service
 class ProxmoxService(
@@ -38,7 +37,7 @@ class ProxmoxService(
         data class Unavailable(val reason: String) : Status()
     }
 
-    private data class NodeDetailState(val detail: ProxmoxJson.NodeDetail?, val unavailableReason: String?)
+    private data class NodeDetailState(val detail: ProxmoxConverter.NodeDetail?, val unavailableReason: String?)
 
     private val logger by logger()
 
@@ -57,7 +56,7 @@ class ProxmoxService(
 
     private var missingGuestIds = emptySet<String>()
     private var version: String? = null
-    private var clusterStatus: ProxmoxJson.ClusterStatus? = null
+    private var clusterStatus: ProxmoxConverter.ClusterStatus? = null
     private var nodeDetails = emptyMap<String, NodeDetailState>()
     private var warnings = emptyList<String>()
     private var detailsRefreshedAt: Instant? = null
@@ -123,8 +122,8 @@ class ProxmoxService(
     @Synchronized
     fun poll() {
         try {
-            when (val result = client.get("/cluster/resources")) {
-                is Result.Ok -> refresh(ProxmoxJson.resources(result.data))
+            when (val result = client.getList("/cluster/resources", ProxmoxApi.Resource::class.java)) {
+                is Result.Ok -> refresh(ProxmoxConverter.resources(result.data))
                 else -> recordFailure(result)
             }
         } catch (exception: Exception) {
@@ -134,7 +133,7 @@ class ProxmoxService(
         }
     }
 
-    private fun refresh(resources: ProxmoxJson.Resources) {
+    private fun refresh(resources: ProxmoxConverter.Resources) {
         val now = clock.instant()
         if (snapshot == null || consecutiveFailures > 0 || detailsDue(now)) {
             refreshDetails(resources.nodes, now)
@@ -142,7 +141,10 @@ class ProxmoxService(
         val guests = retainMissingOnce(resources.guests.filter { config.includeTemplates || !it.template })
         snapshot = ProxmoxSnapshot(
             cluster = clusterStatus?.cluster ?: ProxmoxCluster(name = null, quorate = true, nodeCount = resources.nodes.size),
-            nodes = resources.nodes.map { it.toNode() }.sortedBy { it.name },
+            nodes = resources.nodes.map { node ->
+                val state = nodeDetails[node.name]
+                ProxmoxConverter.node(node, clusterStatus?.nodes?.get(node.name), state?.detail, state?.unavailableReason)
+            }.sortedBy { it.name },
             guests = guests,
             storages = resources.storages.sortedBy { it.id },
             warnings = warnings,
@@ -166,11 +168,11 @@ class ProxmoxService(
     private fun detailsDue(now: Instant): Boolean =
         detailsRefreshedAt?.let { Duration.between(it, now) >= DETAIL_INTERVAL } ?: true
 
-    private fun refreshDetails(nodes: List<ProxmoxJson.ResourceNode>, now: Instant) {
+    private fun refreshDetails(nodes: List<ProxmoxConverter.ResourceNode>, now: Instant) {
         val warnings = mutableListOf<String>()
-        (client.get("/version") as? Result.Ok)?.let { version = ProxmoxJson.version(it.data) }
-        when (val result = client.get("/cluster/status")) {
-            is Result.Ok -> clusterStatus = ProxmoxJson.clusterStatus(result.data)
+        (client.get("/version", ProxmoxApi.Version::class.java) as? Result.Ok)?.let { version = ProxmoxConverter.version(it.data) }
+        when (val result = client.getList("/cluster/status", ProxmoxApi.ClusterStatusEntry::class.java)) {
+            is Result.Ok -> clusterStatus = ProxmoxConverter.clusterStatus(result.data)
             is Result.Forbidden -> {
                 clusterStatus = null
                 warnings += "The API token lacks Sys.Audit on /: the cluster name, quorum and node addresses are hidden"
@@ -189,8 +191,8 @@ class ProxmoxService(
     }
 
     private fun nodeDetail(name: String, warnings: MutableList<String>): NodeDetailState {
-        return when (val result = client.get("/nodes/$name/status")) {
-            is Result.Ok -> NodeDetailState(ProxmoxJson.nodeStatus(result.data), unavailableReason = null)
+        return when (val result = client.get("/nodes/$name/status", ProxmoxApi.NodeStatus::class.java)) {
+            is Result.Ok -> NodeDetailState(ProxmoxConverter.nodeDetail(result.data), unavailableReason = null)
             is Result.Forbidden -> {
                 warnings += "The API token lacks Sys.Audit on /nodes/$name: the details of node $name are hidden"
                 NodeDetailState(detail = null, unavailableReason = result.reason)
@@ -200,32 +202,7 @@ class ProxmoxService(
         }
     }
 
-    private fun ProxmoxJson.ResourceNode.toNode(): ProxmoxNode {
-        val member = clusterStatus?.nodes?.get(name)
-        val state = nodeDetails[name]
-        val detail = state?.detail
-        return ProxmoxNode(
-            name = name,
-            status = status,
-            local = member?.local ?: false,
-            ip = member?.ip,
-            uptimeSeconds = uptimeSeconds,
-            cpuUsagePercent = cpuUsagePercent,
-            cpuCount = cpuCount ?: detail?.cpuCount,
-            cpuModel = detail?.cpuModel,
-            memoryUsedBytes = memoryUsedBytes,
-            memoryTotalBytes = memoryTotalBytes,
-            ksmSharedBytes = detail?.ksmSharedBytes,
-            loadAverages = detail?.loadAverages,
-            rootFsUsedBytes = detail?.rootFsUsedBytes,
-            rootFsTotalBytes = detail?.rootFsTotalBytes,
-            pveVersion = detail?.pveVersion,
-            kernelRelease = detail?.kernelRelease,
-            detailUnavailableReason = state?.unavailableReason
-        )
-    }
-
-    private fun recordFailure(result: Result) {
+    private fun recordFailure(result: Result<*>) {
         val reason = describe(result)
         logger.debug("Proxmox poll failed: {}", reason)
         consecutiveFailures = when (result) {
@@ -235,20 +212,7 @@ class ProxmoxService(
         lastFailure = reason
     }
 
-    private fun describe(result: Result): String = when (result) {
-        is Result.Ok -> "OK"
-        is Result.Unauthorized ->
-            "Proxmox rejected the API token (${result.reason}). Check proxmox.tokenId and proxmox.secret, and whether the token has expired"
-
-        is Result.Forbidden -> "Proxmox denied access: ${result.reason}"
-        is Result.Failed -> "Proxmox answered ${result.status}: ${result.reason}"
-        is Result.TransportFailure -> when (result.error) {
-            is SSLException ->
-                "The certificate of ${config.host}:${config.port} is not trusted (${result.error.message}). Set proxmox.caCertificatePath to a copy of /etc/pve/pve-root-ca.pem and proxmox.host to the node's name, or set proxmox.verifyTls to false"
-
-            else -> "Could not reach Proxmox at ${config.host}:${config.port}: ${result.error.message ?: result.error::class.java.simpleName}"
-        }
-    }
+    private fun describe(result: Result<*>): String = ProxmoxConverter.failureReason(result, config.host, config.port)
 
     private fun configurationError(): String? = when {
         config.tokenId.isBlank() || config.secret.isBlank() -> "proxmox.tokenId and proxmox.secret must be set in configuration.yml"
@@ -259,9 +223,11 @@ class ProxmoxService(
     }
 
     private fun fetchDetail(guest: ProxmoxGuest): ProxmoxGuestDetail? {
-        val status = (client.get("${guest.apiPath()}/status/current") as? Result.Ok)?.data ?: return null
-        val guestConfig = (client.get("${guest.apiPath()}/config") as? Result.Ok)?.data ?: return null
-        return ProxmoxJson.guestDetail(guest.kind, status, guestConfig)
+        val status = (client.get("${guest.apiPath()}/status/current", ProxmoxApi.GuestStatus::class.java) as? Result.Ok)?.data
+            ?: return null
+        val guestConfig = (client.get("${guest.apiPath()}/config", ProxmoxApi.GuestConfig::class.java) as? Result.Ok)?.data
+            ?: return null
+        return ProxmoxConverter.guestDetail(guest.kind, status, guestConfig)
     }
 
     private fun fetchNetwork(guest: ProxmoxGuest): ProxmoxGuestNetworkResult {
@@ -270,9 +236,9 @@ class ProxmoxService(
         }
         return when (guest.kind) {
             ProxmoxGuestKind.QEMU -> qemuNetwork(guest)
-            ProxmoxGuestKind.LXC -> when (val interfaces = client.get("${guest.apiPath()}/interfaces")) {
+            ProxmoxGuestKind.LXC -> when (val interfaces = client.getList("${guest.apiPath()}/interfaces", ProxmoxApi.LxcInterface::class.java)) {
                 is Result.Ok -> ProxmoxGuestNetworkResult.Available(
-                    ProxmoxJson.lxcNetwork(interfaces.data, guestDetail(guest)?.hostname)
+                    ProxmoxConverter.lxcNetwork(interfaces.data, guestDetail(guest)?.hostname)
                 )
 
                 else -> ProxmoxGuestNetworkResult.Unavailable(describe(interfaces))
@@ -284,11 +250,11 @@ class ProxmoxService(
         if (guestDetail(guest)?.agentEnabled != true) {
             return ProxmoxGuestNetworkResult.Unavailable("The QEMU guest agent is not enabled for this VM")
         }
-        return when (val interfaces = client.get("${guest.apiPath()}/agent/network-get-interfaces")) {
+        return when (val interfaces = client.get("${guest.apiPath()}/agent/network-get-interfaces", ProxmoxApi.AgentInterfaces::class.java)) {
             is Result.Ok -> ProxmoxGuestNetworkResult.Available(
-                ProxmoxJson.qemuNetwork(
+                ProxmoxConverter.qemuNetwork(
                     interfaces.data,
-                    (client.get("${guest.apiPath()}/agent/get-host-name") as? Result.Ok)?.data
+                    (client.get("${guest.apiPath()}/agent/get-host-name", ProxmoxApi.AgentHostName::class.java) as? Result.Ok)?.data
                 )
             )
 
