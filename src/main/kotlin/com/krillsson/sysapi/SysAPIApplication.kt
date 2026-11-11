@@ -163,6 +163,7 @@ import com.krillsson.sysapi.launcher.NativeSelfTest
 import com.krillsson.sysapi.launcher.StartupFailure
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.graphql.domain.ProxmoxInfoUnavailable
+import com.krillsson.sysapi.proxmox.ProxmoxApi
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
 import com.krillsson.sysapi.proxmox.ProxmoxNode
 import com.krillsson.sysapi.proxmox.ProxmoxNodeStatus
@@ -295,6 +296,22 @@ import kotlin.system.exitProcess
     ProxmoxGuestNetworkInterface::class,
     ProxmoxStorage::class,
     ProxmoxStorageStatus::class,
+    ProxmoxApi.Version::class,
+    ProxmoxApi.Resource::class,
+    ProxmoxApi.ClusterStatusEntry::class,
+    ProxmoxApi.NodeStatus::class,
+    ProxmoxApi.NodeStatus.CpuInfo::class,
+    ProxmoxApi.NodeStatus.Ksm::class,
+    ProxmoxApi.NodeStatus.RootFs::class,
+    ProxmoxApi.NodeStatus.CurrentKernel::class,
+    ProxmoxApi.GuestStatus::class,
+    ProxmoxApi.GuestConfig::class,
+    ProxmoxApi.AgentInterfaces::class,
+    ProxmoxApi.AgentInterface::class,
+    ProxmoxApi.AgentHostName::class,
+    ProxmoxApi.AgentHostName.HostName::class,
+    ProxmoxApi.LxcInterface::class,
+    ProxmoxApi.IpAddress::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,
     UpdateCheckConfiguration::class,

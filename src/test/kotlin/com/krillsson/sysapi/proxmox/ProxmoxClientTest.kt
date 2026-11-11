@@ -67,18 +67,18 @@ class ProxmoxClientTest {
     }
 
     @Test
-    fun `authenticates with the api token and unwraps data`() {
+    fun `authenticates with the api token and reads data into the requested type`() {
         // Given
         server.enqueue(MockResponse().setBody(fixtureBody("version.json")))
 
         // When
-        val result = client().get("/version")
+        val result = client().get("/version", ProxmoxApi.Version::class.java)
 
         // Then
         val request = server.takeRequest()
         request.path shouldBe "/api2/json/version"
         request.getHeader("Authorization") shouldBe "PVEAPIToken=monitee@pve!agent=0b6a1c1e-5c2f-4c5d-9c1e-3d2f1a0b9c8d"
-        result.shouldBeInstanceOf<ProxmoxClient.Result.Ok>().data.path("version").asText() shouldBe "9.0.3"
+        result.shouldBeInstanceOf<ProxmoxClient.Result.Ok<ProxmoxApi.Version>>().data.version shouldBe "9.0.3"
     }
 
     @Test
@@ -87,7 +87,7 @@ class ProxmoxClientTest {
         server.enqueue(MockResponse().setBody("""{"data":{}}"""))
 
         // When
-        client().get("/nodes/pve1/qemu/100/agent/network-get-interfaces")
+        client().get("/nodes/pve1/qemu/100/agent/network-get-interfaces", ProxmoxApi.AgentInterfaces::class.java)
 
         // Then
         server.takeRequest().path shouldBe "/api2/json/nodes/pve1/qemu/100/agent/network-get-interfaces"
@@ -99,7 +99,7 @@ class ProxmoxClientTest {
         server.enqueue(MockResponse().setStatus("HTTP/1.1 401 authentication failure"))
 
         // When
-        val result = client().get("/cluster/resources")
+        val result = client().getList("/cluster/resources", ProxmoxApi.Resource::class.java)
 
         // Then
         result shouldBe ProxmoxClient.Result.Unauthorized("authentication failure")
@@ -115,7 +115,7 @@ class ProxmoxClientTest {
         )
 
         // When
-        val result = client().get("/cluster/status")
+        val result = client().getList("/cluster/status", ProxmoxApi.ClusterStatusEntry::class.java)
 
         // Then
         result shouldBe ProxmoxClient.Result.Forbidden("Permission check failed (/, Sys.Audit)")
@@ -133,7 +133,7 @@ class ProxmoxClientTest {
         server.enqueue(MockResponse().setStatus("HTTP/1.1 $status $reason").setBody("""{"data":null}"""))
 
         // When
-        val result = client().get("/nodes/pve2/status")
+        val result = client().get("/nodes/pve2/status", ProxmoxApi.NodeStatus::class.java)
 
         // Then
         result shouldBe ProxmoxClient.Result.Failed(status, reason)
@@ -149,10 +149,22 @@ class ProxmoxClientTest {
         )
 
         // When
-        val result = client().get("/nodes/pve1/qemu/abc/status/current")
+        val result = client().get("/nodes/pve1/qemu/abc/status/current", ProxmoxApi.GuestStatus::class.java)
 
         // Then
         result shouldBe ProxmoxClient.Result.Failed(400, "vmid: invalid format - value does not look like a valid VM ID")
+    }
+
+    @Test
+    fun `reports data of an unexpected shape as a failure`() {
+        // Given
+        server.enqueue(MockResponse().setBody("""{"data":[1,2,3]}"""))
+
+        // When
+        val result = client().get("/nodes/pve1/status", ProxmoxApi.NodeStatus::class.java)
+
+        // Then
+        result shouldBe ProxmoxClient.Result.Failed(200, "Proxmox sent an answer the agent could not read")
     }
 
     @Test
@@ -161,7 +173,7 @@ class ProxmoxClientTest {
         server.enqueue(MockResponse().setBody(fixtureBody("version.json")))
 
         // When
-        val result = client(verifyTls = true).get("/version")
+        val result = client(verifyTls = true).get("/version", ProxmoxApi.Version::class.java)
 
         // Then
         result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>().error.shouldBeInstanceOf<SSLException>()
@@ -174,10 +186,10 @@ class ProxmoxClientTest {
         server.enqueue(MockResponse().setBody(fixtureBody("version.json")))
 
         // When
-        val result = client(verifyTls = true, caCertificatePath = caFile.path).get("/version")
+        val result = client(verifyTls = true, caCertificatePath = caFile.path).get("/version", ProxmoxApi.Version::class.java)
 
         // Then
-        result.shouldBeInstanceOf<ProxmoxClient.Result.Ok>()
+        result.shouldBeInstanceOf<ProxmoxClient.Result.Ok<ProxmoxApi.Version>>()
     }
 
     @Test
@@ -186,7 +198,7 @@ class ProxmoxClientTest {
         val caFile = File(directory, "empty.pem").apply { writeText("") }
 
         // When
-        val result = client(verifyTls = true, caCertificatePath = caFile.path).get("/version")
+        val result = client(verifyTls = true, caCertificatePath = caFile.path).get("/version", ProxmoxApi.Version::class.java)
 
         // Then
         result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>()

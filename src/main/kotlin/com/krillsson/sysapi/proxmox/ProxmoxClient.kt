@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.proxmox
 
+import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.ProxmoxConfiguration
@@ -26,12 +27,12 @@ class ProxmoxClient(
         private const val TIMEOUT_SECONDS = 10L
     }
 
-    sealed interface Result {
-        data class Ok(val data: JsonNode) : Result
-        data class Unauthorized(val reason: String) : Result
-        data class Forbidden(val reason: String) : Result
-        data class Failed(val status: Int, val reason: String) : Result
-        data class TransportFailure(val error: Exception) : Result
+    sealed interface Result<out T> {
+        data class Ok<T>(val data: T) : Result<T>
+        data class Unauthorized(val reason: String) : Result<Nothing>
+        data class Forbidden(val reason: String) : Result<Nothing>
+        data class Failed(val status: Int, val reason: String) : Result<Nothing>
+        data class TransportFailure(val error: Exception) : Result<Nothing>
     }
 
     private val config: ProxmoxConfiguration = configuration.proxmox
@@ -52,14 +53,19 @@ class ProxmoxClient(
             .build()
     }
 
-    fun get(path: String): Result {
+    fun <T> get(path: String, type: Class<T>): Result<T> = get(path, objectMapper.constructType(type))
+
+    fun <T> getList(path: String, elementType: Class<T>): Result<List<T>> =
+        get(path, objectMapper.typeFactory.constructCollectionType(List::class.java, elementType))
+
+    private fun <T> get(path: String, type: JavaType): Result<T> {
         return try {
             val request = Request.Builder()
                 .url(urlOf(path))
                 .header("Authorization", "PVEAPIToken=${config.tokenId}=${config.secret}")
                 .header("Accept", "application/json")
                 .build()
-            client.newCall(request).execute().use { resultOf(it) }
+            client.newCall(request).execute().use { resultOf(it, type) }
         } catch (exception: Exception) {
             Result.TransportFailure(exception)
         }
@@ -73,11 +79,13 @@ class ProxmoxClient(
         .addPathSegments(path.trimStart('/'))
         .build()
 
-    private fun resultOf(response: Response): Result {
+    private fun <T> resultOf(response: Response, type: JavaType): Result<T> {
         val body = response.body?.string().orEmpty()
         val json = runCatching { objectMapper.readTree(body) }.getOrNull()
         if (response.isSuccessful) {
-            return Result.Ok(json?.path("data") ?: objectMapper.nullNode())
+            return dataOf<T>(json, type)
+                ?.let { Result.Ok(it) }
+                ?: Result.Failed(response.code, "Proxmox sent an answer the agent could not read")
         }
         val reason = reasonOf(response, json)
         return when (response.code) {
@@ -85,6 +93,11 @@ class ProxmoxClient(
             FORBIDDEN -> Result.Forbidden(reason)
             else -> Result.Failed(response.code, reason)
         }
+    }
+
+    private fun <T> dataOf(json: JsonNode?, type: JavaType): T? {
+        val data = json?.get("data")?.takeIf { !it.isNull } ?: return null
+        return runCatching { objectMapper.convertValue<T>(data, type) }.getOrNull()
     }
 
     private fun reasonOf(response: Response, json: JsonNode?): String {

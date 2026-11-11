@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.proxmox
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.JavaType
+import com.fasterxml.jackson.databind.JsonNode
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
@@ -29,7 +30,7 @@ class ProxmoxServiceTest {
     private val taskScheduler = mockk<TaskScheduler>(relaxed = true)
     private var now = Instant.parse("2026-11-11T10:00:00Z")
     private val clock = mockk<Clock> { every { instant() } answers { now } }
-    private val responses = mutableMapOf<String, Result>()
+    private val responses = mutableMapOf<String, Result<JsonNode>>()
 
     @BeforeEach
     fun setUp() {
@@ -38,8 +39,19 @@ class ProxmoxServiceTest {
         respond("/cluster/status", "cluster-status.json")
         respond("/nodes/pve1/status", "node-status.json")
         respond("/nodes/pve2/status", "node-status-pve8.json")
-        every { client.get(any()) } answers { responses[firstArg()] ?: Result.Failed(404, "no such path ${firstArg<String>()}") }
+        every { client.get(any(), any<Class<Any>>()) } answers {
+            answer(firstArg(), objectMapper.constructType(secondArg<Class<*>>()))
+        }
+        every { client.getList(any(), any<Class<Any>>()) } answers {
+            answer(firstArg(), objectMapper.typeFactory.constructCollectionType(List::class.java, secondArg<Class<*>>()))
+        }
     }
+
+    private fun <T> answer(path: String, type: JavaType): Result<T> =
+        when (val response = responses[path] ?: Result.Failed(404, "no such path $path")) {
+            is Result.Ok -> Result.Ok(objectMapper.convertValue<T>(response.data, type))
+            else -> @Suppress("UNCHECKED_CAST") (response as Result<T>)
+        }
 
     private fun respond(path: String, fixture: String) {
         responses[path] = Result.Ok(fixtureData(fixture))
@@ -199,7 +211,7 @@ class ProxmoxServiceTest {
         val service = service()
         service.poll()
         val withoutWeb = fixtureData("cluster-resources.json").filterNot { it.path("vmid").asInt() == 100 }
-        responses["/cluster/resources"] = Result.Ok(ObjectMapper().valueToTree(withoutWeb))
+        responses["/cluster/resources"] = Result.Ok(objectMapper.valueToTree(withoutWeb))
 
         // When
         service.pollAfter(15)
@@ -243,7 +255,7 @@ class ProxmoxServiceTest {
         val offline = service.node("pve3").shouldNotBeNull()
         offline.status shouldBe ProxmoxNodeStatus.OFFLINE
         offline.detailUnavailableReason.shouldBeNull()
-        verify(exactly = 0) { client.get("/nodes/pve3/status") }
+        verify(exactly = 0) { client.get("/nodes/pve3/status", any<Class<Any>>()) }
     }
 
     @Test
@@ -288,9 +300,9 @@ class ProxmoxServiceTest {
         service.pollAfter(30)
 
         // Then
-        verify(exactly = 4) { client.get("/cluster/resources") }
-        verify(exactly = 2) { client.get("/cluster/status") }
-        verify(exactly = 2) { client.get("/nodes/pve1/status") }
+        verify(exactly = 4) { client.getList("/cluster/resources", any<Class<Any>>()) }
+        verify(exactly = 2) { client.getList("/cluster/status", any<Class<Any>>()) }
+        verify(exactly = 2) { client.get("/nodes/pve1/status", any<Class<Any>>()) }
     }
 
     @Test
@@ -313,7 +325,7 @@ class ProxmoxServiceTest {
     fun `explains that a vm without the guest agent has no addresses`() {
         // Given
         responses["/nodes/pve1/qemu/100/status/current"] = Result.Ok(
-            ObjectMapper().readTree("""{"vmid":100,"status":"running","qmpstatus":"running"}""")
+            objectMapper.readTree("""{"vmid":100,"status":"running","qmpstatus":"running"}""")
         )
         respond("/nodes/pve1/qemu/100/config", "qemu-config-no-agent.json")
         val service = service()
@@ -324,7 +336,7 @@ class ProxmoxServiceTest {
 
         // Then
         network shouldBe ProxmoxGuestNetworkResult.Unavailable("The QEMU guest agent is not enabled for this VM")
-        verify(exactly = 0) { client.get("/nodes/pve1/qemu/100/agent/network-get-interfaces") }
+        verify(exactly = 0) { client.get("/nodes/pve1/qemu/100/agent/network-get-interfaces", any<Class<Any>>()) }
     }
 
     @Test

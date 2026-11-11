@@ -3,12 +3,19 @@ package com.krillsson.sysapi.proxmox
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 
-private val objectMapper = ObjectMapper()
+val objectMapper = ObjectMapper()
 
 fun fixtureBody(name: String): String =
-    requireNotNull(ProxmoxJsonTest::class.java.getResource("/proxmox/$name")) { "No fixture $name" }.readText()
+    requireNotNull(ProxmoxConverterTest::class.java.getResource("/proxmox/$name")) { "No fixture $name" }.readText()
 
 fun fixtureData(name: String): JsonNode = objectMapper.readTree(fixtureBody(name)).path("data")
+
+inline fun <reified T> fixture(name: String): T = objectMapper.convertValue(fixtureData(name), T::class.java)
+
+inline fun <reified T> fixtureList(name: String): List<T> = decodeList(fixtureData(name))
+
+inline fun <reified T> decodeList(data: JsonNode): List<T> =
+    objectMapper.convertValue(data, objectMapper.typeFactory.constructCollectionType(List::class.java, T::class.java))
 
 fun guest(
     vmid: Int,
