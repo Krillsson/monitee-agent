@@ -296,6 +296,7 @@ import kotlin.system.exitProcess
     ProxmoxGuestNetworkInterface::class,
     ProxmoxStorage::class,
     ProxmoxStorageStatus::class,
+    ProxmoxApi::class,
     ProxmoxApi.Version::class,
     ProxmoxApi.Resource::class,
     ProxmoxApi.ClusterStatusEntry::class,
