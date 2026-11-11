@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldStartWith
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
@@ -164,7 +165,9 @@ class ProxmoxClientTest {
         val result = client().get("/nodes/pve1/status", ProxmoxApi.NodeStatus::class.java)
 
         // Then
-        result shouldBe ProxmoxClient.Result.Failed(200, "Proxmox sent an answer the agent could not read")
+        val failed = result.shouldBeInstanceOf<ProxmoxClient.Result.Failed>()
+        failed.status shouldBe 200
+        failed.reason shouldStartWith "Proxmox sent an answer the agent could not read as NodeStatus: "
     }
 
     @Test
