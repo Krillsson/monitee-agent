@@ -16,6 +16,7 @@ import com.krillsson.sysapi.config.HistoryPurgingConfiguration
 import com.krillsson.sysapi.config.InternetServicesCheckConfiguration
 import com.krillsson.sysapi.config.LogReaderConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
+import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.RegistryConfiguration
 import com.krillsson.sysapi.config.RetentionConfiguration
 import com.krillsson.sysapi.config.SelfSignedCertificateConfiguration
@@ -239,7 +240,11 @@ class SettingsResolverTest {
             "s3cr3t-log-file",
             "s3cr3t-log-directory",
             "s3cr3t-docker-host",
-            "s3cr3t-smart-device"
+            "s3cr3t-smart-device",
+            "s3cr3t-proxmox-host",
+            "s3cr3t-proxmox-token-id",
+            "s3cr3t-proxmox-secret",
+            "s3cr3t-proxmox-ca-path"
         )
         val config = YAMLConfigFile(
             user = UserConfiguration(username = "s3cr3t-username", password = "s3cr3t-password"),
@@ -263,6 +268,13 @@ class SettingsResolverTest {
                 )
             ),
             mqtt = MqttConfiguration(username = "s3cr3t-mqtt-username", password = "s3cr3t-mqtt-password"),
+            proxmox = ProxmoxConfiguration(
+                enabled = true,
+                host = "s3cr3t-proxmox-host",
+                tokenId = "s3cr3t-proxmox-token-id",
+                secret = "s3cr3t-proxmox-secret",
+                caCertificatePath = "s3cr3t-proxmox-ca-path"
+            ),
             docker = DockerConfiguration(
                 host = "s3cr3t-docker-host",
                 updateCheck = ContainerUpdateCheckConfiguration(

@@ -1,0 +1,6 @@
+{"data":[
+{"id":"cluster","type":"cluster","name":"homelab","nodes":3,"quorate":1,"version":5},
+{"id":"node/pve1","type":"node","name":"pve1","nodeid":1,"ip":"192.168.1.11","local":1,"online":1,"level":""},
+{"id":"node/pve2","type":"node","name":"pve2","nodeid":2,"ip":"192.168.1.12","local":0,"online":1,"level":""},
+{"id":"node/pve3","type":"node","name":"pve3","nodeid":3,"ip":"192.168.1.13","local":0,"online":0,"level":""}
+]}

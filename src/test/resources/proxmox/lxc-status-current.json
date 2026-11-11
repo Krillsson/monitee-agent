@@ -1,0 +1,1 @@
+{"data":{"vmid":101,"name":"pihole","status":"running","type":"lxc","cpus":1,"cpu":0.015,"maxmem":536870912,"mem":134217728,"maxswap":536870912,"swap":1048576,"maxdisk":8589934592,"disk":1073741824,"netin":1000,"netout":2000,"diskread":3000,"diskwrite":4000,"uptime":7200,"ha":{"managed":0}}}

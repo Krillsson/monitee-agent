@@ -1,6 +1,7 @@
 package com.krillsson.sysapi.core.check
 
 import com.krillsson.sysapi.util.logger
+import com.krillsson.sysapi.util.trustingEveryCertificate
 import okhttp3.Handshake.Companion.handshake
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -8,15 +9,11 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.springframework.stereotype.Component
-import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 @Component
 class HttpCheckProbe {
@@ -29,7 +26,12 @@ class HttpCheckProbe {
     private val logger by logger()
 
     private val client = OkHttpClient.Builder().build()
-    private val permissiveClient by lazy { client.newBuilder().trustingEveryCertificate() }
+    private val permissiveClient by lazy {
+        client.newBuilder()
+            .trustingEveryCertificate()
+            .addNetworkInterceptor(::withUnverifiedHandshake)
+            .build()
+    }
 
     fun probe(spec: HttpCheckSpec): CheckResult {
         val start = Instant.now()
@@ -127,21 +129,6 @@ class HttpCheckProbe {
         } catch (exception: Exception) {
             "${exception::class.simpleName}: ${exception.message}"
         }
-    }
-
-    private fun OkHttpClient.Builder.trustingEveryCertificate(): OkHttpClient {
-        val trustManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
-            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
-        }
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
-        }
-        return sslSocketFactory(sslContext.socketFactory, trustManager)
-            .hostnameVerifier { _, _ -> true }
-            .addNetworkInterceptor(::withUnverifiedHandshake)
-            .build()
     }
 
     // OkHttp only exposes peer certificates it can chain to a trusted root and silently reports none

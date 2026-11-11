@@ -1,0 +1,15 @@
+{"data":{
+"uptime":864000,
+"loadavg":["0.42","0.38","0.35"],
+"cpu":0.0421,
+"wait":0.001,
+"cpuinfo":{"model":"AMD Ryzen 7 5700G with Radeon Graphics","cores":8,"cpus":16,"sockets":1,"mhz":"3800.000","hvm":"1","flags":"fpu vme"},
+"memory":{"total":67108864000,"used":13421772800,"free":53687091200,"available":52000000000},
+"swap":{"total":8589934592,"used":0,"free":8589934592},
+"ksm":{"shared":1073741824},
+"rootfs":{"total":100000000000,"used":10737418240,"avail":89262581760,"free":89262581760},
+"pveversion":"pve-manager/9.0.3/025864202ebb6109",
+"kversion":"Linux 6.14.8-2-pve #1 SMP PREEMPT_DYNAMIC PMX 6.14.8-2 (2025-07-22T10:04Z)",
+"current-kernel":{"sysname":"Linux","release":"6.14.8-2-pve","version":"#1 SMP PREEMPT_DYNAMIC PMX 6.14.8-2 (2025-07-22T10:04Z)","machine":"x86_64"},
+"boot-info":{"mode":"efi","secureboot":0}
+}}

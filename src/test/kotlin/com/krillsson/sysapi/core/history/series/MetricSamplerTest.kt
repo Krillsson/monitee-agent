@@ -8,6 +8,7 @@ import com.krillsson.sysapi.core.metrics.MemoryMetrics
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.core.metrics.NetworkMetrics
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsService
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -32,6 +33,7 @@ class MetricSamplerTest {
     private val metrics = mockk<Metrics>(relaxed = true)
     private val containerService = mockk<ContainerService>(relaxed = true)
     private val upsService = mockk<UpsService>(relaxed = true)
+    private val proxmoxService = mockk<ProxmoxService>(relaxed = true)
     private val repository = mockk<MetricSeriesBucketRepository>(relaxed = true)
     private val taskScheduler = mockk<TaskScheduler>(relaxed = true)
 
@@ -41,6 +43,7 @@ class MetricSamplerTest {
         metrics,
         containerService,
         upsService,
+        proxmoxService,
         repository,
         taskScheduler,
         configWithSeriesRetention()
@@ -67,6 +70,8 @@ class MetricSamplerTest {
         every { fileSystemMetrics.fileSystemLoads() } returns listOf(fileSystemLoad())
         every { containerService.containers() } returns emptyList()
         every { upsService.upsDevices() } returns emptyList()
+        every { proxmoxService.guests() } returns emptyList()
+        every { proxmoxService.nodes() } returns emptyList()
         every { repository.saveAll(any<Iterable<MetricSeriesBucketEntity>>()) } answers {
             firstArg<Iterable<MetricSeriesBucketEntity>>().toMutableList().also { saved += it }
         }

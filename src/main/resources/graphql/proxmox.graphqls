@@ -1,0 +1,209 @@
+extend type Query {
+    proxmox: ProxmoxInfo!
+}
+
+extend type Subscription {
+    # Live metrics for one guest, emitted every proxmox.pollIntervalSeconds while subscribed
+    proxmoxGuestMetricsById(id: String!): ProxmoxGuestMetrics
+}
+
+union ProxmoxInfo = ProxmoxInfoAvailable | ProxmoxInfoUnavailable
+
+type ProxmoxInfoUnavailable {
+    reason: String!
+    isDisabled: Boolean
+}
+
+type ProxmoxInfoAvailable {
+    cluster: ProxmoxCluster!
+    nodes: [ProxmoxNode!]!
+    nodeByName(name: String!): ProxmoxNode
+    # Templates are left out unless proxmox.includeTemplates is set
+    guests: [ProxmoxGuest!]!
+    runningGuests: [ProxmoxGuest!]!
+    # id is the vmid as a string, e.g. "100"
+    guest(id: String!): ProxmoxGuest
+    storages: [ProxmoxStorage!]!
+    # Reads the configured API token is not allowed to make, one line each. Empty when the token
+    # has PVEAuditor on /
+    warnings: [String!]!
+    # Everything here is from this poll. Proxmox is reported unavailable after three failed polls
+    # in a row, until then the last answer is kept
+    lastSuccessfulPoll: Instant!
+    pveVersion: String!
+}
+
+type ProxmoxCluster {
+    # Null on a standalone node, or when the API token may not read the cluster status
+    name: String
+    quorate: Boolean!
+    nodeCount: Int!
+}
+
+enum ProxmoxNodeStatus {
+    ONLINE
+    OFFLINE
+    UNKNOWN
+}
+
+type ProxmoxNode {
+    name: String!
+    status: ProxmoxNodeStatus!
+    # True for the node the agent is talking to
+    local: Boolean!
+    ip: String
+    uptimeSeconds: Long
+    cpuUsagePercent: Float
+    cpuCount: Int
+    cpuModel: String
+    memoryUsedBytes: Long
+    memoryTotalBytes: Long
+    # Memory merged by kernel same-page merging. Null when Proxmox does not report it
+    ksmSharedBytes: Long
+    loadAverages: [Float!]
+    rootFsUsedBytes: Long
+    rootFsTotalBytes: Long
+    # e.g. pve-manager/9.0.3/...
+    pveVersion: String
+    kernelRelease: String
+    # Set when the node is listed but its own status could not be read, e.g. when the node the
+    # agent talks to cannot reach it
+    detailUnavailableReason: String
+    guests: [ProxmoxGuest!]!
+    storages: [ProxmoxStorage!]!
+}
+
+enum ProxmoxGuestKind {
+    # A virtual machine
+    QEMU
+    # A container
+    LXC
+}
+
+enum ProxmoxGuestStatus {
+    RUNNING
+    STOPPED
+    # What Proxmox reports once the guest's node has been offline for a few minutes. The guest is
+    # still listed
+    UNKNOWN
+}
+
+type ProxmoxGuest {
+    # The vmid as a string. Stable across migrations and restarts
+    id: String!
+    vmid: Int!
+    kind: ProxmoxGuestKind!
+    name: String!
+    node: String!
+    status: ProxmoxGuestStatus!
+    template: Boolean!
+    tags: [String!]!
+    # Null unless the guest is HA managed. Proxmox's own state names: started, stopped,
+    # request_stop, stopping, starting, fence, recovery, freeze, ignored, migrate, error,
+    # queued, disabled
+    haState: String
+    # The config lock Proxmox holds on the guest (backup, migrate, snapshot, ...), null when free
+    lock: String
+    uptimeSeconds: Long!
+    cpuCount: Int!
+    memoryTotalBytes: Long!
+    # Null unless the guest is running
+    metrics: ProxmoxGuestMetrics
+
+    # The fields below are read from the guest's own status and config, one request per guest,
+    # so ask for them on a detail screen rather than in a list
+
+    # QEMU only: the QMP run state (running, paused, prelaunch, suspended, ...), or "stopped".
+    # Null for LXC
+    qmpStatus: String
+    # QEMU only: whether the guest agent is enabled in the config, not whether it answers
+    agentEnabled: Boolean
+    # QEMU: the ostype from the config (l26, win11, ...). LXC: the distribution (debian, alpine, ...)
+    osType: String
+    # LXC only. Null for QEMU
+    unprivileged: Boolean
+    # LXC only. Null for QEMU
+    swapUsedBytes: Long
+    # LXC only. Null for QEMU
+    swapTotalBytes: Long
+    # From the guest agent for QEMU, from the container itself for LXC. Null when neither is
+    # available, networkUnavailableReason says why
+    network: ProxmoxGuestNetwork
+    networkUnavailableReason: String
+}
+
+type ProxmoxGuestNetwork {
+    hostname: String
+    interfaces: [ProxmoxGuestNetworkInterface!]!
+}
+
+type ProxmoxGuestNetworkInterface {
+    name: String!
+    macAddress: String
+    ipv4: [String!]!
+    ipv6: [String!]!
+}
+
+# Field names follow DockerContainerMetrics where the meaning is the same
+type ProxmoxGuestMetrics {
+    id: String!
+    cpuUsage: ProxmoxGuestCpuUsage!
+    memoryUsage: ProxmoxGuestMemoryUsage!
+    networkUsage: ProxmoxGuestNetworkUsage!
+    blockIOUsage: ProxmoxGuestBlockIOUsage!
+    # LXC only: rootfs usage. Null for QEMU, for which Proxmox reports no disk usage
+    diskUsage: ProxmoxGuestDiskUsage
+}
+
+type ProxmoxGuestCpuUsage {
+    # Percent of the guest's own cpuCount, 0-100
+    usagePercentTotal: Float!
+}
+
+type ProxmoxGuestMemoryUsage {
+    # QEMU: what the guest reports through the balloon driver when it does, otherwise the host's
+    # view. LXC: the container's cgroup
+    usageBytes: Long!
+    usagePercent: Float!
+    limitBytes: Long!
+    # QEMU on Proxmox VE 9 only: the host's view of the same guest. Null elsewhere
+    hostUsageBytes: Long
+}
+
+# Counters since the guest started, in bytes
+type ProxmoxGuestNetworkUsage {
+    bytesReceived: Long!
+    bytesTransferred: Long!
+}
+
+# Counters since the guest started, in bytes. Not available for every storage type
+type ProxmoxGuestBlockIOUsage {
+    bytesRead: Long!
+    bytesWritten: Long!
+}
+
+type ProxmoxGuestDiskUsage {
+    usageBytes: Long!
+    limitBytes: Long!
+}
+
+enum ProxmoxStorageStatus {
+    AVAILABLE
+    UNKNOWN
+}
+
+type ProxmoxStorage {
+    # "<node>/<storage>". A shared storage is listed once per node, use shared to collapse them
+    id: String!
+    storage: String!
+    node: String!
+    # dir, lvmthin, zfspool, nfs, pbs, ... Null when Proxmox does not report it
+    type: String
+    status: ProxmoxStorageStatus!
+    # False when Proxmox does not report it
+    shared: Boolean!
+    # What the storage holds: images, rootdir, backup, iso, vztmpl, snippets, import
+    content: [String!]!
+    usedBytes: Long
+    totalBytes: Long
+}

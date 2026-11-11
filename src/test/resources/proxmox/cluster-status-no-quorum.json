@@ -1,0 +1,4 @@
+{"data":[
+{"id":"cluster","type":"cluster","name":"homelab","nodes":3,"quorate":0,"version":5},
+{"id":"node/pve1","type":"node","name":"pve1","nodeid":1,"ip":"192.168.1.11","local":1,"online":1}
+]}

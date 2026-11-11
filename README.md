@@ -20,6 +20,7 @@ Query for:
 - Show info from sensors and fans
 - Motherboard information
 - Manage docker containers
+- List Proxmox VE nodes, VMs and containers ([setup](docs/proxmox.md))
 - Manage systemd services
 - Manage windows services
 - Read logs from files, systemd journal and Windows events 

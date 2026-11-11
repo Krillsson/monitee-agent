@@ -106,6 +106,21 @@ ups:
 # md/mdadm arrays, the Unraid array, btrfs filesystems and ZFS pool state, read from /proc and /sys. No extra privileges needed
 storagePools:
   enabled: true
+# Proxmox VE nodes, VMs and containers through the PVE API. See docs/proxmox.md for the API token
+proxmox:
+  enabled: false
+  # the node's name rather than localhost, so it matches the certificate when verifyTls is on
+  host: "pve"
+  port: 8006
+  # pveum user token add monitee@pve agent  ->  tokenId: "monitee@pve!agent"
+  tokenId: ""
+  secret: ""
+  # false accepts the self-signed certificate Proxmox ships with. Prefer caCertificatePath with
+  # a copy of /etc/pve/pve-root-ca.pem from the node
+  verifyTls: true
+  # caCertificatePath: "/config/pve-root-ca.pem"
+  pollIntervalSeconds: 15
+  includeTemplates: false
 docker:
   enabled: true
   # keep the interfaces docker makes for itself (docker0, br-<network id>, veth*) out of the
@@ -190,6 +205,8 @@ mqtt:
   # intervalSeconds: 30
   # a binary sensor per container, off because a busy host has a lot of them
   # containers: false
+  # a binary sensor per Proxmox VM and container, off for the same reason
+  # proxmoxGuests: false
   # link state and rates per network interface, discovered disabled so they stay out of the way
   # networkInterfaces: true
   homeAssistant:

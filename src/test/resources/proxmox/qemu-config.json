@@ -1,0 +1,1 @@
+{"data":{"name":"web","cores":2,"sockets":2,"memory":"current=4096","balloon":2048,"ostype":"l26","agent":"1,fstrim_cloned_disks=1","boot":"order=scsi0;net0","scsi0":"local-lvm:vm-100-disk-0,size=32G","net0":"virtio=BC:24:11:AA:BB:CC,bridge=vmbr0","onboot":1,"tags":"prod;web","digest":"5b2d0c3a"}}

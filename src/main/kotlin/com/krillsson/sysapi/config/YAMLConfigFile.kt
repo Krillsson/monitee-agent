@@ -28,6 +28,7 @@ data class YAMLConfigFile(
     val linux: LinuxConfiguration = LinuxConfiguration(),
     val ups: UpsConfiguration = UpsConfiguration(),
     val storagePools: StoragePoolConfiguration = StoragePoolConfiguration(),
+    val proxmox: ProxmoxConfiguration = ProxmoxConfiguration(),
     val connectivityCheck: ConnectivityCheckConfiguration,
     val internetServicesCheck: InternetServicesCheckConfiguration = InternetServicesCheckConfiguration(),
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),

@@ -30,6 +30,7 @@ import com.krillsson.sysapi.core.check.RunCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
 import com.krillsson.sysapi.graphql.domain.*
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.storagepool.StoragePoolService
@@ -62,7 +63,8 @@ class QueryResolver(
     private val upsService: UpsService,
     private val legacyHistoryCompatService: LegacyHistoryCompatService,
     private val metricHistoryService: MetricHistoryService,
-    private val storagePoolService: StoragePoolService
+    private val storagePoolService: StoragePoolService,
+    private val proxmoxService: ProxmoxService
 ) {
 
     @QueryMapping
@@ -267,6 +269,19 @@ class QueryResolver(
                 "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
                 isDisabled = false
             )
+        }
+    }
+
+    @QueryMapping
+    fun proxmox(): ProxmoxInfo {
+        return when (val status = proxmoxService.status()) {
+            ProxmoxService.Status.Available -> ProxmoxInfoAvailable
+            ProxmoxService.Status.Disabled -> ProxmoxInfoUnavailable(
+                "Proxmox support is currently disabled. You can change this in the configuration.yml",
+                isDisabled = true
+            )
+
+            is ProxmoxService.Status.Unavailable -> ProxmoxInfoUnavailable(status.reason, isDisabled = false)
         }
     }
 

@@ -5,6 +5,7 @@ import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.metrics.Metrics
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.ups.UpsService
 import com.krillsson.sysapi.util.logger
 import jakarta.annotation.PostConstruct
@@ -19,6 +20,7 @@ class MetricSampler(
     private val metrics: Metrics,
     private val containerService: ContainerService,
     private val upsService: UpsService,
+    private val proxmoxService: ProxmoxService,
     private val repository: MetricSeriesBucketRepository,
     private val taskScheduler: TaskScheduler,
     yamlConfigFile: YAMLConfigFile
@@ -59,7 +61,11 @@ class MetricSampler(
                     SystemLoadMetricExtractor.diskHealth(metrics.diskMetrics().diskLoads(), now)
                 } +
                 from("container") { ContainerMetricExtractor.containers(runningContainerMetrics(), now) } +
-                from("ups") { UpsMetricExtractor.upsDevices(upsService.upsDevices().map { it.metrics }, now) }
+                from("ups") { UpsMetricExtractor.upsDevices(upsService.upsDevices().map { it.metrics }, now) } +
+                from("proxmox") {
+                    ProxmoxMetricExtractor.guests(proxmoxService.guests(), now) +
+                        ProxmoxMetricExtractor.nodes(proxmoxService.nodes(), now)
+                }
         )
     }
 
