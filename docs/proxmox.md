@@ -15,6 +15,14 @@ The second command prints the token's secret once, so copy it. A token with priv
 
 On Proxmox VE 8 the guest agent, and with it a VM's IP addresses, needs `VM.Monitor`, which `PVEAuditor` does not have. Everything else works without it.
 
+To start, shut down and reboot guests from the app as well, give the token `VM.PowerMgmt` on the guests:
+
+```sh
+pveum role add MoniteePower --privs "VM.PowerMgmt"
+pveum acl modify /vms --users monitee@pve --roles MoniteePower
+pveum acl modify /vms --tokens 'monitee@pve!agent' --roles MoniteePower
+```
+
 ## Configure the agent
 
 ```yaml

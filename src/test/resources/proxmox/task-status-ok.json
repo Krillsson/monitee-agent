@@ -1,0 +1,1 @@
+{"data":{"upid":"UPID:pve1:00001A2B:0003C4D5:6731F0A0:qmshutdown:100:monitee@pve!agent:","node":"pve1","pid":6699,"pstart":247765,"starttime":1731326112,"type":"qmshutdown","id":"100","user":"monitee@pve!agent","status":"stopped","exitstatus":"OK"}}
