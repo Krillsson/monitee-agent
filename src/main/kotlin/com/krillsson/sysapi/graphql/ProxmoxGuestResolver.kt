@@ -1,6 +1,9 @@
 package com.krillsson.sysapi.graphql
 
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJob
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
+import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand
+import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetwork
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkResult
 import com.krillsson.sysapi.proxmox.ProxmoxService
@@ -10,8 +13,15 @@ import org.springframework.stereotype.Controller
 @Controller
 @SchemaMapping(typeName = "ProxmoxGuest")
 class ProxmoxGuestResolver(
-    private val proxmoxService: ProxmoxService
+    private val proxmoxService: ProxmoxService,
+    private val proxmoxGuestCommandJobs: ProxmoxGuestCommandJobs
 ) {
+
+    @SchemaMapping
+    fun supportedCommands(guest: ProxmoxGuest): List<ProxmoxGuestCommand> = proxmoxService.supportedCommands(guest)
+
+    @SchemaMapping
+    fun commandJob(guest: ProxmoxGuest): ProxmoxGuestCommandJob? = proxmoxGuestCommandJobs.latestFor(guest.id)
 
     @SchemaMapping
     fun qmpStatus(guest: ProxmoxGuest): String? = proxmoxService.guestDetail(guest)?.qmpStatus

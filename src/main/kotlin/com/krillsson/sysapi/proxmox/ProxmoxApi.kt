@@ -206,4 +206,20 @@ object ProxmoxApi {
         @JsonProperty("ip-address-type")
         val ipAddressType: String?
     )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class TaskStatus(
+        @JsonProperty("status")
+        val status: String?,
+        @JsonProperty("exitstatus")
+        val exitStatus: String?
+    )
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    data class TaskLogLine(
+        @JsonProperty("n")
+        val n: Int?,
+        @JsonProperty("t")
+        val t: String?
+    )
 }

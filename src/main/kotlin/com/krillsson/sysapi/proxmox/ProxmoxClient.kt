@@ -8,6 +8,7 @@ import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.trustingCertificatesIn
 import com.krillsson.sysapi.util.trustingEveryCertificate
+import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -59,14 +60,23 @@ class ProxmoxClient(
     fun <T> getList(path: String, elementType: Class<T>): Result<List<T>> =
         get(path, objectMapper.typeFactory.constructCollectionType(List::class.java, elementType))
 
-    private fun <T> get(path: String, type: JavaType): Result<T> {
+    fun <T> post(path: String, form: Map<String, String>, type: Class<T>): Result<T> {
+        val body = FormBody.Builder()
+            .apply { form.forEach { (name, value) -> add(name, value) } }
+            .build()
+        return execute(requestTo(path).post(body), objectMapper.constructType(type))
+    }
+
+    private fun <T> get(path: String, type: JavaType): Result<T> = execute(requestTo(path).get(), type)
+
+    private fun requestTo(path: String): Request.Builder = Request.Builder()
+        .url(urlOf(path))
+        .header("Authorization", "PVEAPIToken=${config.tokenId}=${config.secret}")
+        .header("Accept", "application/json")
+
+    private fun <T> execute(request: Request.Builder, type: JavaType): Result<T> {
         return try {
-            val request = Request.Builder()
-                .url(urlOf(path))
-                .header("Authorization", "PVEAPIToken=${config.tokenId}=${config.secret}")
-                .header("Accept", "application/json")
-                .build()
-            client.newCall(request).execute().use { resultOf(it, type) }
+            client.newCall(request.build()).execute().use { resultOf(it, type) }
         } catch (exception: Exception) {
             Result.TransportFailure(exception)
         }

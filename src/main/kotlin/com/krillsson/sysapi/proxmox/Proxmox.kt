@@ -11,6 +11,15 @@ enum class ProxmoxGuestStatus { RUNNING, STOPPED, UNKNOWN }
 
 enum class ProxmoxNodeStatus { ONLINE, OFFLINE, UNKNOWN }
 
+enum class ProxmoxGuestCommand(val action: String) {
+    START("start"),
+    SHUTDOWN("shutdown"),
+    FORCE_STOP("stop"),
+    REBOOT("reboot"),
+    SUSPEND("suspend"),
+    RESUME("resume")
+}
+
 enum class ProxmoxStorageStatus { AVAILABLE, UNKNOWN }
 
 data class ProxmoxCluster(
@@ -54,7 +63,9 @@ data class ProxmoxGuest(
     val cpuCount: Int,
     val memoryTotalBytes: Long,
     val metrics: ProxmoxGuestMetrics?
-)
+) {
+    fun apiPath() = "/nodes/$node/${kind.apiPath}/$vmid"
+}
 
 data class ProxmoxGuestMetrics(
     val id: String,

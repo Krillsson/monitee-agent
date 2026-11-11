@@ -1,0 +1,1 @@
+{"data":[{"n":1,"t":"trying to acquire lock..."},{"n":2,"t":" OK"},{"n":3,"t":"VM quit/powerdown failed - got timeout"},{"n":4,"t":"TASK ERROR: VM quit/powerdown failed - got timeout"}],"total":4}

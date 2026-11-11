@@ -119,6 +119,18 @@ class ProxmoxService(
     fun guestNetwork(guest: ProxmoxGuest): ProxmoxGuestNetworkResult =
         guestNetworks.get(guest.cacheKey()) { fetchNetwork(guest) }
 
+    fun supportedCommands(guest: ProxmoxGuest): List<ProxmoxGuestCommand> =
+        ProxmoxGuestCommands.supported(guest, quorate(), qmpStatus(guest))
+
+    fun commandRefusal(guest: ProxmoxGuest, command: ProxmoxGuestCommand): String? =
+        ProxmoxGuestCommands.refusal(guest, command, quorate(), qmpStatus(guest))
+
+    fun guestChanged(guest: ProxmoxGuest) {
+        guestDetails.asMap().keys.removeIf { it.startsWith("${guest.id}:") }
+        guestNetworks.asMap().keys.removeIf { it.startsWith("${guest.id}:") }
+        poll()
+    }
+
     @Synchronized
     fun poll() {
         try {
@@ -267,7 +279,12 @@ class ProxmoxService(
         }
     }
 
-    private fun ProxmoxGuest.apiPath() = "/nodes/$node/${kind.apiPath}/$vmid"
+    private fun quorate(): Boolean = snapshot()?.cluster?.quorate ?: false
+
+    private fun qmpStatus(guest: ProxmoxGuest): String? = when {
+        guest.kind == ProxmoxGuestKind.QEMU && guest.status == ProxmoxGuestStatus.RUNNING -> guestDetail(guest)?.qmpStatus
+        else -> null
+    }
 
     private fun ProxmoxGuest.cacheKey() = "$id:$node:$status"
 }

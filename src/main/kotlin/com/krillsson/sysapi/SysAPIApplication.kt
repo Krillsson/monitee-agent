@@ -164,6 +164,15 @@ import com.krillsson.sysapi.launcher.StartupFailure
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.graphql.domain.ProxmoxInfoUnavailable
 import com.krillsson.sysapi.proxmox.ProxmoxApi
+import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandRunning
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandSucceeded
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandFailed
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJob
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJobState
+import com.krillsson.sysapi.graphql.mutations.PerformProxmoxGuestCommandInput
+import com.krillsson.sysapi.graphql.mutations.PerformProxmoxGuestCommandOutputStarted
+import com.krillsson.sysapi.graphql.mutations.PerformProxmoxGuestCommandOutputFailed
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
 import com.krillsson.sysapi.proxmox.ProxmoxNode
 import com.krillsson.sysapi.proxmox.ProxmoxNodeStatus
@@ -313,6 +322,17 @@ import kotlin.system.exitProcess
     ProxmoxApi.AgentHostName.HostName::class,
     ProxmoxApi.LxcInterface::class,
     ProxmoxApi.IpAddress::class,
+    ProxmoxApi.TaskStatus::class,
+    ProxmoxApi.TaskLogLine::class,
+    ProxmoxGuestCommand::class,
+    ProxmoxGuestCommandRunning::class,
+    ProxmoxGuestCommandSucceeded::class,
+    ProxmoxGuestCommandFailed::class,
+    ProxmoxGuestCommandJob::class,
+    ProxmoxGuestCommandJobState::class,
+    PerformProxmoxGuestCommandInput::class,
+    PerformProxmoxGuestCommandOutputStarted::class,
+    PerformProxmoxGuestCommandOutputFailed::class,
     ProcessesConfiguration::class,
     SelfSignedCertificateConfiguration::class,
     UpdateCheckConfiguration::class,

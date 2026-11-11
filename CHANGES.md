@@ -1,6 +1,7 @@
 ### Unreleased
 
 - Feature: `proxmox` lists the nodes, VMs, containers and storage of a Proxmox VE host or cluster, see [docs/proxmox.md](docs/proxmox.md).
+- Feature: `performProxmoxGuestCommand` starts, shuts down, reboots, suspends and resumes Proxmox VE guests.
 
 ### 0.50.0
 
