@@ -162,6 +162,7 @@ import com.krillsson.sysapi.launcher.LauncherHandshake
 import com.krillsson.sysapi.launcher.NativeSelfTest
 import com.krillsson.sysapi.launcher.StartupFailure
 import com.krillsson.sysapi.config.ProxmoxConfiguration
+import com.krillsson.sysapi.graphql.domain.ProxmoxInfoAvailable
 import com.krillsson.sysapi.graphql.domain.ProxmoxInfoUnavailable
 import com.krillsson.sysapi.proxmox.ProxmoxApi
 import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand
@@ -288,6 +289,7 @@ import kotlin.system.exitProcess
     StoragePoolDataSource::class,
     StoragePoolInfoUnavailable::class,
     ProxmoxConfiguration::class,
+    ProxmoxInfoAvailable::class,
     ProxmoxInfoUnavailable::class,
     ProxmoxCluster::class,
     ProxmoxNode::class,
