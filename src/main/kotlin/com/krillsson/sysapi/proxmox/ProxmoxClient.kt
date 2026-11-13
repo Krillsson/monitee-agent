@@ -31,10 +31,11 @@ class ProxmoxClient(
 
     sealed interface Result<out T> {
         data class Ok<T>(val data: T) : Result<T>
-        data class Unauthorized(val reason: String) : Result<Nothing>
-        data class Forbidden(val reason: String) : Result<Nothing>
-        data class Failed(val status: Int, val reason: String) : Result<Nothing>
-        data class TransportFailure(val error: Exception) : Result<Nothing>
+        sealed interface Failure : Result<Nothing>
+        data class Unauthorized(val reason: String) : Failure
+        data class Forbidden(val reason: String) : Failure
+        data class Failed(val status: Int, val reason: String) : Failure
+        data class TransportFailure(val error: Exception) : Failure
     }
 
     private val config: ProxmoxConfiguration = configuration.proxmox

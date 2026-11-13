@@ -2,6 +2,7 @@ package com.krillsson.sysapi.proxmox
 
 import com.fasterxml.jackson.databind.JavaType
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
@@ -320,6 +321,88 @@ class ProxmoxServiceTest {
 
         // Then
         emitted.map { it.id } shouldContainExactly listOf("101", "101")
+    }
+
+    @Test
+    fun `starts a new subscriber from the current metrics rather than the last ones emitted`() {
+        // Given
+        val service = service()
+        val earlier = service.guestMetricsById("101").subscribe()
+        service.poll()
+        earlier.dispose()
+        val busier = fixtureData("cluster-resources.json").deepCopy<ArrayNode>()
+        busier.filterIsInstance<ObjectNode>().single { it.path("vmid").asInt() == 101 }.put("cpu", 0.5)
+        responses["/cluster/resources"] = Result.Ok(busier)
+        service.pollAfter(15)
+
+        // When
+        val first = service.guestMetricsById("101").blockFirst(Duration.ofSeconds(1))
+
+        // Then
+        first.shouldNotBeNull().cpuUsage.usagePercentTotal shouldBe 50.0
+    }
+
+    @Test
+    fun `explains that the configuration of a vm could not be read instead of blaming the guest agent`() {
+        // Given
+        responses["/nodes/pve1/qemu/100/status/current"] = Result.Failed(500, "unable to read status")
+        respond("/nodes/pve1/qemu/100/config", "qemu-config.json")
+        val service = service()
+        service.poll()
+
+        // When
+        val network = service.guestNetwork(service.guest("100")!!)
+
+        // Then
+        network shouldBe ProxmoxGuestNetworkResult.Unavailable("Could not read the status and configuration of this VM from Proxmox")
+    }
+
+    @Test
+    fun `asks a vm for its addresses again one poll interval after the guest agent did not answer`() {
+        // Given
+        respond("/nodes/pve1/qemu/100/status/current", "qemu-status-current.json")
+        respond("/nodes/pve1/qemu/100/config", "qemu-config.json")
+        respond("/nodes/pve1/qemu/100/agent/get-host-name", "agent-get-host-name.json")
+        responses["/nodes/pve1/qemu/100/agent/network-get-interfaces"] = Result.Failed(500, "QEMU guest agent is not running")
+        val service = service()
+        service.poll()
+        val guest = service.guest("100")!!
+        val notRunning = service.guestNetwork(guest)
+        respond("/nodes/pve1/qemu/100/agent/network-get-interfaces", "agent-network-get-interfaces.json")
+
+        // When
+        now = now.plusSeconds(5)
+        val withinInterval = service.guestNetwork(guest)
+        now = now.plusSeconds(10)
+        val afterInterval = service.guestNetwork(guest)
+
+        // Then
+        notRunning shouldBe ProxmoxGuestNetworkResult.Unavailable("QEMU guest agent is not running")
+        withinInterval shouldBe notRunning
+        afterInterval.shouldBeInstanceOf<ProxmoxGuestNetworkResult.Available>()
+        verify(exactly = 2) { client.get("/nodes/pve1/qemu/100/agent/network-get-interfaces", any<Class<Any>>()) }
+    }
+
+    @Test
+    fun `keeps the addresses a vm reported for five minutes`() {
+        // Given
+        respond("/nodes/pve1/qemu/100/status/current", "qemu-status-current.json")
+        respond("/nodes/pve1/qemu/100/config", "qemu-config.json")
+        respond("/nodes/pve1/qemu/100/agent/network-get-interfaces", "agent-network-get-interfaces.json")
+        respond("/nodes/pve1/qemu/100/agent/get-host-name", "agent-get-host-name.json")
+        val service = service()
+        service.poll()
+        val guest = service.guest("100")!!
+        service.guestNetwork(guest)
+
+        // When
+        now = now.plus(Duration.ofMinutes(4))
+        service.guestNetwork(guest)
+        now = now.plus(Duration.ofMinutes(1))
+        service.guestNetwork(guest)
+
+        // Then
+        verify(exactly = 2) { client.get("/nodes/pve1/qemu/100/agent/network-get-interfaces", any<Class<Any>>()) }
     }
 
     @Test

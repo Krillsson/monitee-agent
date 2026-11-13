@@ -3,7 +3,8 @@ extend type Query {
 }
 
 extend type Subscription {
-    # Live metrics for one guest, emitted every proxmox.pollIntervalSeconds while subscribed
+    # Live metrics for one guest: the current ones on subscribe, then every
+    # proxmox.pollIntervalSeconds while subscribed
     proxmoxGuestMetricsById(id: String!): ProxmoxGuestMetrics
 
     # Follow a command started with performProxmoxGuestCommand

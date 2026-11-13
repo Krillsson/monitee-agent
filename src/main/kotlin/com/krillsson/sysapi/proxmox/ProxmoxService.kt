@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.proxmox
 
+import com.google.common.base.Ticker
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import com.krillsson.sysapi.config.YAMLConfigFile
@@ -9,6 +10,7 @@ import jakarta.annotation.PostConstruct
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import reactor.core.publisher.Sinks
 import java.io.File
 import java.time.Clock
@@ -61,17 +63,28 @@ class ProxmoxService(
     private var warnings = emptyList<String>()
     private var detailsRefreshedAt: Instant? = null
 
+    private val ticker = object : Ticker() {
+        override fun read(): Long = clock.instant().let { TimeUnit.SECONDS.toNanos(it.epochSecond) + it.nano }
+    }
+
     private val guestDetails: Cache<String, Optional<ProxmoxGuestDetail>> = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .expireAfterWrite(pollInterval.seconds, TimeUnit.SECONDS)
         .build()
 
-    private val guestNetworks: Cache<String, ProxmoxGuestNetworkResult> = CacheBuilder.newBuilder()
+    private val guestNetworks: Cache<String, ProxmoxGuestNetworkResult.Available> = CacheBuilder.newBuilder()
+        .ticker(ticker)
         .expireAfterWrite(NETWORK_CACHE_MINUTES, TimeUnit.MINUTES)
         .build()
 
+    private val unavailableGuestNetworks: Cache<String, ProxmoxGuestNetworkResult.Unavailable> = CacheBuilder.newBuilder()
+        .ticker(ticker)
+        .expireAfterWrite(pollInterval.seconds, TimeUnit.SECONDS)
+        .build()
+
     private val guestMetricsSink = Sinks.many()
-        .replay()
-        .latest<List<ProxmoxGuestMetrics>>()
+        .multicast()
+        .directBestEffort<List<ProxmoxGuestMetrics>>()
 
     @PostConstruct
     fun start() {
@@ -110,14 +123,21 @@ class ProxmoxService(
 
     fun storages(): List<ProxmoxStorage> = snapshot()?.storages.orEmpty()
 
-    fun guestMetricsById(id: String): Flux<ProxmoxGuestMetrics> = guestMetricsSink.asFlux()
-        .mapNotNull { metrics -> metrics.firstOrNull { it.id == id } }
+    fun guestMetricsById(id: String): Flux<ProxmoxGuestMetrics> = Mono.defer { Mono.justOrEmpty(guest(id)?.metrics) }
+        .concatWith(guestMetricsSink.asFlux().mapNotNull { metrics -> metrics.firstOrNull { it.id == id } })
 
     fun guestDetail(guest: ProxmoxGuest): ProxmoxGuestDetail? =
         guestDetails.get(guest.cacheKey()) { Optional.ofNullable(fetchDetail(guest)) }.orElse(null)
 
-    fun guestNetwork(guest: ProxmoxGuest): ProxmoxGuestNetworkResult =
-        guestNetworks.get(guest.cacheKey()) { fetchNetwork(guest) }
+    fun guestNetwork(guest: ProxmoxGuest): ProxmoxGuestNetworkResult {
+        val key = guest.cacheKey()
+        guestNetworks.getIfPresent(key)?.let { return it }
+        unavailableGuestNetworks.getIfPresent(key)?.let { return it }
+        return when (val network = fetchNetwork(guest)) {
+            is ProxmoxGuestNetworkResult.Available -> network.also { guestNetworks.put(key, it) }
+            is ProxmoxGuestNetworkResult.Unavailable -> network.also { unavailableGuestNetworks.put(key, it) }
+        }
+    }
 
     fun supportedCommands(guest: ProxmoxGuest): List<ProxmoxGuestCommand> =
         ProxmoxGuestCommands.supported(guest, quorate(), qmpStatus(guest))
@@ -128,6 +148,7 @@ class ProxmoxService(
     fun guestChanged(guest: ProxmoxGuest) {
         guestDetails.asMap().keys.removeIf { it.startsWith("${guest.id}:") }
         guestNetworks.asMap().keys.removeIf { it.startsWith("${guest.id}:") }
+        unavailableGuestNetworks.asMap().keys.removeIf { it.startsWith("${guest.id}:") }
         poll()
     }
 
@@ -136,7 +157,7 @@ class ProxmoxService(
         try {
             when (val result = client.getList("/cluster/resources", ProxmoxApi.Resource::class.java)) {
                 is Result.Ok -> refresh(ProxmoxConverter.resources(result.data))
-                else -> recordFailure(result)
+                is Result.Failure -> recordFailure(result)
             }
         } catch (exception: Exception) {
             logger.warn("Failed to poll Proxmox", exception)
@@ -210,11 +231,11 @@ class ProxmoxService(
                 NodeDetailState(detail = null, unavailableReason = result.reason)
             }
 
-            else -> NodeDetailState(detail = null, unavailableReason = describe(result))
+            is Result.Failure -> NodeDetailState(detail = null, unavailableReason = describe(result))
         }
     }
 
-    private fun recordFailure(result: Result<*>) {
+    private fun recordFailure(result: Result.Failure) {
         val reason = describe(result)
         logger.debug("Proxmox poll failed: {}", reason)
         consecutiveFailures = when (result) {
@@ -224,7 +245,7 @@ class ProxmoxService(
         lastFailure = reason
     }
 
-    private fun describe(result: Result<*>): String = ProxmoxConverter.failureReason(result, config.host, config.port)
+    private fun describe(result: Result.Failure): String = ProxmoxConverter.failureReason(result, config.host, config.port)
 
     private fun configurationError(): String? = when {
         config.tokenId.isBlank() || config.secret.isBlank() -> "proxmox.tokenId and proxmox.secret must be set in configuration.yml"
@@ -253,13 +274,15 @@ class ProxmoxService(
                     ProxmoxConverter.lxcNetwork(interfaces.data, guestDetail(guest)?.hostname)
                 )
 
-                else -> ProxmoxGuestNetworkResult.Unavailable(describe(interfaces))
+                is Result.Failure -> ProxmoxGuestNetworkResult.Unavailable(describe(interfaces))
             }
         }
     }
 
     private fun qemuNetwork(guest: ProxmoxGuest): ProxmoxGuestNetworkResult {
-        if (guestDetail(guest)?.agentEnabled != true) {
+        val detail = guestDetail(guest)
+            ?: return ProxmoxGuestNetworkResult.Unavailable("Could not read the status and configuration of this VM from Proxmox")
+        if (detail.agentEnabled != true) {
             return ProxmoxGuestNetworkResult.Unavailable("The QEMU guest agent is not enabled for this VM")
         }
         return when (val interfaces = client.get("${guest.apiPath()}/agent/network-get-interfaces", ProxmoxApi.AgentInterfaces::class.java)) {
@@ -275,7 +298,7 @@ class ProxmoxService(
             )
 
             is Result.Failed -> ProxmoxGuestNetworkResult.Unavailable(interfaces.reason.replaceFirstChar { it.uppercase() })
-            else -> ProxmoxGuestNetworkResult.Unavailable(describe(interfaces))
+            is Result.Failure -> ProxmoxGuestNetworkResult.Unavailable(describe(interfaces))
         }
     }
 
