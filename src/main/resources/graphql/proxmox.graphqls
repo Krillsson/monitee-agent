@@ -47,7 +47,8 @@ type ProxmoxInfoAvailable {
     lastSuccessfulPoll: Instant!
     pveVersion: String!
     # The most recently started command that is still running, if any. Pass jobId to look up a
-    # specific job instead, including one that finished in the last 30 minutes
+    # specific job instead, including one that finished in the last 30 minutes. Null when no job
+    # has that id, or it has been forgotten
     guestCommandJob(jobId: UUID): ProxmoxGuestCommandJob
 }
 

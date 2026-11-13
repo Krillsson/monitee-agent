@@ -2,6 +2,7 @@ package com.krillsson.sysapi.proxmox
 
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
+import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandEvent
 import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandFailed
 import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJobState
 import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandRunning
@@ -18,6 +19,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.springframework.scheduling.TaskScheduler
 import java.io.IOException
 import java.time.Clock
@@ -105,6 +108,52 @@ class ProxmoxGuestCommandJobsTest {
         job.finishedAt shouldBe now
         jobs.current().shouldBeNull()
         verify { proxmoxService.guestChanged(running) }
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "task-status-ok.json, SUCCEEDED",
+        "task-status-timeout.json, FAILED"
+    )
+    fun `refreshes the guest before reporting that the command finished`(fixture: String, state: ProxmoxGuestCommandJobState) {
+        // Given
+        val jobs = jobs()
+        taskStatus(fixture)
+        val started = jobs.start("100", ProxmoxGuestCommand.SHUTDOWN) as ProxmoxGuestCommandJobs.StartResult.Started
+        val received = mutableListOf<ProxmoxGuestCommandEvent>()
+        jobs.events(started.jobId).subscribe { received += it }
+        var receivedAtRefresh: List<ProxmoxGuestCommandEvent>? = null
+        var stateAtRefresh: ProxmoxGuestCommandJobState? = null
+        every { proxmoxService.guestChanged(running) } answers {
+            receivedAtRefresh = received.toList()
+            stateAtRefresh = jobs.find(started.jobId)?.state
+        }
+
+        // When
+        runScheduledChecks()
+
+        // Then
+        receivedAtRefresh.shouldNotBeNull().map { it::class } shouldContainExactly listOf(ProxmoxGuestCommandRunning::class)
+        stateAtRefresh shouldBe ProxmoxGuestCommandJobState.RUNNING
+        jobs.find(started.jobId).shouldNotBeNull().state shouldBe state
+        received.size shouldBe 2
+    }
+
+    @Test
+    fun `reports the command finished even when refreshing the guest fails`() {
+        // Given
+        val jobs = jobs()
+        taskStatus("task-status-ok.json")
+        every { proxmoxService.guestChanged(running) } throws IllegalStateException("poll failed")
+        val started = jobs.start("100", ProxmoxGuestCommand.SHUTDOWN) as ProxmoxGuestCommandJobs.StartResult.Started
+
+        // When
+        runScheduledChecks()
+
+        // Then
+        val events = jobs.events(started.jobId).collectList().block().shouldNotBeNull()
+        events.last().shouldBeInstanceOf<ProxmoxGuestCommandSucceeded>()
+        jobs.find(started.jobId).shouldNotBeNull().state shouldBe ProxmoxGuestCommandJobState.SUCCEEDED
     }
 
     @Test
