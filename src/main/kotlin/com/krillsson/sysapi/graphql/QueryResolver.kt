@@ -274,8 +274,13 @@ class QueryResolver(
 
     @QueryMapping
     fun proxmox(): ProxmoxInfo {
+        proxmoxService.snapshot()?.let { return ProxmoxInfoAvailable(it) }
         return when (val status = proxmoxService.status()) {
-            ProxmoxService.Status.Available -> ProxmoxInfoAvailable
+            ProxmoxService.Status.Available -> ProxmoxInfoUnavailable(
+                "Proxmox answered for the first time while this query ran, ask again",
+                isDisabled = false
+            )
+
             ProxmoxService.Status.Disabled -> ProxmoxInfoUnavailable(
                 "Proxmox support is currently disabled. You can change this in the configuration.yml",
                 isDisabled = true

@@ -1,12 +1,12 @@
 package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJob
+import com.krillsson.sysapi.graphql.domain.ProxmoxInfoAvailable
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxNode
-import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.ProxmoxStorage
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -17,33 +17,35 @@ import java.util.UUID
 @Controller
 @SchemaMapping(typeName = "ProxmoxInfoAvailable")
 class ProxmoxResolver(
-    private val proxmoxService: ProxmoxService,
     private val proxmoxGuestCommandJobs: ProxmoxGuestCommandJobs
 ) {
 
     @SchemaMapping
-    fun cluster(): ProxmoxCluster? = proxmoxService.snapshot()?.cluster
+    fun cluster(info: ProxmoxInfoAvailable): ProxmoxCluster = info.snapshot.cluster
 
     @SchemaMapping
-    fun nodes(): List<ProxmoxNode> = proxmoxService.nodes()
+    fun nodes(info: ProxmoxInfoAvailable): List<ProxmoxNode> = info.snapshot.nodes
 
     @SchemaMapping
-    fun nodeByName(@Argument name: String): ProxmoxNode? = proxmoxService.node(name)
+    fun nodeByName(info: ProxmoxInfoAvailable, @Argument name: String): ProxmoxNode? =
+        info.snapshot.nodes.firstOrNull { it.name == name }
 
     @SchemaMapping
-    fun guests(): List<ProxmoxGuest> = proxmoxService.guests()
+    fun guests(info: ProxmoxInfoAvailable): List<ProxmoxGuest> = info.snapshot.guests
 
     @SchemaMapping
-    fun runningGuests(): List<ProxmoxGuest> = proxmoxService.guests().filter { it.status == ProxmoxGuestStatus.RUNNING }
+    fun runningGuests(info: ProxmoxInfoAvailable): List<ProxmoxGuest> =
+        info.snapshot.guests.filter { it.status == ProxmoxGuestStatus.RUNNING }
 
     @SchemaMapping
-    fun guest(@Argument id: String): ProxmoxGuest? = proxmoxService.guest(id)
+    fun guest(info: ProxmoxInfoAvailable, @Argument id: String): ProxmoxGuest? =
+        info.snapshot.guests.firstOrNull { it.id == id }
 
     @SchemaMapping
-    fun storages(): List<ProxmoxStorage> = proxmoxService.storages()
+    fun storages(info: ProxmoxInfoAvailable): List<ProxmoxStorage> = info.snapshot.storages
 
     @SchemaMapping
-    fun warnings(): List<String> = proxmoxService.snapshot()?.warnings.orEmpty()
+    fun warnings(info: ProxmoxInfoAvailable): List<String> = info.snapshot.warnings
 
     @SchemaMapping
     fun guestCommandJob(@Argument jobId: UUID?): ProxmoxGuestCommandJob? = when (jobId) {
@@ -52,8 +54,8 @@ class ProxmoxResolver(
     }
 
     @SchemaMapping
-    fun lastSuccessfulPoll(): Instant? = proxmoxService.snapshot()?.lastSuccessfulPoll
+    fun lastSuccessfulPoll(info: ProxmoxInfoAvailable): Instant = info.snapshot.lastSuccessfulPoll
 
     @SchemaMapping
-    fun pveVersion(): String? = proxmoxService.snapshot()?.pveVersion
+    fun pveVersion(info: ProxmoxInfoAvailable): String = info.snapshot.pveVersion
 }
