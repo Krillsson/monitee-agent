@@ -101,7 +101,7 @@ class ProxmoxGuestCommandJobs(
                 StartResult.Started(jobId, guestId, job.upid)
             }
 
-            else -> StartResult.Rejected(ProxmoxConverter.failureReason(result, config.host, config.port))
+            is Result.Failure -> StartResult.Rejected(ProxmoxConverter.failureReason(result, config.host, config.port))
         }
     }
 
@@ -143,7 +143,7 @@ class ProxmoxGuestCommandJobs(
                 job.failedChecks = 0
             }
 
-            else -> {
+            is Result.Failure -> {
                 job.failedChecks++
                 if (job.failedChecks >= FAILED_CHECKS_BEFORE_GIVING_UP) {
                     return fail(jobId, job, "Lost track of the task: ${ProxmoxConverter.failureReason(result, config.host, config.port)}")

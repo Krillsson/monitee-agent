@@ -1,7 +1,8 @@
 package com.krillsson.sysapi.proxmox
 
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
-import javax.net.ssl.SSLException
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLPeerUnverifiedException
 
 object ProxmoxConverter {
 
@@ -45,9 +46,9 @@ object ProxmoxConverter {
     fun version(version: ProxmoxApi.Version): String = version.version ?: version.release ?: "unknown"
 
     fun resources(resources: List<ProxmoxApi.Resource>): Resources = Resources(
-        nodes = resources.filter { it.type == "node" }.mapNotNull { resourceNode(it) },
+        nodes = resources.mapNotNull { resourceNode(it) },
         guests = resources.mapNotNull { guest(it) },
-        storages = resources.filter { it.type == "storage" }.mapNotNull { storage(it) }
+        storages = resources.mapNotNull { storage(it) }
     )
 
     fun clusterStatus(entries: List<ProxmoxApi.ClusterStatusEntry>): ClusterStatus {
@@ -173,15 +174,14 @@ object ProxmoxConverter {
         }
     }
 
-    fun failureReason(result: Result<*>, host: String, port: Int): String = when (result) {
-        is Result.Ok -> "OK"
+    fun failureReason(result: Result.Failure, host: String, port: Int): String = when (result) {
         is Result.Unauthorized ->
             "Proxmox rejected the API token (${result.reason}). Check proxmox.tokenId and proxmox.secret, and whether the token has expired"
 
         is Result.Forbidden -> "Proxmox denied access: ${result.reason}"
         is Result.Failed -> "Proxmox answered ${result.status}: ${result.reason}"
         is Result.TransportFailure -> when (result.error) {
-            is SSLException ->
+            is SSLHandshakeException, is SSLPeerUnverifiedException ->
                 "The certificate of $host:$port is not trusted (${result.error.message}). Set proxmox.caCertificatePath to a copy of /etc/pve/pve-root-ca.pem and proxmox.host to the node's name, or set proxmox.verifyTls to false"
 
             else -> "Could not reach Proxmox at $host:$port: ${result.error.message ?: result.error::class.java.simpleName}"
@@ -189,6 +189,7 @@ object ProxmoxConverter {
     }
 
     private fun resourceNode(resource: ProxmoxApi.Resource): ResourceNode? {
+        if (resource.type != "node") return null
         val name = resource.node ?: return null
         return ResourceNode(
             name = name,
@@ -273,6 +274,7 @@ object ProxmoxConverter {
     }
 
     private fun storage(resource: ProxmoxApi.Resource): ProxmoxStorage? {
+        if (resource.type != "storage") return null
         val node = resource.node ?: return null
         val storage = resource.storage ?: return null
         return ProxmoxStorage(

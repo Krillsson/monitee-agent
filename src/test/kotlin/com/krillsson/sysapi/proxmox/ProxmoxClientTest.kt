@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
@@ -19,7 +20,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
 import javax.net.ssl.SSLException
+import kotlin.concurrent.thread
 
 class ProxmoxClientTest {
 
@@ -52,12 +56,17 @@ class ProxmoxClientTest {
         server.shutdown()
     }
 
-    private fun client(verifyTls: Boolean = false, caCertificatePath: String? = null): ProxmoxClient {
+    private fun client(
+        verifyTls: Boolean = false,
+        caCertificatePath: String? = null,
+        host: String = server.hostName,
+        port: Int = server.port
+    ): ProxmoxClient {
         val configFile = mockk<YAMLConfigFile> {
             every { proxmox } returns ProxmoxConfiguration(
                 enabled = true,
-                host = server.hostName,
-                port = server.port,
+                host = host,
+                port = port,
                 tokenId = "monitee@pve!agent",
                 secret = "0b6a1c1e-5c2f-4c5d-9c1e-3d2f1a0b9c8d",
                 verifyTls = verifyTls,
@@ -180,6 +189,44 @@ class ProxmoxClientTest {
 
         // Then
         result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>().error.shouldBeInstanceOf<SSLException>()
+    }
+
+    @Test
+    fun `points at the certificate settings when the certificate is self-signed or issued for another name`() {
+        // Given
+        val caFile = File(directory, "pve-root-ca.pem").apply { writeText(rootCertificate.certificatePem()) }
+        server.enqueue(MockResponse().setBody(fixtureBody("version.json")))
+        server.enqueue(MockResponse().setBody(fixtureBody("version.json")))
+
+        // When
+        val untrusted = client(verifyTls = true).get("/version", ProxmoxApi.Version::class.java)
+        val otherName = client(verifyTls = true, caCertificatePath = caFile.path, host = "127.0.0.1")
+            .get("/version", ProxmoxApi.Version::class.java)
+
+        // Then
+        listOf(untrusted, otherName).forEach { result ->
+            val failure = result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>()
+            ProxmoxConverter.failureReason(failure, server.hostName, server.port) shouldContain "proxmox.caCertificatePath"
+        }
+    }
+
+    @Test
+    fun `does not blame the certificate when the port does not speak tls`() {
+        // Given
+        val plain = ServerSocket(0, 1, InetAddress.getLoopbackAddress())
+        thread {
+            plain.accept().use { it.getOutputStream().write("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n".toByteArray()) }
+        }
+
+        // When
+        val result = plain.use {
+            client(verifyTls = true, host = it.inetAddress.hostAddress, port = it.localPort).get("/version", ProxmoxApi.Version::class.java)
+        }
+
+        // Then
+        val failure = result.shouldBeInstanceOf<ProxmoxClient.Result.TransportFailure>()
+        failure.error.shouldBeInstanceOf<SSLException>()
+        ProxmoxConverter.failureReason(failure, plain.inetAddress.hostAddress, plain.localPort) shouldStartWith "Could not reach Proxmox"
     }
 
     @Test
