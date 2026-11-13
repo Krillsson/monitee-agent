@@ -526,7 +526,7 @@ class MonitorInputCreator(
 
             Monitor.Type.PROXMOX_GUEST_RUNNING,
             Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
-            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxService.guests().map {
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxService.guests().filterNot { it.template }.map {
                 createProxmoxGuestMonitorableItem(it, type)
             }
 
@@ -887,22 +887,28 @@ class MonitorInputCreator(
         type = Monitor.Type.CONTAINER_UPDATE_AVAILABLE
     )
 
-    private fun createProxmoxGuestMonitorableItem(guest: ProxmoxGuest, type: Monitor.Type) = MonitorableItem(
-        id = guest.id,
-        name = guest.name,
-        description = "${guest.kind.name} ${guest.vmid} on ${guest.node}",
-        maxValue = when (type) {
-            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> (100f).toFractionalValue()
-            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> guest.memoryTotalBytes.toNumericalValue()
-            else -> true.toConditionalValue()
-        },
-        currentValue = when (type) {
-            Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> (guest.metrics?.cpuUsage?.usagePercentTotal ?: 0.0).toFractionalValue()
-            Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> (guest.metrics?.memoryUsage?.usageBytes ?: 0L).toNumericalValue()
-            else -> (guest.status == ProxmoxGuestStatus.RUNNING).toConditionalValue()
-        },
-        type = type
-    )
+    private fun createProxmoxGuestMonitorableItem(guest: ProxmoxGuest, type: Monitor.Type): MonitorableItem {
+        val (maxValue, currentValue) = when (type) {
+            Monitor.Type.PROXMOX_GUEST_RUNNING ->
+                true.toConditionalValue() to (guest.status == ProxmoxGuestStatus.RUNNING).toConditionalValue()
+
+            Monitor.Type.PROXMOX_GUEST_CPU_LOAD ->
+                (100f).toFractionalValue() to (guest.metrics?.cpuUsage?.usagePercentTotal ?: 0.0).toFractionalValue()
+
+            Monitor.Type.PROXMOX_GUEST_MEMORY_USED ->
+                guest.memoryTotalBytes.toNumericalValue() to (guest.metrics?.memoryUsage?.usageBytes ?: 0L).toNumericalValue()
+
+            else -> throw IllegalArgumentException("$type is not a Proxmox guest monitor")
+        }
+        return MonitorableItem(
+            id = guest.id,
+            name = guest.name,
+            description = "${guest.kind.name} ${guest.vmid} on ${guest.node}",
+            maxValue = maxValue,
+            currentValue = currentValue,
+            type = type
+        )
+    }
 
     private fun createContainerRunningMonitorableItem(it: Container) = MonitorableItem(
         id = it.id,
