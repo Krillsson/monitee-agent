@@ -48,12 +48,14 @@ class ProxmoxGuestCommandJobs(
         val command: ProxmoxGuestCommand,
         val upid: String,
         val startedAt: Instant,
-        val deadline: Instant
+        val deadline: Instant,
+        firstEvent: ProxmoxGuestCommandEvent
     ) {
-        val events: Sinks.Many<ProxmoxGuestCommandEvent> = Sinks.many().replay().all()
+        val events: Sinks.Many<ProxmoxGuestCommandEvent> = Sinks.many().replay().all<ProxmoxGuestCommandEvent>()
+            .apply { tryEmitNext(firstEvent) }
 
         @Volatile
-        var lastEvent: ProxmoxGuestCommandEvent? = null
+        var lastEvent: ProxmoxGuestCommandEvent = firstEvent
 
         @Volatile
         var finishedAt: Instant? = null
@@ -92,9 +94,9 @@ class ProxmoxGuestCommandJobs(
             is Result.Ok -> {
                 val jobId = UUID.randomUUID()
                 val now = clock.instant()
-                val job = Job(guest, command, result.data, now, now.plus(timeout))
+                val running = ProxmoxGuestCommandRunning(jobId, guestId, now, result.data)
+                val job = Job(guest, command, result.data, now, now.plus(timeout), running)
                 jobs[jobId] = job
-                job.emit(ProxmoxGuestCommandRunning(jobId, guestId, now, job.upid))
                 scheduleCheck(jobId, job)
                 StartResult.Started(jobId, guestId, job.upid)
             }
@@ -133,14 +135,20 @@ class ProxmoxGuestCommandJobs(
         } catch (exception: Exception) {
             Result.TransportFailure(exception)
         }
-        when {
-            result is Result.Ok && result.data.status == "stopped" -> return finish(jobId, job, result.data.exitStatus)
-            result is Result.Ok -> job.failedChecks = 0
-            ++job.failedChecks >= FAILED_CHECKS_BEFORE_GIVING_UP -> return fail(
-                jobId,
-                job,
-                "Lost track of the task: ${ProxmoxConverter.failureReason(result, config.host, config.port)}"
-            )
+        when (result) {
+            is Result.Ok -> {
+                if (result.data.status == "stopped") {
+                    return finish(jobId, job, result.data.exitStatus)
+                }
+                job.failedChecks = 0
+            }
+
+            else -> {
+                job.failedChecks++
+                if (job.failedChecks >= FAILED_CHECKS_BEFORE_GIVING_UP) {
+                    return fail(jobId, job, "Lost track of the task: ${ProxmoxConverter.failureReason(result, config.host, config.port)}")
+                }
+            }
         }
         if (clock.instant() >= job.deadline) {
             fail(jobId, job, "Proxmox did not finish the task within ${timeout.seconds} seconds, it may still be running there")
@@ -151,10 +159,8 @@ class ProxmoxGuestCommandJobs(
 
     private fun finish(jobId: UUID, job: Job, exitStatus: String?) {
         when {
-            exitStatus == "OK" || exitStatus?.startsWith("WARNINGS") == true -> {
-                job.emit(ProxmoxGuestCommandSucceeded(jobId, job.guest.id, clock.instant(), job.upid, exitStatus))
-                job.complete()
-            }
+            exitStatus == "OK" || exitStatus?.startsWith("WARNINGS") == true ->
+                job.conclude(ProxmoxGuestCommandSucceeded(jobId, job.guest.id, clock.instant(), job.upid, exitStatus))
 
             else -> fail(jobId, job, exitStatus ?: "Proxmox reported no exit status for the task", taskLog(job))
         }
@@ -163,8 +169,7 @@ class ProxmoxGuestCommandJobs(
     private fun fail(jobId: UUID, job: Job, reason: String, log: List<String> = emptyList()) {
         val canForceStop = job.command in setOf(ProxmoxGuestCommand.SHUTDOWN, ProxmoxGuestCommand.REBOOT) &&
             SHUTDOWN_TIMEOUT_FAILURES.any { reason.contains(it) }
-        job.emit(ProxmoxGuestCommandFailed(jobId, job.guest.id, clock.instant(), job.upid, reason, log, canForceStop))
-        job.complete()
+        job.conclude(ProxmoxGuestCommandFailed(jobId, job.guest.id, clock.instant(), job.upid, reason, log, canForceStop))
     }
 
     private fun taskLog(job: Job): List<String> {
@@ -172,23 +177,20 @@ class ProxmoxGuestCommandJobs(
         return (result as? Result.Ok)?.data.orEmpty().mapNotNull { it.t }.takeLast(LOG_TAIL_LINES)
     }
 
-    private fun Job.emit(event: ProxmoxGuestCommandEvent) {
-        lastEvent = event
-        events.tryEmitNext(event)
-    }
-
-    private fun Job.complete() {
-        finishedAt = clock.instant()
-        events.tryEmitComplete()
+    private fun Job.conclude(event: ProxmoxGuestCommandEvent) {
         try {
             proxmoxService.guestChanged(guest)
         } catch (exception: Exception) {
             logger.warn("Failed to refresh Proxmox after a command on guest {}", guest.id, exception)
         }
+        lastEvent = event
+        finishedAt = clock.instant()
+        events.tryEmitNext(event)
+        events.tryEmitComplete()
     }
 
     private fun Job.toSnapshot(jobId: UUID): ProxmoxGuestCommandJob {
-        val event = requireNotNull(lastEvent)
+        val event = lastEvent
         return ProxmoxGuestCommandJob(
             jobId = jobId,
             guestId = guest.id,

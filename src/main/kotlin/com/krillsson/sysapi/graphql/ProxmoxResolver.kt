@@ -46,8 +46,10 @@ class ProxmoxResolver(
     fun warnings(): List<String> = proxmoxService.snapshot()?.warnings.orEmpty()
 
     @SchemaMapping
-    fun guestCommandJob(@Argument jobId: UUID?): ProxmoxGuestCommandJob? =
-        jobId?.let { proxmoxGuestCommandJobs.find(it) } ?: proxmoxGuestCommandJobs.current()
+    fun guestCommandJob(@Argument jobId: UUID?): ProxmoxGuestCommandJob? = when (jobId) {
+        null -> proxmoxGuestCommandJobs.current()
+        else -> proxmoxGuestCommandJobs.find(jobId)
+    }
 
     @SchemaMapping
     fun lastSuccessfulPoll(): Instant? = proxmoxService.snapshot()?.lastSuccessfulPoll
