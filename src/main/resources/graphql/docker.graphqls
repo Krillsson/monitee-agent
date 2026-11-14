@@ -425,7 +425,16 @@ enum DockerContainerState {
     UNKNOWN
 }
 
-type DockerContainer {
+# Listed in Query.containers as well
+type DockerContainer implements Container {
+    platform: WorkloadPlatform!
+    # The first of names without its leading slash, or the short id when there is none
+    name: String!
+    runState: RunState!
+    # The stats the agent last read for this container, usually for the metric history, so asking
+    # for it never waits on docker stats. Null while the container is not running and until its
+    # stats have been read once
+    usage: WorkloadUsage
     command: String!
     created: Long!
     hostConfig: DockerHostConfig!

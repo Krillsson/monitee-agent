@@ -190,6 +190,11 @@ import com.krillsson.sysapi.proxmox.ProxmoxGuestNetwork
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkInterface
 import com.krillsson.sysapi.proxmox.ProxmoxStorage
 import com.krillsson.sysapi.proxmox.ProxmoxStorageStatus
+import com.krillsson.sysapi.workload.PlatformAvailability
+import com.krillsson.sysapi.workload.RunState
+import com.krillsson.sysapi.workload.WorkloadList
+import com.krillsson.sysapi.workload.WorkloadPlatform
+import com.krillsson.sysapi.workload.WorkloadUsage
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration
@@ -306,6 +311,11 @@ import kotlin.system.exitProcess
     ProxmoxGuestNetwork::class,
     ProxmoxGuestNetworkInterface::class,
     ProxmoxStorage::class,
+    WorkloadPlatform::class,
+    RunState::class,
+    PlatformAvailability::class,
+    WorkloadList::class,
+    WorkloadUsage::class,
     ProxmoxStorageStatus::class,
     ProxmoxApi::class,
     ProxmoxApi.Version::class,

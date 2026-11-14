@@ -1,8 +1,9 @@
 ### Unreleased
 
-- Feature: `proxmox` lists the nodes, VMs, containers and storage of a Proxmox VE host or cluster, see [docs/proxmox.md](docs/proxmox.md).
-- Feature: `performProxmoxGuestCommand` starts, shuts down, reboots, suspends and resumes Proxmox VE guests.
-- Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for Proxmox VE guests.
+- Feature: `virtualMachines` and `containers` list the VMs and containers of Docker and Proxmox VE behind shared `VirtualMachine` and `Container` interfaces.
+- Feature: `proxmox` lists the nodes and storage of a Proxmox VE host or cluster, and its VMs and containers are in `virtualMachines` and `containers`, see [docs/proxmox.md](docs/proxmox.md).
+- Feature: `performProxmoxGuestCommand` starts, shuts down, reboots, suspends and resumes the Proxmox VE VMs and containers in `virtualMachines` and `containers`.
+- Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for the Proxmox VE VMs and containers.
 
 ### 0.50.0
 

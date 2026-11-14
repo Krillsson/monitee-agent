@@ -1,0 +1,92 @@
+extend type Query {
+    # The virtual machines of every platform that is enabled and reachable: Proxmox VE QEMU guests.
+    # platforms says which ones answered, so an empty list can be told apart from a missing one
+    virtualMachines: VirtualMachines!
+    # The containers of every platform that is enabled and reachable: Docker containers and
+    # Proxmox VE LXC containers. platforms says which ones answered
+    containers: Containers!
+}
+
+# Where a virtual machine or container runs. Not to be confused with Platform, the operating
+# system the agent runs on
+enum WorkloadPlatform {
+    DOCKER
+    PROXMOX
+}
+
+# One row per platform that can host the kind of workload in the list, enabled or not
+type PlatformAvailability {
+    platform: WorkloadPlatform!
+    available: Boolean!
+    isDisabled: Boolean!
+    # Why the platform is not available, the same text as DockerUnavailable.reason and
+    # ProxmoxInfoUnavailable.reason. Null when it is
+    reason: String
+    # When the platform last answered a poll. Null for Docker, which is not polled, and while
+    # the platform is unavailable
+    lastSuccessfulPoll: Instant
+}
+
+# Running first, then by name, ignoring case
+type VirtualMachines {
+    all: [VirtualMachine!]!
+    running: [VirtualMachine!]!
+    # id is the platform's own id, see VirtualMachine.id
+    virtualMachine(platform: WorkloadPlatform!, id: String!): VirtualMachine
+    platforms: [PlatformAvailability!]!
+}
+
+# Running first, then by name, ignoring case
+type Containers {
+    all: [Container!]!
+    running: [Container!]!
+    # id is the platform's own id, see Container.id
+    container(platform: WorkloadPlatform!, id: String!): Container
+    platforms: [PlatformAvailability!]!
+}
+
+# The states shared by every platform. Each platform's own state is on its type
+enum RunState {
+    RUNNING
+    PAUSED
+    STOPPED
+    # Docker restarting
+    STARTING
+    # Docker dead
+    FAILED
+    UNKNOWN
+}
+
+interface VirtualMachine {
+    # The platform's own id: the vmid for Proxmox VE ("100"). Only unique together with platform
+    id: String!
+    platform: WorkloadPlatform!
+    name: String!
+    runState: RunState!
+    # Null when the platform reports no usage for this VM, e.g. while it is stopped
+    usage: WorkloadUsage
+}
+
+interface Container {
+    # The platform's own id: the container id for Docker, the vmid for Proxmox VE ("101"). Only
+    # unique together with platform
+    id: String!
+    platform: WorkloadPlatform!
+    name: String!
+    runState: RunState!
+    # Null when the platform reports no usage for this container, e.g. while it is stopped
+    usage: WorkloadUsage
+}
+
+# The numbers every platform that reports usage can fill. The detail lives on the platform types
+type WorkloadUsage {
+    # 0-100. Proxmox VE: percent of the guest's own CPUs. Docker: percent of all the host's CPUs
+    cpuPercent: Float!
+    memoryUsedBytes: Long!
+    # Null when the platform reports no limit. A Docker container without a memory limit reports
+    # the memory of the host
+    memoryLimitBytes: Long
+    # When the numbers were read. Proxmox VE: the last poll. Docker: when the agent last read the
+    # container's stats, which can be a minute or more ago
+    sampledAt: Instant!
+}

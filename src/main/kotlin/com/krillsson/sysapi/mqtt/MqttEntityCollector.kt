@@ -4,7 +4,7 @@ import com.krillsson.sysapi.BuildConfig
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.disk.DiskLoad
-import com.krillsson.sysapi.core.domain.docker.Container
+import com.krillsson.sysapi.core.domain.docker.displayName
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
@@ -390,8 +390,6 @@ class MqttEntityCollector(
             .orEmpty()
         return if (candidate == "/" || candidate.isBlank()) "Root" else candidate
     }
-
-    private fun Container.displayName() = names.firstOrNull()?.trimStart('/')?.takeIf { it.isNotBlank() } ?: id.take(12)
 
     private fun Long.asRate() = takeIf { it >= 0 }
 

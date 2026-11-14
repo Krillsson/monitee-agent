@@ -3,9 +3,7 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandJob
 import com.krillsson.sysapi.graphql.domain.ProxmoxInfoAvailable
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
-import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
-import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxNode
 import com.krillsson.sysapi.proxmox.ProxmoxStorage
 import org.springframework.graphql.data.method.annotation.Argument
@@ -29,17 +27,6 @@ class ProxmoxResolver(
     @SchemaMapping
     fun nodeByName(info: ProxmoxInfoAvailable, @Argument name: String): ProxmoxNode? =
         info.snapshot.nodes.firstOrNull { it.name == name }
-
-    @SchemaMapping
-    fun guests(info: ProxmoxInfoAvailable): List<ProxmoxGuest> = info.snapshot.guests
-
-    @SchemaMapping
-    fun runningGuests(info: ProxmoxInfoAvailable): List<ProxmoxGuest> =
-        info.snapshot.guests.filter { it.status == ProxmoxGuestStatus.RUNNING }
-
-    @SchemaMapping
-    fun guest(info: ProxmoxInfoAvailable, @Argument id: String): ProxmoxGuest? =
-        info.snapshot.guests.firstOrNull { it.id == id }
 
     @SchemaMapping
     fun storages(info: ProxmoxInfoAvailable): List<ProxmoxStorage> = info.snapshot.storages
