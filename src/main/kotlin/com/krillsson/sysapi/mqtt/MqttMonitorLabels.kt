@@ -37,6 +37,7 @@ object MqttMonitorLabels {
         Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox guest"
         Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox guest CPU load"
         Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox guest memory"
+        Monitor.Type.UNRAID_VM_RUNNING -> "Unraid VM"
         Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory"
         Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU load"
         Monitor.Type.PROCESS_EXISTS -> "Process"

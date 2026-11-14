@@ -23,7 +23,8 @@ class MonitoredValueFormatter(
             Monitor.Type.NETWORK_UPLOAD_RATE -> byteFormatter.formatNetworkRate((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.NETWORK_DOWNLOAD_RATE -> byteFormatter.formatNetworkRate((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.CONTAINER_RUNNING,
-            Monitor.Type.PROXMOX_GUEST_RUNNING -> if ((value as MonitoredValue.ConditionalValue).value) "running" else "stopped"
+            Monitor.Type.PROXMOX_GUEST_RUNNING,
+            Monitor.Type.UNRAID_VM_RUNNING -> if ((value as MonitoredValue.ConditionalValue).value) "running" else "stopped"
             Monitor.Type.PROCESS_MEMORY_SPACE -> byteFormatter.format((value as MonitoredValue.NumericalValue).value)
             Monitor.Type.PROCESS_CPU_LOAD -> formatPercent(
                 (value as MonitoredValue.FractionalValue).value

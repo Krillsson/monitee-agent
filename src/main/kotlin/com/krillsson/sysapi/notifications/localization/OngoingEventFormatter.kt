@@ -12,6 +12,7 @@ class OngoingEventFormatter(
     private val checkEventFormatter: CheckEventFormatter,
     private val storagePoolEventFormatter: StoragePoolEventFormatter,
     private val proxmoxEventFormatter: ProxmoxEventFormatter,
+    private val unraidEventFormatter: UnraidEventFormatter,
 ) {
     fun formatOngoingEventTitle(
         notification: Notification.OngoingEvent,
@@ -44,6 +45,7 @@ class OngoingEventFormatter(
                 Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox guest stopped on $serverName"
                 Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox guest CPU load $level on $serverName"
                 Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox guest memory usage $level on $serverName"
+                Monitor.Type.UNRAID_VM_RUNNING -> "Unraid VM stopped on $serverName"
                 Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory usage $level on $serverName"
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage $level on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process stopped on $serverName"
@@ -137,6 +139,7 @@ class OngoingEventFormatter(
                 Monitor.Type.PROXMOX_GUEST_RUNNING -> proxmoxEventFormatter.formatGuestRunningOngoingDescription(monitoredItemId, formattedValue)
                 Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> proxmoxEventFormatter.formatGuestUsageOngoingDescription(monitoredItemId, "CPU", wentAbove)
                 Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxEventFormatter.formatGuestUsageOngoingDescription(monitoredItemId, "memory", wentAbove)
+                Monitor.Type.UNRAID_VM_RUNNING -> unraidEventFormatter.formatVmRunningOngoingDescription(monitoredItemId, formattedValue)
                 Monitor.Type.UPS_OPERATING_NORMALLY -> "UPS $monitoredItemId is not operating normally"
                 Monitor.Type.UPS_LOAD_PERCENTAGE -> "UPS $monitoredItemId load $wentAbove"
                 Monitor.Type.UPS_LOAD_WATT -> "UPS $monitoredItemId load $wentAbove"

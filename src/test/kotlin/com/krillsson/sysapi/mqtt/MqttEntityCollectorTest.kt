@@ -11,6 +11,12 @@ import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.ProxmoxSnapshot
 import com.krillsson.sysapi.proxmox.guest
+import com.krillsson.sysapi.unraid.HOME_ASSISTANT_UUID
+import com.krillsson.sysapi.unraid.UnraidVmService
+import com.krillsson.sysapi.unraid.UnraidVmState
+import com.krillsson.sysapi.unraid.WINDOWS_UUID
+import com.krillsson.sysapi.unraid.unraidSnapshot
+import com.krillsson.sysapi.unraid.unraidVm
 import com.krillsson.sysapi.ups.UpsService
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -24,11 +30,12 @@ import java.time.ZoneOffset
 
 class MqttEntityCollectorTest {
 
-    private val proxmoxService = mockk<ProxmoxService>()
+    private val proxmoxService = mockk<ProxmoxService> { every { snapshot() } returns null }
+    private val unraidVmService = mockk<UnraidVmService> { every { snapshot() } returns null }
 
-    private fun collector(proxmoxGuests: Boolean = false): MqttEntityCollector {
+    private fun collector(proxmoxGuests: Boolean = false, unraidVms: Boolean = false): MqttEntityCollector {
         val configFile = mockk<YAMLConfigFile> {
-            every { mqtt } returns MqttConfiguration(proxmoxGuests = proxmoxGuests)
+            every { mqtt } returns MqttConfiguration(proxmoxGuests = proxmoxGuests, unraidVms = unraidVms)
         }
         return MqttEntityCollector(
             configFile = configFile,
@@ -39,6 +46,7 @@ class MqttEntityCollectorTest {
             containerUpdateChecker = mockk(relaxed = true),
             upsService = mockk<UpsService> { every { status() } returns UpsService.Status.Disabled },
             proxmoxService = proxmoxService,
+            unraidVmService = unraidVmService,
             clock = Clock.fixed(Instant.parse("2026-11-11T10:00:00Z"), ZoneOffset.UTC)
         )
     }
@@ -112,5 +120,50 @@ class MqttEntityCollectorTest {
             "proxmox_guest_db_102_running"
         )
         guests.map { it.value } shouldContainExactly listOf("ON", "ON", "OFF")
+    }
+
+    private fun List<MeasuredEntity>.unraidKeys() = map { it.entity.key }.filter { it.startsWith("unraid_") }
+
+    private fun unraidVms() = unraidSnapshot(
+        unraidVm(HOME_ASSISTANT_UUID, "home-assistant", UnraidVmState.PAUSED),
+        unraidVm(WINDOWS_UUID, "Windows 11", UnraidVmState.IDLE)
+    )
+
+    @Test
+    fun `publishes nothing for unraid while it is unavailable`() {
+        // When
+        val entities = collector(unraidVms = true).collect()
+
+        // Then
+        entities.unraidKeys().shouldBeEmpty()
+    }
+
+    @Test
+    fun `counts running unraid vms and leaves out per vm sensors unless asked for`() {
+        // Given
+        every { unraidVmService.snapshot() } returns unraidVms()
+
+        // When
+        val entities = collector().collect()
+
+        // Then
+        entities.unraidKeys() shouldContainExactly listOf("unraid_vms_running")
+        entities.single { it.entity.key == "unraid_vms_running" }.value shouldBe 1
+    }
+
+    @Test
+    fun `adds a running sensor per unraid vm, counting a paused vm as not running`() {
+        // Given
+        every { unraidVmService.snapshot() } returns unraidVms()
+
+        // When
+        val entities = collector(unraidVms = true).collect()
+
+        // Then
+        val vms = entities.filter { it.entity.key.startsWith("unraid_vm_") }
+        vms.map { it.entity.key to it.value } shouldContainExactly listOf(
+            "unraid_vm_home_assistant_running" to "OFF",
+            "unraid_vm_windows_11_running" to "ON"
+        )
     }
 }

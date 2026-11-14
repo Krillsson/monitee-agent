@@ -10,6 +10,8 @@ import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.guest
 import com.krillsson.sysapi.storagepool.StoragePoolService
+import com.krillsson.sysapi.unraid.UnraidVmService
+import com.krillsson.sysapi.unraid.unraidVm
 import com.krillsson.sysapi.storagepool.StoragePoolState
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -31,6 +33,10 @@ class OngoingEventFormatterTest {
         every { guest("100") } returns guest(100, name = "web01")
         every { guest("999") } returns null
     }
+    private val unraidVmService: UnraidVmService = mockk {
+        every { vm("5e1f3c2a-8b4d-4f6e-9a7b-1c2d3e4f5a6b") } returns unraidVm(name = "Windows 11")
+        every { vm("0d1e2f3a-4b5c-4d6e-8f7a-9b0c1d2e3f4a") } returns null
+    }
     private val temperatureFormatter: TemperatureFormatter = mockk {
         every { format(any()) } answers { "${firstArg<Int>()}°C" }
     }
@@ -38,7 +44,8 @@ class OngoingEventFormatterTest {
         MonitoredValueFormatter(temperatureFormatter, ByteFormatter()),
         CheckEventFormatter(checkService),
         StoragePoolEventFormatter(storagePoolService),
-        ProxmoxEventFormatter(proxmoxService)
+        ProxmoxEventFormatter(proxmoxService),
+        UnraidEventFormatter(unraidVmService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -143,6 +150,29 @@ class OngoingEventFormatterTest {
         // Then
         title shouldBe "Proxmox guest CPU load critical on server"
         description shouldBe "Guest 999 CPU usage went above 80% to 93%"
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "5e1f3c2a-8b4d-4f6e-9a7b-1c2d3e4f5a6b, Windows 11 is stopped",
+        "0d1e2f3a-4b5c-4d6e-8f7a-9b0c1d2e3f4a, VM 0d1e2f3a is stopped"
+    )
+    fun `names a stopped unraid vm, or the start of its uuid once it is gone`(uuid: String, expectedDescription: String) {
+        // Given
+        val notification = proxmoxEvent(
+            Monitor.Type.UNRAID_VM_RUNNING,
+            uuid,
+            MonitoredValue.ConditionalValue(true),
+            MonitoredValue.ConditionalValue(false)
+        )
+
+        // When
+        val title = formatter.formatOngoingEventTitle(notification, "server")
+        val description = formatter.formatOngoingEventDescription(notification)
+
+        // Then
+        title shouldBe "Unraid VM stopped on server"
+        description shouldBe expectedDescription
     }
 
     @ParameterizedTest

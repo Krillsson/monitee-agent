@@ -177,6 +177,11 @@ class MonitorFactory(private val clock: Clock) {
                 id,
                 config as MonitorConfig<MonitoredValue.NumericalValue>
             )
+
+            Monitor.Type.UNRAID_VM_RUNNING -> UnraidVmRunningMonitor(
+                id,
+                config as MonitorConfig<MonitoredValue.ConditionalValue>
+            )
         }
     }
 }

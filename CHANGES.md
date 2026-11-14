@@ -4,6 +4,7 @@
 - Feature: `proxmox` lists the nodes and storage of a Proxmox VE host or cluster, and its VMs and containers are in `virtualMachines` and `containers`, see [docs/proxmox.md](docs/proxmox.md).
 - Feature: `performProxmoxGuestCommand` starts, shuts down, reboots, suspends and resumes the Proxmox VE VMs and containers in `virtualMachines` and `containers`.
 - Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for the Proxmox VE VMs and containers.
+- Feature: `virtualMachines` lists the VMs of an Unraid server through the Unraid API, with an `UNRAID_VM_RUNNING` monitor type, see [docs/unraid.md](docs/unraid.md#vms).
 
 ### 0.50.0
 

@@ -12,6 +12,7 @@ data class MqttConfiguration(
     val emoji: Boolean = true,
     val containers: Boolean = false,
     val proxmoxGuests: Boolean = false,
+    val unraidVms: Boolean = false,
     val networkInterfaces: Boolean = true,
     val homeAssistant: HomeAssistantConfiguration = HomeAssistantConfiguration()
 ) {
