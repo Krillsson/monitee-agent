@@ -7,6 +7,7 @@ import com.krillsson.sysapi.core.domain.system.SystemLoad
 import com.krillsson.sysapi.core.check.CheckResult
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.storagepool.StoragePool
+import com.krillsson.sysapi.unraid.UnraidVm
 import com.krillsson.sysapi.ups.UpsDevice
 
 class MonitorInput(
@@ -19,4 +20,5 @@ class MonitorInput(
     val storagePools: List<StoragePool>,
     val checkCertificateResults: List<CheckResult> = emptyList(),
     val proxmoxGuests: List<ProxmoxGuest>? = null,
+    val unraidVms: List<UnraidVm>? = null,
 )

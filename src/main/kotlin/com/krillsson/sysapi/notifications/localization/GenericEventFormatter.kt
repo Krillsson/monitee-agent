@@ -99,6 +99,7 @@ class GenericEventFormatter {
             Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox — Guest running"
             Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox — Guest CPU usage"
             Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox — Guest memory usage"
+            Monitor.Type.UNRAID_VM_RUNNING -> "Unraid — VM running"
             Monitor.Type.WEBSERVER_UP -> "Check — Passing"
             Monitor.Type.CHECK_LATENCY -> "Check — Latency"
             Monitor.Type.CHECK_CERTIFICATE_EXPIRY -> "Check — Certificate expiry"

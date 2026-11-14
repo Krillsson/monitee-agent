@@ -12,6 +12,7 @@ class ResolvedEventFormatter(
     private val checkEventFormatter: CheckEventFormatter,
     private val storagePoolEventFormatter: StoragePoolEventFormatter,
     private val proxmoxEventFormatter: ProxmoxEventFormatter,
+    private val unraidEventFormatter: UnraidEventFormatter,
 ) {
     fun formatResolvedEventTitle(
         notification: Notification.ResolvedEvent,
@@ -39,6 +40,7 @@ class ResolvedEventFormatter(
                 Monitor.Type.PROXMOX_GUEST_RUNNING -> "Proxmox guest running again on $serverName"
                 Monitor.Type.PROXMOX_GUEST_CPU_LOAD -> "Proxmox guest CPU load back to normal on $serverName"
                 Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> "Proxmox guest memory usage back to normal on $serverName"
+                Monitor.Type.UNRAID_VM_RUNNING -> "Unraid VM running again on $serverName"
                 Monitor.Type.PROCESS_MEMORY_SPACE -> "Process memory usage back to normal on $serverName"
                 Monitor.Type.PROCESS_CPU_LOAD -> "Process CPU usage back to normal on $serverName"
                 Monitor.Type.PROCESS_EXISTS -> "Process running again on $serverName"
@@ -148,6 +150,11 @@ class ResolvedEventFormatter(
                     monitoredItemId,
                     "memory",
                     formattedThreshold,
+                    formattedValue,
+                    formattedDuration
+                )
+                Monitor.Type.UNRAID_VM_RUNNING -> unraidEventFormatter.formatVmRunningResolvedDescription(
+                    monitoredItemId,
                     formattedValue,
                     formattedDuration
                 )

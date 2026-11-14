@@ -73,7 +73,8 @@ fun <E : Enum<E>> Monitor.Type.toEnumEntries(): EnumEntries<E>? =
         Monitor.Type.GPU_UTILIZATION,
         Monitor.Type.PROXMOX_GUEST_RUNNING,
         Monitor.Type.PROXMOX_GUEST_CPU_LOAD,
-        Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> null
+        Monitor.Type.PROXMOX_GUEST_MEMORY_USED,
+        Monitor.Type.UNRAID_VM_RUNNING -> null
     }
 
 

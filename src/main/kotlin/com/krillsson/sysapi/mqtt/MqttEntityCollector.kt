@@ -31,6 +31,7 @@ import com.krillsson.sysapi.mqtt.MqttUnits.WATT
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxNodeStatus
 import com.krillsson.sysapi.proxmox.ProxmoxService
+import com.krillsson.sysapi.unraid.UnraidVmService
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
@@ -48,6 +49,7 @@ class MqttEntityCollector(
     private val containerUpdateChecker: ContainerUpdateChecker,
     private val upsService: UpsService,
     private val proxmoxService: ProxmoxService,
+    private val unraidVmService: UnraidVmService,
     private val clock: Clock
 ) {
 
@@ -69,6 +71,7 @@ class MqttEntityCollector(
         entities.containers()
         entities.upsDevices()
         entities.proxmox()
+        entities.unraid()
         entities.monitors()
         return entities.build()
     }
@@ -350,6 +353,24 @@ class MqttEntityCollector(
                 deviceClass = "running",
                 attributes = mapOf("vmid" to guest.vmid, "node" to guest.node, "kind" to guest.kind.name)
             )
+        }
+    }
+
+    private fun Entities.unraid() {
+        val vms = unraidVmService.snapshot()?.vms
+        if (vms != null) {
+            sensor("unraid_vms_running", "Unraid VMs running", vms.count { it.isRunning() })
+        }
+        if (vms != null && config.unraidVms) {
+            MqttKeys.uniqueSlugs(vms) { it.name }.forEach { (slug, vm) ->
+                binarySensor(
+                    key = "unraid_vm_${slug}_running",
+                    name = vm.name,
+                    value = vm.isRunning(),
+                    deviceClass = "running",
+                    attributes = mapOf("uuid" to vm.id, "state" to vm.state.name)
+                )
+            }
         }
     }
 
