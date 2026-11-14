@@ -28,5 +28,9 @@ type UnraidVm implements VirtualMachine {
     runState: RunState!
     # Always null, the Unraid API reports no CPU or memory usage for VMs
     usage: WorkloadUsage
+    # RUNNING: SHUTDOWN, FORCE_STOP, REBOOT and PAUSE. IDLE: the same without PAUSE. PAUSED:
+    # RESUME and FORCE_STOP. SHUTOFF: START. CRASHED, PMSUSPENDED and SHUTDOWN: FORCE_STOP
+    supportedCommands: [PowerCommand!]!
+    commandJob: PowerCommandJob
     state: UnraidVmState!
 }

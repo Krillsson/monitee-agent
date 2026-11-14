@@ -6,6 +6,7 @@ import com.google.common.cache.CacheBuilder
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
 import com.krillsson.sysapi.util.logger
+import com.krillsson.sysapi.workload.PowerCommand
 import jakarta.annotation.PostConstruct
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Service
@@ -139,10 +140,7 @@ class ProxmoxService(
         }
     }
 
-    fun supportedCommands(guest: ProxmoxGuest): List<ProxmoxGuestCommand> =
-        ProxmoxGuestCommands.supported(guest, quorate(), qmpStatus(guest))
-
-    fun commandRefusal(guest: ProxmoxGuest, command: ProxmoxGuestCommand): String? =
+    fun commandRefusal(guest: ProxmoxGuest, command: PowerCommand): String? =
         ProxmoxGuestCommands.refusal(guest, command, quorate(), qmpStatus(guest))
 
     fun guestChanged(guest: ProxmoxGuest) {
