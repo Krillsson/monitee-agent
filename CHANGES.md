@@ -6,6 +6,7 @@
 - Feature: `performPowerCommand` starts, shuts down, reboots, pauses and resumes the VMs and containers in `virtualMachines` and `containers`, on Docker, Proxmox VE and Unraid alike.
 - Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for the Proxmox VE VMs and containers.
 - Feature: `virtualMachines` lists the VMs of an Unraid server through the Unraid API, with an `UNRAID_VM_RUNNING` monitor type, see [docs/unraid.md](docs/unraid.md#vms).
+- Fix: container memory usage leaves out inactive file pages, so it matches `docker stats` and Unraid's Docker page.
 
 ### 0.50.0
 
