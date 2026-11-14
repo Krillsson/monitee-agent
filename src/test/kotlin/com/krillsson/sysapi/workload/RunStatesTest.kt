@@ -2,6 +2,7 @@ package com.krillsson.sysapi.workload
 
 import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
+import com.krillsson.sysapi.unraid.UnraidVmState
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -35,6 +36,25 @@ class RunStatesTest {
     fun `maps a proxmox guest status to the run state the app draws`(status: ProxmoxGuestStatus, expected: RunState) {
         // When
         val runState = RunStates.proxmox(status)
+
+        // Then
+        runState shouldBe expected
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "RUNNING, RUNNING",
+        "IDLE, RUNNING",
+        "PAUSED, PAUSED",
+        "PMSUSPENDED, PAUSED",
+        "SHUTOFF, STOPPED",
+        "SHUTDOWN, STOPPING",
+        "CRASHED, FAILED",
+        "NOSTATE, UNKNOWN"
+    )
+    fun `maps an unraid vm state to the run state the app draws`(state: UnraidVmState, expected: RunState) {
+        // When
+        val runState = RunStates.unraid(state)
 
         // Then
         runState shouldBe expected

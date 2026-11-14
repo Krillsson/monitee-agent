@@ -19,7 +19,8 @@ class MonitorMetricsTest {
         Monitor.Type.CONTAINER_UPDATE_AVAILABLE,
         Monitor.Type.PROCESS_MEMORY_SPACE,
         Monitor.Type.PROCESS_CPU_LOAD,
-        Monitor.Type.PROCESS_EXISTS
+        Monitor.Type.PROCESS_EXISTS,
+        Monitor.Type.UNRAID_VM_RUNNING
     )
 
     @ParameterizedTest

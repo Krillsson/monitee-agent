@@ -29,6 +29,7 @@ data class YAMLConfigFile(
     val ups: UpsConfiguration = UpsConfiguration(),
     val storagePools: StoragePoolConfiguration = StoragePoolConfiguration(),
     val proxmox: ProxmoxConfiguration = ProxmoxConfiguration(),
+    val unraid: UnraidConfiguration = UnraidConfiguration(),
     val connectivityCheck: ConnectivityCheckConfiguration,
     val internetServicesCheck: InternetServicesCheckConfiguration = InternetServicesCheckConfiguration(),
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),

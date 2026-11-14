@@ -84,6 +84,7 @@ input CreateConditionalMonitorInput {
     # Process: process ID
     # Docker: full container ID (ignoring case)
     # Proxmox guest: the vmid, e.g. "100"
+    # Unraid VM: the UUID, UnraidVm.id
     monitoredItemId: String
 }
 
@@ -442,7 +443,10 @@ enum MonitorType {
     # Percent of the guest's own cores, 0-100. A stopped guest reads 0
     PROXMOX_GUEST_CPU_LOAD,
     # Bytes. A stopped guest reads 0
-    PROXMOX_GUEST_MEMORY_USED
+    PROXMOX_GUEST_MEMORY_USED,
+    # The monitored item is the VM's UUID, UnraidVm.id. Only RUNNING and IDLE count as running, a
+    # paused VM does not. Not evaluated while Unraid is unavailable or its VM manager is stopped
+    UNRAID_VM_RUNNING
 }
 
 type MonitorableItem {
