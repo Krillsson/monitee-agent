@@ -5,6 +5,7 @@ import com.krillsson.sysapi.core.domain.docker.displayName
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.proxmox.ProxmoxService
+import com.krillsson.sysapi.unraid.UnraidVm
 import com.krillsson.sysapi.workload.PlatformAvailability
 import com.krillsson.sysapi.workload.RunState
 import com.krillsson.sysapi.workload.RunStates
@@ -94,6 +95,15 @@ class WorkloadResolver(
 
     @SchemaMapping(typeName = "ProxmoxContainer", field = "usage")
     fun proxmoxContainerUsage(guest: ProxmoxGuest): WorkloadUsage? = proxmoxUsage(guest)
+
+    @SchemaMapping(typeName = "UnraidVm", field = "platform")
+    fun unraidVmPlatform(vm: UnraidVm): WorkloadPlatform = WorkloadPlatform.UNRAID
+
+    @SchemaMapping(typeName = "UnraidVm", field = "runState")
+    fun unraidVmRunState(vm: UnraidVm): RunState = RunStates.unraid(vm.state)
+
+    @SchemaMapping(typeName = "UnraidVm", field = "usage")
+    fun unraidVmUsage(vm: UnraidVm): WorkloadUsage? = null
 
     private fun proxmoxUsage(guest: ProxmoxGuest): WorkloadUsage? {
         val metrics = guest.metrics

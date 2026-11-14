@@ -100,6 +100,14 @@ We can verify that the server is working by looking at the logs in the unraid UI
 [...]: Started SysAPIApplicationKt in 6.352 seconds (process running for 7.234)
 ```
 
+## VMs
+
+The agent can list the VMs on the server and watch whether they are running, through the Unraid API that comes with Unraid 7.2. Create an API key that may read VMs, put it in the `unraid` block of `configuration.yml` and set `enabled: true`:
+
+```bash
+unraid-api apikey --create --name monitee-agent --description "Monitee agent" --permissions "vms:read_any" --json
+```
+
 Now you are ready to proceed to next step
 
 **Connect App to Server**

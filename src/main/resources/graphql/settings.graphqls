@@ -17,6 +17,8 @@ type Settings {
     ups: UpsSettings!
     "The configured intent. The proxmox query reports whether Proxmox is actually reachable"
     proxmox: ProxmoxSettings!
+    "The configured intent. virtualMachines.platforms reports whether Unraid is actually reachable"
+    unraid: UnraidSettings!
     "The configured intent. The systemDaemon query reports whether it is actually reachable"
     systemDaemon: SystemDaemonSettings!
     windowsManagement: WindowsManagementSettings!
@@ -114,6 +116,15 @@ type ProxmoxSettings {
     verifyTls: Boolean!
     pollIntervalSeconds: Long!
     includeTemplates: Boolean!
+}
+
+type UnraidSettings {
+    enabled: Boolean!
+    "http or https"
+    scheme: String!
+    "False when the agent accepts any certificate from Unraid. Only matters for https"
+    verifyTls: Boolean!
+    pollIntervalSeconds: Long!
 }
 
 type SystemDaemonSettings {

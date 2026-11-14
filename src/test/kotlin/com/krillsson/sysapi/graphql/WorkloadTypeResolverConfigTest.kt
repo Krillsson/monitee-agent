@@ -3,6 +3,7 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.docker.container
 import com.krillsson.sysapi.proxmox.ProxmoxGuestKind
 import com.krillsson.sysapi.proxmox.guest
+import com.krillsson.sysapi.unraid.unraidVm
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -31,6 +32,17 @@ class WorkloadTypeResolverConfigTest {
         // Then
         vmType shouldBe "ProxmoxVm"
         containerType shouldBe "ProxmoxContainer"
+    }
+
+    @Test
+    fun `resolves an unraid vm to UnraidVm and never to a container`() {
+        // When
+        val vmType = WorkloadTypeResolverConfig.virtualMachineTypeName(unraidVm())
+        val containerType = WorkloadTypeResolverConfig.containerTypeName(unraidVm())
+
+        // Then
+        vmType shouldBe "UnraidVm"
+        containerType.shouldBeNull()
     }
 
     @Test

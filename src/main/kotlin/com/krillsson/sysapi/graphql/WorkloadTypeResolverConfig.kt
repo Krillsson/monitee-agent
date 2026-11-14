@@ -3,6 +3,7 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.proxmox.ProxmoxGuestKind
+import com.krillsson.sysapi.unraid.UnraidVm
 import graphql.schema.TypeResolver
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -14,6 +15,7 @@ class WorkloadTypeResolverConfig {
     companion object {
         fun virtualMachineTypeName(source: Any?): String? = when {
             source is ProxmoxGuest && source.kind == ProxmoxGuestKind.QEMU -> "ProxmoxVm"
+            source is UnraidVm -> "UnraidVm"
             else -> null
         }
 
