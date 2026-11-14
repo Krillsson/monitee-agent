@@ -126,6 +126,20 @@ proxmox:
   # how long the agent follows a command's task before reporting it failed
   commandTimeoutSeconds: 120
   includeTemplates: false
+# VMs on this Unraid server through the Unraid API (Unraid 7.2 or later). See docs/unraid.md for
+# creating the API key
+unraid:
+  enabled: false
+  # the template runs the agent with host networking, so the webGUI is on localhost
+  host: "localhost"
+  port: 80
+  # https, with the port the webGUI uses for it, when the webGUI's Use SSL/TLS is set to Strict
+  scheme: "http"
+  # unraid-api apikey --create --name monitee-agent --permissions "vms:read_any" --json
+  apiKey: ""
+  verifyTls: true
+  # caCertificatePath: "/config/unraid.pem"
+  pollIntervalSeconds: 15
 docker:
   enabled: true
   # keep the interfaces docker makes for itself (docker0, br-<network id>, veth*) out of the
@@ -212,6 +226,8 @@ mqtt:
   # containers: false
   # a binary sensor per Proxmox VM and container, off for the same reason
   # proxmoxGuests: false
+  # a binary sensor per Unraid VM, off for the same reason
+  # unraidVms: false
   # link state and rates per network interface, discovered disabled so they stay out of the way
   # networkInterfaces: true
   homeAssistant:

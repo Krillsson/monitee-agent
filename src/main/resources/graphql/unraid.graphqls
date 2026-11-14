@@ -1,0 +1,32 @@
+# libvirt's state of a VM as Unraid reports it
+enum UnraidVmState {
+    NOSTATE
+    RUNNING
+    # Running, but blocked on a resource such as I/O. libvirt calls it BLOCKED
+    IDLE
+    # Paused in memory
+    PAUSED
+    # Being shut down
+    SHUTDOWN
+    # Off
+    SHUTOFF
+    CRASHED
+    # Suspended by the guest's own power management
+    PMSUSPENDED
+}
+
+# A VM on the Unraid server, read through the Unraid API, listed in Query.virtualMachines.
+# Unraid reports only the id, name and state of a VM
+type UnraidVm implements VirtualMachine {
+    # The libvirt UUID, without the server id the Unraid API puts in front of it. Stable across
+    # renames, and what virsh shows
+    id: String!
+    platform: WorkloadPlatform!
+    # The UUID when the VM has no name
+    name: String!
+    # RUNNING for IDLE as well, PAUSED for PMSUSPENDED, STOPPING for SHUTDOWN
+    runState: RunState!
+    # Always null, the Unraid API reports no CPU or memory usage for VMs
+    usage: WorkloadUsage
+    state: UnraidVmState!
+}

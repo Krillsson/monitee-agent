@@ -11,6 +11,7 @@ import com.krillsson.sysapi.config.MqttConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.ProcessesConfiguration
 import com.krillsson.sysapi.config.ProxmoxConfiguration
+import com.krillsson.sysapi.config.UnraidConfiguration
 import com.krillsson.sysapi.config.UpsConfiguration
 import com.krillsson.sysapi.config.WindowsConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
@@ -48,6 +49,7 @@ data class Settings(
     val docker: DockerSettings,
     val ups: UpsSettings,
     val proxmox: ProxmoxSettings,
+    val unraid: UnraidSettings,
     val systemDaemon: SystemDaemonSettings,
     val windowsManagement: WindowsManagementSettings,
     val fileBrowser: FileBrowserSettings,
@@ -107,6 +109,13 @@ data class ProxmoxSettings(
     val includeTemplates: Boolean
 )
 
+data class UnraidSettings(
+    val enabled: Boolean,
+    val scheme: String,
+    val verifyTls: Boolean,
+    val pollIntervalSeconds: Long
+)
+
 data class SystemDaemonSettings(val enabled: Boolean)
 
 data class WindowsManagementSettings(val serviceManagementEnabled: Boolean)
@@ -131,6 +140,7 @@ fun YAMLConfigFile.toSettings(activeUnit: ActiveTemperatureUnit): Settings = Set
     docker = docker.toSettings(),
     ups = ups.toSettings(),
     proxmox = proxmox.toSettings(),
+    unraid = unraid.toSettings(),
     systemDaemon = SystemDaemonSettings(enabled = linux.systemDaemonServiceManagement.enabled),
     windowsManagement = windows.toSettings(),
     fileBrowser = fileBrowser.toSettings(),
@@ -193,6 +203,13 @@ fun ProxmoxConfiguration.toSettings() = ProxmoxSettings(
     verifyTls = verifyTls,
     pollIntervalSeconds = pollIntervalSeconds,
     includeTemplates = includeTemplates
+)
+
+fun UnraidConfiguration.toSettings() = UnraidSettings(
+    enabled = enabled,
+    scheme = scheme,
+    verifyTls = verifyTls,
+    pollIntervalSeconds = pollIntervalSeconds
 )
 
 fun WindowsConfiguration.toSettings() = WindowsManagementSettings(serviceManagementEnabled = serviceManagement.enabled)
