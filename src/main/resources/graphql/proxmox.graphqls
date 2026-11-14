@@ -34,11 +34,6 @@ type ProxmoxInfoAvailable {
     cluster: ProxmoxCluster!
     nodes: [ProxmoxNode!]!
     nodeByName(name: String!): ProxmoxNode
-    # Templates are left out unless proxmox.includeTemplates is set
-    guests: [ProxmoxGuest!]!
-    runningGuests: [ProxmoxGuest!]!
-    # id is the vmid as a string, e.g. "100"
-    guest(id: String!): ProxmoxGuest
     storages: [ProxmoxStorage!]!
     # Reads the configured API token is not allowed to make, one line each. Empty when the token
     # has PVEAuditor on /
@@ -89,15 +84,11 @@ type ProxmoxNode {
     # Set when the node is listed but its own status could not be read, e.g. when the node the
     # agent talks to cannot reach it
     detailUnavailableReason: String
-    guests: [ProxmoxGuest!]!
+    # The VMs and containers on this node. Every node's are in Query.virtualMachines and
+    # Query.containers. Templates are left out unless proxmox.includeTemplates is set
+    virtualMachines: [ProxmoxVm!]!
+    containers: [ProxmoxContainer!]!
     storages: [ProxmoxStorage!]!
-}
-
-enum ProxmoxGuestKind {
-    # A virtual machine
-    QEMU
-    # A container
-    LXC
 }
 
 enum ProxmoxGuestStatus {
@@ -108,12 +99,18 @@ enum ProxmoxGuestStatus {
     UNKNOWN
 }
 
-type ProxmoxGuest {
+# A QEMU guest, listed in Query.virtualMachines. Templates are left out unless
+# proxmox.includeTemplates is set
+type ProxmoxVm implements VirtualMachine {
     # The vmid as a string. Stable across migrations and restarts
     id: String!
-    vmid: Int!
-    kind: ProxmoxGuestKind!
+    platform: WorkloadPlatform!
     name: String!
+    # RUNNING for a VM paused in memory as well, since Proxmox's guest list does not say. qmpStatus
+    # has the detail
+    runState: RunState!
+    usage: WorkloadUsage
+    vmid: Int!
     node: String!
     status: ProxmoxGuestStatus!
     template: Boolean!
@@ -129,6 +126,11 @@ type ProxmoxGuest {
     memoryTotalBytes: Long!
     # Null unless the guest is running
     metrics: ProxmoxGuestMetrics
+    # The commands this VM accepts, from the last poll. Empty for templates, locked guests,
+    # guests in a failed HA state and while the cluster has no quorum. The poll cannot tell a VM
+    # paused in memory from a running one, so a paused VM lists the running commands here, and
+    # performProxmoxGuestCommand has the final say
+    supportedCommands: [ProxmoxGuestCommand!]!
     # The latest command started on this guest from the agent, running or finished in the last
     # 30 minutes
     commandJob: ProxmoxGuestCommandJob
@@ -136,25 +138,57 @@ type ProxmoxGuest {
     # The fields below are read from the guest's own status and config, one request per guest,
     # so ask for them on a detail screen rather than in a list
 
-    # The commands this guest accepts right now. Empty for templates, locked guests, guests in a
-    # failed HA state and while the cluster has no quorum. A suspended VM only accepts RESUME and
-    # FORCE_STOP
-    supportedCommands: [ProxmoxGuestCommand!]!
-    # QEMU only: the QMP run state (running, paused, prelaunch, suspended, ...), or "stopped".
-    # Null for LXC
+    # The QMP run state (running, paused, prelaunch, suspended, ...), or "stopped"
     qmpStatus: String
-    # QEMU only: whether the guest agent is enabled in the config, not whether it answers
+    # Whether the guest agent is enabled in the config, not whether it answers
     agentEnabled: Boolean
-    # QEMU: the ostype from the config (l26, win11, ...). LXC: the distribution (debian, alpine, ...)
+    # The ostype from the config (l26, win11, ...)
     osType: String
-    # LXC only. Null for QEMU
+    # From the guest agent. Null when it is not available, networkUnavailableReason says why
+    network: ProxmoxGuestNetwork
+    networkUnavailableReason: String
+}
+
+# An LXC guest, listed in Query.containers. Templates are left out unless
+# proxmox.includeTemplates is set
+type ProxmoxContainer implements Container {
+    # The vmid as a string. Stable across migrations and restarts
+    id: String!
+    platform: WorkloadPlatform!
+    name: String!
+    runState: RunState!
+    usage: WorkloadUsage
+    vmid: Int!
+    node: String!
+    status: ProxmoxGuestStatus!
+    template: Boolean!
+    tags: [String!]!
+    # Null unless the guest is HA managed. Proxmox's own state names, see ProxmoxVm.haState
+    haState: String
+    # The config lock Proxmox holds on the guest (backup, migrate, snapshot, ...), null when free
+    lock: String
+    uptimeSeconds: Long!
+    cpuCount: Int!
+    memoryTotalBytes: Long!
+    # Null unless the guest is running
+    metrics: ProxmoxGuestMetrics
+    # The commands this container accepts, from the last poll. Empty for templates, locked
+    # guests, guests in a failed HA state and while the cluster has no quorum.
+    # performProxmoxGuestCommand has the final say
+    supportedCommands: [ProxmoxGuestCommand!]!
+    # The latest command started on this guest from the agent, running or finished in the last
+    # 30 minutes
+    commandJob: ProxmoxGuestCommandJob
+
+    # The fields below are read from the guest's own status and config, one request per guest,
+    # so ask for them on a detail screen rather than in a list
+
+    # The distribution from the config (debian, alpine, ...)
+    osType: String
     unprivileged: Boolean
-    # LXC only. Null for QEMU
     swapUsedBytes: Long
-    # LXC only. Null for QEMU
     swapTotalBytes: Long
-    # From the guest agent for QEMU, from the container itself for LXC. Null when neither is
-    # available, networkUnavailableReason says why
+    # From the container itself. Null when it is not available, networkUnavailableReason says why
     network: ProxmoxGuestNetwork
     networkUnavailableReason: String
 }
@@ -265,7 +299,7 @@ type PerformProxmoxGuestCommandOutputStarted {
 }
 
 # The command was refused before it ran: Proxmox is unavailable, there is no such guest, the
-# guest does not accept it right now (see supportedCommands), a command for it is already
+# guest does not accept it right now (see ProxmoxVm.supportedCommands), a command for it is already
 # running, or Proxmox refused it, e.g. because the API token lacks VM.PowerMgmt
 type PerformProxmoxGuestCommandOutputFailed {
     reason: String!

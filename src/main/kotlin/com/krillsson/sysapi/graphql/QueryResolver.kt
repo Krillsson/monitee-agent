@@ -29,6 +29,7 @@ import com.krillsson.sysapi.core.check.PingCheckProbe
 import com.krillsson.sysapi.core.check.RunCheckResult
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.Status
+import com.krillsson.sysapi.docker.unavailableReason
 import com.krillsson.sysapi.graphql.domain.*
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.serverid.ServerIdService
@@ -226,17 +227,10 @@ class QueryResolver(
 
     @QueryMapping
     fun docker(): Docker {
-        return when (val status = containerManager.status) {
-            Status.Available -> DockerAvailable
-            Status.Disabled -> DockerUnavailable(
-                "The docker support is currently disabled. You can change this in configuration.yml",
-                isDisabled = true
-            )
-
-            is Status.Unavailable -> DockerUnavailable(
-                "${status.error.message ?: "Unknown reason"} Type: ${requireNotNull(status.error::class.simpleName)}",
-                isDisabled = false
-            )
+        val status = containerManager.status
+        return when (val reason = status.unavailableReason()) {
+            null -> DockerAvailable
+            else -> DockerUnavailable(reason, isDisabled = status == Status.Disabled)
         }
     }
 
@@ -273,25 +267,7 @@ class QueryResolver(
     }
 
     @QueryMapping
-    fun proxmox(): ProxmoxInfo {
-        val snapshot = proxmoxService.snapshot()
-        val status = proxmoxService.status()
-        return when {
-            snapshot != null -> ProxmoxInfoAvailable(snapshot)
-
-            status is ProxmoxService.Status.Unavailable -> ProxmoxInfoUnavailable(status.reason, isDisabled = false)
-
-            status is ProxmoxService.Status.Disabled -> ProxmoxInfoUnavailable(
-                "Proxmox support is currently disabled. You can change this in the configuration.yml",
-                isDisabled = true
-            )
-
-            else -> ProxmoxInfoUnavailable(
-                "Proxmox answered for the first time while this query ran, ask again",
-                isDisabled = false
-            )
-        }
-    }
+    fun proxmox(): ProxmoxInfo = proxmoxService.info()
 
     @QueryMapping
     fun logFiles() = LogFileAccess
