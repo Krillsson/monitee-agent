@@ -11,6 +11,7 @@ import com.krillsson.sysapi.core.domain.docker.Command
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.ContainerMetricsHistoryEntry
+import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.graphql.domain.DockerLogMessageConnection
 import com.krillsson.sysapi.graphql.domain.DockerLogMessageEdge
 import com.krillsson.sysapi.graphql.domain.PageInfo
@@ -19,8 +20,11 @@ import com.krillsson.sysapi.util.encodeAsCursor
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
+import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 @Service
@@ -28,8 +32,17 @@ class ContainerService(
     private val dockerClient: DockerClient,
     private val config: YAMLConfigFile,
     private val containersHistoryRepository: ContainersHistoryRepository,
+    private val clock: Clock
 ) {
+    companion object {
+        private val SAMPLE_RETENTION: Duration = Duration.ofHours(1)
+    }
+
+    data class SampledMetrics(val metrics: ContainerMetrics, val sampledAt: Instant)
+
     private val logger by logger()
+
+    private val lastSamples = ConcurrentHashMap<String, SampledMetrics>()
 
     private val dockerConfiguration: DockerConfiguration = config.docker
     private val cacheConfiguration = config.docker.cache
@@ -59,7 +72,7 @@ class ContainerService(
             @Throws(Exception::class)
             override fun load(id: String): Optional<ContainerMetrics> {
                 return if (status == Status.Available) {
-                    dockerClient.containerStatistics(id)?.let { Optional.of(it) } ?: Optional.empty()
+                    Optional.ofNullable(sampleStatistics(id))
                 } else {
                     Optional.empty()
                 }
@@ -101,9 +114,25 @@ class ContainerService(
     fun statsForContainer(id: String): ContainerMetrics? {
         return when {
             status != Status.Available -> null
-            !cacheConfiguration.enabled -> dockerClient.containerStatistics(id)
+            !cacheConfiguration.enabled -> sampleStatistics(id)
             else -> containerStatsCache.get(id).orElse(null)
         }
+    }
+
+    fun lastSampledMetrics(container: Container): SampledMetrics? = when (container.state) {
+        State.RUNNING -> lastSamples[container.id]
+        else -> null
+    }
+
+    private fun sampleStatistics(id: String): ContainerMetrics? {
+        val metrics = dockerClient.containerStatistics(id)
+        val now = clock.instant()
+        lastSamples.values.removeIf { it.sampledAt.isBefore(now.minus(SAMPLE_RETENTION)) }
+        when (metrics) {
+            null -> lastSamples.remove(id)
+            else -> lastSamples[id] = SampledMetrics(metrics, now)
+        }
+        return metrics
     }
 
     fun containerStats(): List<ContainerMetrics> {
