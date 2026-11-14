@@ -17,6 +17,7 @@ import com.krillsson.sysapi.config.InternetServicesCheckConfiguration
 import com.krillsson.sysapi.config.LogReaderConfiguration
 import com.krillsson.sysapi.config.NotificationsConfiguration
 import com.krillsson.sysapi.config.ProxmoxConfiguration
+import com.krillsson.sysapi.config.UnraidConfiguration
 import com.krillsson.sysapi.config.RegistryConfiguration
 import com.krillsson.sysapi.config.RetentionConfiguration
 import com.krillsson.sysapi.config.SelfSignedCertificateConfiguration
@@ -244,7 +245,10 @@ class SettingsResolverTest {
             "s3cr3t-proxmox-host",
             "s3cr3t-proxmox-token-id",
             "s3cr3t-proxmox-secret",
-            "s3cr3t-proxmox-ca-path"
+            "s3cr3t-proxmox-ca-path",
+            "s3cr3t-unraid-host",
+            "s3cr3t-unraid-api-key",
+            "s3cr3t-unraid-ca-path"
         )
         val config = YAMLConfigFile(
             user = UserConfiguration(username = "s3cr3t-username", password = "s3cr3t-password"),
@@ -274,6 +278,12 @@ class SettingsResolverTest {
                 tokenId = "s3cr3t-proxmox-token-id",
                 secret = "s3cr3t-proxmox-secret",
                 caCertificatePath = "s3cr3t-proxmox-ca-path"
+            ),
+            unraid = UnraidConfiguration(
+                enabled = true,
+                host = "s3cr3t-unraid-host",
+                apiKey = "s3cr3t-unraid-api-key",
+                caCertificatePath = "s3cr3t-unraid-ca-path"
             ),
             docker = DockerConfiguration(
                 host = "s3cr3t-docker-host",

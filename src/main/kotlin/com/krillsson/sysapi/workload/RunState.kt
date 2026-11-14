@@ -5,6 +5,7 @@ enum class RunState {
     PAUSED,
     STOPPED,
     STARTING,
+    STOPPING,
     FAILED,
     UNKNOWN
 }

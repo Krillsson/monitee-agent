@@ -190,6 +190,10 @@ import com.krillsson.sysapi.proxmox.ProxmoxGuestNetwork
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkInterface
 import com.krillsson.sysapi.proxmox.ProxmoxStorage
 import com.krillsson.sysapi.proxmox.ProxmoxStorageStatus
+import com.krillsson.sysapi.config.UnraidConfiguration
+import com.krillsson.sysapi.unraid.UnraidApi
+import com.krillsson.sysapi.unraid.UnraidVm
+import com.krillsson.sysapi.unraid.UnraidVmState
 import com.krillsson.sysapi.workload.PlatformAvailability
 import com.krillsson.sysapi.workload.RunState
 import com.krillsson.sysapi.workload.WorkloadList
@@ -316,6 +320,11 @@ import kotlin.system.exitProcess
     PlatformAvailability::class,
     WorkloadList::class,
     WorkloadUsage::class,
+    UnraidConfiguration::class,
+    UnraidApi::class,
+    UnraidApi.VmDomain::class,
+    UnraidVm::class,
+    UnraidVmState::class,
     ProxmoxStorageStatus::class,
     ProxmoxApi::class,
     ProxmoxApi.Version::class,

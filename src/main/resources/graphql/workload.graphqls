@@ -1,6 +1,7 @@
 extend type Query {
-    # The virtual machines of every platform that is enabled and reachable: Proxmox VE QEMU guests.
-    # platforms says which ones answered, so an empty list can be told apart from a missing one
+    # The virtual machines of every platform that is enabled and reachable: Proxmox VE QEMU guests
+    # and Unraid VMs. platforms says which ones answered, so an empty list can be told apart from a
+    # missing one
     virtualMachines: VirtualMachines!
     # The containers of every platform that is enabled and reachable: Docker containers and
     # Proxmox VE LXC containers. platforms says which ones answered
@@ -12,6 +13,7 @@ extend type Query {
 enum WorkloadPlatform {
     DOCKER
     PROXMOX
+    UNRAID
 }
 
 # One row per platform that can host the kind of workload in the list, enabled or not
@@ -20,7 +22,8 @@ type PlatformAvailability {
     available: Boolean!
     isDisabled: Boolean!
     # Why the platform is not available, the same text as DockerUnavailable.reason and
-    # ProxmoxInfoUnavailable.reason. Null when it is
+    # ProxmoxInfoUnavailable.reason. Null when it is, except for an Unraid server that answers but
+    # has its VM manager stopped: that is available with no VMs, and the reason says so
     reason: String
     # When the platform last answered a poll. Null for Docker, which is not polled, and while
     # the platform is unavailable
@@ -52,18 +55,22 @@ enum RunState {
     STOPPED
     # Docker restarting
     STARTING
-    # Docker dead
+    # Unraid shutting down
+    STOPPING
+    # Docker dead, Unraid crashed
     FAILED
     UNKNOWN
 }
 
 interface VirtualMachine {
-    # The platform's own id: the vmid for Proxmox VE ("100"). Only unique together with platform
+    # The platform's own id: the vmid for Proxmox VE ("100"), the libvirt UUID for Unraid. Only
+    # unique together with platform
     id: String!
     platform: WorkloadPlatform!
     name: String!
     runState: RunState!
-    # Null when the platform reports no usage for this VM, e.g. while it is stopped
+    # Null when the platform reports no usage for this VM, e.g. while it is stopped. Always null
+    # for Unraid
     usage: WorkloadUsage
 }
 
