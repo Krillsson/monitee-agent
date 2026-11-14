@@ -11,6 +11,7 @@ import io.mockk.every
 import io.mockk.mockk
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,13 +32,14 @@ class UnraidClientTest {
         server.shutdown()
     }
 
-    private fun client(): UnraidClient {
+    private fun client(commandTimeoutSeconds: Long = 120): UnraidClient {
         val configFile = mockk<YAMLConfigFile> {
             every { unraid } returns UnraidConfiguration(
                 enabled = true,
                 host = server.hostName,
                 port = server.port,
-                apiKey = "a1b2c3-monitee_key"
+                apiKey = "a1b2c3-monitee_key",
+                commandTimeoutSeconds = commandTimeoutSeconds
             )
         }
         return UnraidClient(configFile, ObjectMapper())
@@ -212,6 +214,65 @@ class UnraidClientTest {
 
         // When
         val result = client.vmDomains()
+
+        // Then
+        result.shouldBeInstanceOf<Result.TransportFailure>()
+    }
+
+    @Test
+    fun `posts a vm command as a mutation with the bare uuid as a variable`() {
+        // Given
+        server.enqueue(json("""{"data":{"vm":{"forceStop":true}}}"""))
+
+        // When
+        val result = client().vmCommand("forceStop", WINDOWS_UUID)
+
+        // Then
+        result shouldBe Result.Ok(true)
+        val body = ObjectMapper().readTree(server.takeRequest().body.readUtf8())
+        body.path("query").asText() shouldBe "mutation(\$id: PrefixedID!) { vm { forceStop(id: \$id) } }"
+        body.path("variables").path("id").asText() shouldBe WINDOWS_UUID
+    }
+
+    @Test
+    fun `passes on the graphql error a failed vm command answers with`() {
+        // Given
+        server.enqueue(
+            json(
+                """{"errors":[{"message":"Failed to reboot VM: Graceful shutdown failed, please force stop the VM and try again",
+                "extensions":{"code":"INTERNAL_SERVER_ERROR"}}],"data":null}"""
+            )
+        )
+
+        // When
+        val result = client().vmCommand("reboot", WINDOWS_UUID)
+
+        // Then
+        result shouldBe Result.GraphQlErrors(
+            listOf("Failed to reboot VM: Graceful shutdown failed, please force stop the VM and try again"),
+            listOf("INTERNAL_SERVER_ERROR")
+        )
+    }
+
+    @Test
+    fun `reports a vm command answer without its result as failed`() {
+        // Given
+        server.enqueue(json("""{"data":{"vm":{}}}"""))
+
+        // When
+        val result = client().vmCommand("start", WINDOWS_UUID)
+
+        // Then
+        result shouldBe Result.Failed(200, "Unraid sent an answer without vm.start")
+    }
+
+    @Test
+    fun `gives up on a vm command after unraid commandTimeoutSeconds`() {
+        // Given
+        server.enqueue(json("""{"data":{"vm":{"stop":true}}}""").setHeadersDelay(3, TimeUnit.SECONDS))
+
+        // When
+        val result = client(commandTimeoutSeconds = 1).vmCommand("stop", WINDOWS_UUID)
 
         // Then
         result.shouldBeInstanceOf<Result.TransportFailure>()

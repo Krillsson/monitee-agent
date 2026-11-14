@@ -5,6 +5,7 @@ import com.krillsson.sysapi.core.domain.docker.ContainerMetrics
 import com.krillsson.sysapi.core.domain.docker.CpuUsage
 import com.krillsson.sysapi.core.domain.docker.MemoryUsage
 import com.krillsson.sysapi.core.domain.docker.NetworkUsage
+import com.krillsson.sysapi.core.domain.docker.State
 import com.krillsson.sysapi.core.domain.docker.ThrottlingData
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.container
@@ -13,7 +14,14 @@ import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.ProxmoxSnapshot
 import com.krillsson.sysapi.proxmox.guest
+import com.krillsson.sysapi.unraid.UnraidVmState
+import com.krillsson.sysapi.unraid.unraidVm
+import com.krillsson.sysapi.workload.PowerCommand
+import com.krillsson.sysapi.workload.PowerCommandJobs
+import com.krillsson.sysapi.workload.WorkloadPlatform
 import com.krillsson.sysapi.workload.WorkloadUsage
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -26,7 +34,8 @@ class WorkloadResolverTest {
 
     private val containerService = mockk<ContainerService>()
     private val proxmoxService = mockk<ProxmoxService>()
-    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService)
+    private val powerCommandJobs = mockk<PowerCommandJobs> { every { isRunning(any(), any()) } returns false }
+    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService, powerCommandJobs)
     private val sampledAt = Instant.parse("2026-11-14T10:00:00Z")
 
     private fun dockerMetrics(limitBytes: Long) = ContainerMetrics(
@@ -116,8 +125,63 @@ class WorkloadResolverTest {
         usage.shouldBeNull()
     }
 
-    private fun snapshot() = ProxmoxSnapshot(
-        cluster = ProxmoxCluster("homelab", quorate = true, nodeCount = 1),
+    @Test
+    fun `lists the commands of a running proxmox vm from the poll alone, without reading its run state`() {
+        // Given
+        every { proxmoxService.snapshot() } returns snapshot()
+
+        // When
+        val supported = resolver.proxmoxVmSupportedCommands(guest(100))
+
+        // Then
+        supported shouldContainExactly listOf(PowerCommand.SHUTDOWN, PowerCommand.FORCE_STOP, PowerCommand.REBOOT, PowerCommand.PAUSE)
+        verify(exactly = 0) { proxmoxService.guestDetail(any()) }
+    }
+
+    @Test
+    fun `lists no proxmox commands while the cluster has no quorum`() {
+        // Given
+        every { proxmoxService.snapshot() } returns snapshot(quorate = false)
+
+        // When
+        val supported = resolver.proxmoxVmSupportedCommands(guest(100))
+
+        // Then
+        supported.shouldBeEmpty()
+    }
+
+    @Test
+    fun `lists the commands of unraid vms and docker containers from their state`() {
+        // Given
+        val paused = unraidVm(state = UnraidVmState.PAUSED)
+        val stopped = container("abc", "web").copy(state = State.EXITED)
+
+        // When
+        val unraid = resolver.unraidVmSupportedCommands(paused)
+        val docker = resolver.dockerSupportedCommands(stopped)
+
+        // Then
+        unraid shouldContainExactly listOf(PowerCommand.FORCE_STOP, PowerCommand.RESUME)
+        docker shouldContainExactly listOf(PowerCommand.START)
+    }
+
+    @Test
+    fun `lists no commands while a command is running for the same id on the same platform`() {
+        // Given
+        every { proxmoxService.snapshot() } returns snapshot()
+        every { powerCommandJobs.isRunning(WorkloadPlatform.UNRAID, "vm-1") } returns true
+
+        // When
+        val busy = resolver.unraidVmSupportedCommands(unraidVm(id = "vm-1"))
+        val idle = resolver.unraidVmSupportedCommands(unraidVm(id = "vm-2"))
+
+        // Then
+        busy.shouldBeEmpty()
+        idle shouldContainExactly listOf(PowerCommand.SHUTDOWN, PowerCommand.FORCE_STOP, PowerCommand.REBOOT, PowerCommand.PAUSE)
+    }
+
+    private fun snapshot(quorate: Boolean = true) = ProxmoxSnapshot(
+        cluster = ProxmoxCluster("homelab", quorate = quorate, nodeCount = 1),
         nodes = emptyList(),
         guests = emptyList(),
         storages = emptyList(),

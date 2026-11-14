@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.krillsson.sysapi.config.ProxmoxConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
+import com.krillsson.sysapi.workload.PowerCommand
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -75,6 +76,9 @@ class ProxmoxServiceTest {
         includeTemplates = includeTemplates,
         pollIntervalSeconds = pollIntervalSeconds
     )
+
+    private fun ProxmoxService.acceptedCommands(guest: ProxmoxGuest): List<PowerCommand> =
+        PowerCommand.entries.filter { commandRefusal(guest, it) == null }
 
     private fun ProxmoxService.pollAfter(seconds: Long) {
         now = now.plusSeconds(seconds)
@@ -512,23 +516,23 @@ class ProxmoxServiceTest {
         respond("/nodes/pve1/qemu/100/config", "qemu-config.json")
         val service = service()
         service.poll()
-        val before = service.supportedCommands(service.guest("100")!!)
+        val before = service.acceptedCommands(service.guest("100")!!)
         val paused = fixtureData("qemu-status-current.json").deepCopy<JsonNode>()
         (paused as ObjectNode).put("qmpstatus", "paused")
         responses["/nodes/pve1/qemu/100/status/current"] = Result.Ok(paused)
 
         // When
         service.guestChanged(service.guest("100")!!)
-        val after = service.supportedCommands(service.guest("100")!!)
+        val after = service.acceptedCommands(service.guest("100")!!)
 
         // Then
         before shouldContainExactly listOf(
-            ProxmoxGuestCommand.SHUTDOWN,
-            ProxmoxGuestCommand.FORCE_STOP,
-            ProxmoxGuestCommand.REBOOT,
-            ProxmoxGuestCommand.SUSPEND
+            PowerCommand.SHUTDOWN,
+            PowerCommand.FORCE_STOP,
+            PowerCommand.REBOOT,
+            PowerCommand.PAUSE
         )
-        after shouldContainExactly listOf(ProxmoxGuestCommand.FORCE_STOP, ProxmoxGuestCommand.RESUME)
+        after shouldContainExactly listOf(PowerCommand.FORCE_STOP, PowerCommand.RESUME)
     }
 
     @Test
@@ -539,11 +543,11 @@ class ProxmoxServiceTest {
         service.poll()
 
         // When
-        val supported = service.supportedCommands(service.guest("101")!!)
+        val supported = service.acceptedCommands(service.guest("101")!!)
 
         // Then
         supported.shouldBeEmpty()
-        service.commandRefusal(service.guest("101")!!, ProxmoxGuestCommand.SHUTDOWN) shouldBe "The cluster has no quorum"
+        service.commandRefusal(service.guest("101")!!, PowerCommand.SHUTDOWN) shouldBe "The cluster has no quorum"
     }
 
     @Test
@@ -553,10 +557,10 @@ class ProxmoxServiceTest {
         service.poll()
 
         // When
-        val supported = service.supportedCommands(service.guest("102")!!)
+        val supported = service.acceptedCommands(service.guest("102")!!)
 
         // Then
-        supported shouldContainExactly listOf(ProxmoxGuestCommand.START)
+        supported shouldContainExactly listOf(PowerCommand.START)
         verify(exactly = 0) { client.get("/nodes/pve2/qemu/102/status/current", any<Class<Any>>()) }
     }
 }

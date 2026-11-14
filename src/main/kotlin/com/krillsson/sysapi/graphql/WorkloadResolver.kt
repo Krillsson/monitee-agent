@@ -3,10 +3,15 @@ package com.krillsson.sysapi.graphql
 import com.krillsson.sysapi.core.domain.docker.Container
 import com.krillsson.sysapi.core.domain.docker.displayName
 import com.krillsson.sysapi.docker.ContainerService
+import com.krillsson.sysapi.docker.DockerPowerCommands
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.unraid.UnraidVm
+import com.krillsson.sysapi.unraid.UnraidVmCommands
 import com.krillsson.sysapi.workload.PlatformAvailability
+import com.krillsson.sysapi.workload.PowerCommand
+import com.krillsson.sysapi.workload.PowerCommandJob
+import com.krillsson.sysapi.workload.PowerCommandJobs
 import com.krillsson.sysapi.workload.RunState
 import com.krillsson.sysapi.workload.RunStates
 import com.krillsson.sysapi.workload.WorkloadCatalog
@@ -23,7 +28,8 @@ import org.springframework.stereotype.Controller
 class WorkloadResolver(
     private val catalog: WorkloadCatalog,
     private val containerService: ContainerService,
-    private val proxmoxService: ProxmoxService
+    private val proxmoxService: ProxmoxService,
+    private val powerCommandJobs: PowerCommandJobs
 ) {
 
     @QueryMapping
@@ -78,6 +84,13 @@ class WorkloadResolver(
             )
         }
 
+    @SchemaMapping(typeName = "DockerContainer", field = "supportedCommands")
+    fun dockerSupportedCommands(container: Container): List<PowerCommand> =
+        listed(WorkloadPlatform.DOCKER, container.id) { DockerPowerCommands.supported(container) }
+
+    @SchemaMapping(typeName = "DockerContainer", field = "commandJob")
+    fun dockerCommandJob(container: Container): PowerCommandJob? = powerCommandJobs.latestFor(WorkloadPlatform.DOCKER, container.id)
+
     @SchemaMapping(typeName = "ProxmoxVm", field = "platform")
     fun proxmoxVmPlatform(guest: ProxmoxGuest): WorkloadPlatform = WorkloadPlatform.PROXMOX
 
@@ -86,6 +99,12 @@ class WorkloadResolver(
 
     @SchemaMapping(typeName = "ProxmoxVm", field = "usage")
     fun proxmoxVmUsage(guest: ProxmoxGuest): WorkloadUsage? = proxmoxUsage(guest)
+
+    @SchemaMapping(typeName = "ProxmoxVm", field = "supportedCommands")
+    fun proxmoxVmSupportedCommands(guest: ProxmoxGuest): List<PowerCommand> = proxmoxListedCommands(guest)
+
+    @SchemaMapping(typeName = "ProxmoxVm", field = "commandJob")
+    fun proxmoxVmCommandJob(guest: ProxmoxGuest): PowerCommandJob? = powerCommandJobs.latestFor(WorkloadPlatform.PROXMOX, guest.id)
 
     @SchemaMapping(typeName = "ProxmoxContainer", field = "platform")
     fun proxmoxContainerPlatform(guest: ProxmoxGuest): WorkloadPlatform = WorkloadPlatform.PROXMOX
@@ -96,6 +115,13 @@ class WorkloadResolver(
     @SchemaMapping(typeName = "ProxmoxContainer", field = "usage")
     fun proxmoxContainerUsage(guest: ProxmoxGuest): WorkloadUsage? = proxmoxUsage(guest)
 
+    @SchemaMapping(typeName = "ProxmoxContainer", field = "supportedCommands")
+    fun proxmoxContainerSupportedCommands(guest: ProxmoxGuest): List<PowerCommand> = proxmoxListedCommands(guest)
+
+    @SchemaMapping(typeName = "ProxmoxContainer", field = "commandJob")
+    fun proxmoxContainerCommandJob(guest: ProxmoxGuest): PowerCommandJob? =
+        powerCommandJobs.latestFor(WorkloadPlatform.PROXMOX, guest.id)
+
     @SchemaMapping(typeName = "UnraidVm", field = "platform")
     fun unraidVmPlatform(vm: UnraidVm): WorkloadPlatform = WorkloadPlatform.UNRAID
 
@@ -104,6 +130,22 @@ class WorkloadResolver(
 
     @SchemaMapping(typeName = "UnraidVm", field = "usage")
     fun unraidVmUsage(vm: UnraidVm): WorkloadUsage? = null
+
+    @SchemaMapping(typeName = "UnraidVm", field = "supportedCommands")
+    fun unraidVmSupportedCommands(vm: UnraidVm): List<PowerCommand> =
+        listed(WorkloadPlatform.UNRAID, vm.id) { UnraidVmCommands.supported(vm) }
+
+    @SchemaMapping(typeName = "UnraidVm", field = "commandJob")
+    fun unraidVmCommandJob(vm: UnraidVm): PowerCommandJob? = powerCommandJobs.latestFor(WorkloadPlatform.UNRAID, vm.id)
+
+    private fun proxmoxListedCommands(guest: ProxmoxGuest): List<PowerCommand> =
+        listed(WorkloadPlatform.PROXMOX, guest.id) { proxmoxService.listedCommands(guest) }
+
+    private fun listed(platform: WorkloadPlatform, id: String, supported: () -> List<PowerCommand>): List<PowerCommand> =
+        when {
+            powerCommandJobs.isRunning(platform, id) -> emptyList()
+            else -> supported()
+        }
 
     private fun proxmoxUsage(guest: ProxmoxGuest): WorkloadUsage? {
         val metrics = guest.metrics

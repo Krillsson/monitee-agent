@@ -103,6 +103,15 @@ class DockerClient(
     }
 
 
+    fun killContainer(id: String): CommandResult {
+        return try {
+            client.killContainerCmd(id).exec()
+            CommandResult.Success
+        } catch (e: RuntimeException) {
+            CommandResult.Failed(e)
+        }
+    }
+
     fun listContainers(containersFilter: List<String> = emptyList()): List<Container> {
         val timedResult = measureTimeMillis {
             val command = if (containersFilter.isNotEmpty()) {
