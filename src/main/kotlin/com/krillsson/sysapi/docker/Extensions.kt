@@ -208,15 +208,25 @@ private fun BlkioStatsConfig.asBlockIOUsage(): BlockIOUsage {
     )
 }
 
-private fun MemoryStatsConfig.asMemoryUsage(): MemoryUsage {
-    val memoryUsageBytes = usage.orDefault() - stats?.cache.orDefault()
-    val limitBytes = limit.orDefault()
-    val usagePercentage = (memoryUsageBytes.toDouble() / limitBytes.toDouble()) * 100.0
+internal fun MemoryStatsConfig.asMemoryUsage(): MemoryUsage {
+    val usageBytes = usageWithoutInactiveFiles()
+    val limitBytes = limit ?: 0L
+    val usagePercentage = when {
+        limitBytes > 0 -> (usageBytes.toDouble() / limitBytes.toDouble()) * 100.0
+        else -> 0.0
+    }
     return MemoryUsage(
-        usageBytes = usage.orDefault(),
+        usageBytes = usageBytes,
         limitBytes = limitBytes,
         usagePercent = usagePercentage
     )
+}
+
+private fun MemoryStatsConfig.usageWithoutInactiveFiles(): Long {
+    val usageBytes = usage ?: 0L
+    val inactiveFileBytes = listOfNotNull(stats?.totalInactiveFile, stats?.inactiveFile)
+        .firstOrNull { it < usageBytes } ?: 0L
+    return (usageBytes - inactiveFileBytes).coerceAtLeast(0)
 }
 
 private fun CpuStatsConfig.asCpuUsage(
