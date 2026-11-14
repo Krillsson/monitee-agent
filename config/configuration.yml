@@ -135,11 +135,13 @@ unraid:
   port: 80
   # https, with the port the webGUI uses for it, when the webGUI's Use SSL/TLS is set to Strict
   scheme: "http"
-  # unraid-api apikey --create --name monitee-agent --permissions "vms:read_any" --json
+  # unraid-api apikey --create --name monitee-agent --permissions "vms:read_any,vms:update_any" --json
   apiKey: ""
   verifyTls: true
   # caCertificatePath: "/config/unraid.pem"
   pollIntervalSeconds: 15
+  # how long the agent waits for Unraid to answer a power command before reporting it failed
+  commandTimeoutSeconds: 120
 docker:
   enabled: true
   # keep the interfaces docker makes for itself (docker0, br-<network id>, veth*) out of the

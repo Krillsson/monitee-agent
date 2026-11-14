@@ -26,7 +26,6 @@ import com.krillsson.sysapi.docker.ContainerBatchUpdateJobs
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.ContainerUpdateJobs
 import com.krillsson.sysapi.graphql.mutations.*
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.systemd.CommandResult
 import com.krillsson.sysapi.systemd.SystemDaemonManager
 import com.krillsson.sysapi.windows.WindowsManager
@@ -47,8 +46,7 @@ class MutationResolver(
     private val systemDaemonManager: SystemDaemonManager,
     private val windowsManager: WindowsManager,
     private val processKiller: ProcessKillerService,
-    private val checkService: CheckService,
-    private val proxmoxGuestCommandJobs: ProxmoxGuestCommandJobs
+    private val checkService: CheckService
 ) {
 
     @MutationMapping
@@ -114,18 +112,6 @@ class MutationResolver(
         }
     }
 
-    @MutationMapping
-    fun performProxmoxGuestCommand(@Argument input: PerformProxmoxGuestCommandInput): PerformProxmoxGuestCommandOutput {
-        return when (val result = proxmoxGuestCommandJobs.start(input.guestId, input.command)) {
-            is ProxmoxGuestCommandJobs.StartResult.Started -> PerformProxmoxGuestCommandOutputStarted(
-                result.jobId,
-                result.guestId,
-                result.upid
-            )
-
-            is ProxmoxGuestCommandJobs.StartResult.Rejected -> PerformProxmoxGuestCommandOutputFailed(result.reason)
-        }
-    }
 
     @MutationMapping
     fun performSystemDaemonCommand(@Argument input: PerformSystemDaemonCommandInput): PerformSystemDaemonCommandOutput {

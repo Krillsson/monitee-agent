@@ -1,13 +1,13 @@
 package com.krillsson.sysapi.graphql
 
 import com.krillsson.sysapi.proxmox.ProxmoxGuest
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand
 import com.krillsson.sysapi.proxmox.ProxmoxGuestCommands
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetwork
 import com.krillsson.sysapi.proxmox.ProxmoxGuestNetworkResult
 import com.krillsson.sysapi.proxmox.ProxmoxService
+import com.krillsson.sysapi.workload.PowerCommand
 
-fun ProxmoxService.listedCommands(guest: ProxmoxGuest): List<ProxmoxGuestCommand> =
+fun ProxmoxService.listedCommands(guest: ProxmoxGuest): List<PowerCommand> =
     ProxmoxGuestCommands.supported(guest, quorate = snapshot()?.cluster?.quorate ?: false, qmpStatus = null)
 
 fun ProxmoxService.availableNetwork(guest: ProxmoxGuest): ProxmoxGuestNetwork? =

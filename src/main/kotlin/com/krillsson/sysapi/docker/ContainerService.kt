@@ -151,6 +151,11 @@ class ContainerService(
         return CommandResult.Unavailable
     }
 
+    fun killContainer(id: String): CommandResult = when (status) {
+        Status.Available -> dockerClient.killContainer(id)
+        else -> CommandResult.Unavailable
+    }
+
     fun readLogsForContainer(containerId: String, from: Instant?, to: Instant?): ReadLogsCommandResult {
         if (status == Status.Available) {
             return try {

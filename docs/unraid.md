@@ -102,10 +102,10 @@ We can verify that the server is working by looking at the logs in the unraid UI
 
 ## VMs
 
-The agent can list the VMs on the server and watch whether they are running, through the Unraid API that comes with Unraid 7.2. Create an API key that may read VMs, put it in the `unraid` block of `configuration.yml` and set `enabled: true`:
+The agent can list, start and stop the VMs on the server and watch whether they are running, through the Unraid API that comes with Unraid 7.2. Create an API key that may read and update VMs, put it in the `unraid` block of `configuration.yml` and set `enabled: true`:
 
 ```bash
-unraid-api apikey --create --name monitee-agent --description "Monitee agent" --permissions "vms:read_any" --json
+unraid-api apikey --create --name monitee-agent --description "Monitee agent" --permissions "vms:read_any,vms:update_any" --json
 ```
 
 Now you are ready to proceed to next step
