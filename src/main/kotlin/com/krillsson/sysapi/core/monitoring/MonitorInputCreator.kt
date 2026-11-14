@@ -35,6 +35,8 @@ import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.smart.HealthStatus
 import com.krillsson.sysapi.storagepool.StoragePool
 import com.krillsson.sysapi.storagepool.StoragePoolService
+import com.krillsson.sysapi.unraid.UnraidVm
+import com.krillsson.sysapi.unraid.UnraidVmService
 import com.krillsson.sysapi.storagepool.StoragePoolState
 import com.krillsson.sysapi.ups.UpsDevice
 import com.krillsson.sysapi.ups.UpsService
@@ -55,6 +57,7 @@ class MonitorInputCreator(
     private val containerUpdateChecker: ContainerUpdateChecker,
     private val storagePoolService: StoragePoolService,
     private val proxmoxService: ProxmoxService,
+    private val unraidVmService: UnraidVmService,
 ) {
 
     companion object {
@@ -180,6 +183,7 @@ class MonitorInputCreator(
         val upsDeviceMetrics = upsService.upsDevices().map { it.metrics }
         val storagePools = storagePoolService.pools()
         val proxmoxGuests = if (activeTypes.any { proxmoxGuestTypes.contains(it.type) }) proxmoxService.snapshot()?.guests else null
+        val unraidVms = if (activeTypes.any { it.type == Monitor.Type.UNRAID_VM_RUNNING }) unraidVmService.monitorableVms() else null
         return MonitorInput(
             load,
             containers,
@@ -189,7 +193,8 @@ class MonitorInputCreator(
             upsDeviceMetrics,
             storagePools,
             checkCertificateResults,
-            proxmoxGuests
+            proxmoxGuests,
+            unraidVms
         )
     }
 
@@ -285,6 +290,9 @@ class MonitorInputCreator(
                 Monitor.Type.PROXMOX_GUEST_MEMORY_USED ->
                     proxmoxService.guest(requireNotNull(monitor.config.monitoredItemId))
                         ?.let { createProxmoxGuestMonitorableItem(it, monitor.type) }
+
+                Monitor.Type.UNRAID_VM_RUNNING ->
+                    unraidVmService.vm(requireNotNull(monitor.config.monitoredItemId))?.let { createUnraidVmMonitorableItem(it) }
 
                 Monitor.Type.PROCESS_MEMORY_SPACE -> {
                     metrics.processesMetrics().getProcessByPid(monitor.config.monitoredItemId?.toInt() ?: 0)
@@ -529,6 +537,8 @@ class MonitorInputCreator(
             Monitor.Type.PROXMOX_GUEST_MEMORY_USED -> proxmoxService.guests().filterNot { it.template }.map {
                 createProxmoxGuestMonitorableItem(it, type)
             }
+
+            Monitor.Type.UNRAID_VM_RUNNING -> unraidVmService.vms().map { createUnraidVmMonitorableItem(it) }
 
             Monitor.Type.CONTAINER_UPDATE_AVAILABLE -> {
                 if (containerUpdateChecker.enabled) {
@@ -909,6 +919,15 @@ class MonitorInputCreator(
             type = type
         )
     }
+
+    private fun createUnraidVmMonitorableItem(vm: UnraidVm) = MonitorableItem(
+        id = vm.id,
+        name = vm.name,
+        description = "Unraid VM",
+        maxValue = true.toConditionalValue(),
+        currentValue = vm.isRunning().toConditionalValue(),
+        type = Monitor.Type.UNRAID_VM_RUNNING
+    )
 
     private fun createContainerRunningMonitorableItem(it: Container) = MonitorableItem(
         id = it.id,

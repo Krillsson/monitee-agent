@@ -7,6 +7,9 @@ import com.krillsson.sysapi.core.monitoring.MonitoredValue
 import com.krillsson.sysapi.notifications.Notification
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.guest
+import com.krillsson.sysapi.unraid.UnraidVmService
+import com.krillsson.sysapi.unraid.WINDOWS_UUID
+import com.krillsson.sysapi.unraid.unraidVm
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
@@ -20,12 +23,16 @@ class ResolvedEventFormatterTest {
     private val proxmoxService: ProxmoxService = mockk {
         every { guest("100") } returns guest(100, name = "web01")
     }
+    private val unraidVmService: UnraidVmService = mockk {
+        every { vm(WINDOWS_UUID) } returns unraidVm(name = "Windows 11")
+    }
     private val formatter = ResolvedEventFormatter(
         MonitoredValueFormatter(mockk(), mockk()),
         DurationFormatter(),
         CheckEventFormatter(checkService),
         StoragePoolEventFormatter(mockk()),
-        ProxmoxEventFormatter(proxmoxService)
+        ProxmoxEventFormatter(proxmoxService),
+        UnraidEventFormatter(unraidVmService)
     )
 
     private val checkId: UUID = UUID.fromString("11111111-2222-3333-4444-555555555555")
@@ -78,5 +85,23 @@ class ResolvedEventFormatterTest {
         // Then
         title shouldBe "Proxmox guest running again on server"
         description shouldBe "web01 (100) is running again after 5 minutes"
+    }
+
+    @Test
+    fun `names an unraid vm that is running again`() {
+        // Given
+        val notification = resolvedEvent(WINDOWS_UUID).copy(
+            monitorType = Monitor.Type.UNRAID_VM_RUNNING,
+            startValue = MonitoredValue.ConditionalValue(false),
+            endValue = MonitoredValue.ConditionalValue(true)
+        )
+
+        // When
+        val title = formatter.formatResolvedEventTitle(notification, "server")
+        val description = formatter.formatResolvedEventDescription(notification)
+
+        // Then
+        title shouldBe "Unraid VM running again on server"
+        description shouldBe "Windows 11 is running again after 5 minutes"
     }
 }

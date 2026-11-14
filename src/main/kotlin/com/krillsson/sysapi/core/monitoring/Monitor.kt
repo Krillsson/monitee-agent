@@ -44,7 +44,8 @@ abstract class Monitor<out T : MonitoredValue> {
         GPU_UTILIZATION(ValueType.Fractional),
         PROXMOX_GUEST_RUNNING(ValueType.Conditional),
         PROXMOX_GUEST_CPU_LOAD(ValueType.Fractional),
-        PROXMOX_GUEST_MEMORY_USED(ValueType.Numerical)
+        PROXMOX_GUEST_MEMORY_USED(ValueType.Numerical),
+        UNRAID_VM_RUNNING(ValueType.Conditional)
     }
 
     enum class ValueType {

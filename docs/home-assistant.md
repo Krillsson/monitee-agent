@@ -98,7 +98,8 @@ Three things stop a busy server from arriving as a wall of entities:
   arrive disabled. They are on the device, and switching one on in Home Assistant starts recording
   it — nothing is lost, it is just out of the way until asked for.
 - **Off entirely.** A binary sensor per container is off until `containers: true`, since a server
-  can easily run fifty of them, and the same goes for Proxmox guests and `proxmoxGuests: true`.
+  can easily run fifty of them, and the same goes for Proxmox guests and `proxmoxGuests: true`, and
+  Unraid VMs and `unraidVms: true`.
   `networkInterfaces: false` drops the per-interface entities.
 
 Interfaces docker creates for itself never reach Home Assistant at all — see
@@ -130,6 +131,7 @@ mqtt:
   emoji: true
   containers: false
   proxmoxGuests: false
+  unraidVms: false
   networkInterfaces: true
   homeAssistant:
     enabled: true
