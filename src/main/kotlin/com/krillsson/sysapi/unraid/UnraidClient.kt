@@ -60,6 +60,13 @@ class UnraidClient(
             .build()
     }
 
+    private val commandClient: OkHttpClient by lazy {
+        client.newBuilder()
+            .readTimeout(config.commandTimeoutSeconds, TimeUnit.SECONDS)
+            .callTimeout(config.commandTimeoutSeconds, TimeUnit.SECONDS)
+            .build()
+    }
+
     private val url: HttpUrl by lazy {
         HttpUrl.Builder()
             .scheme(config.scheme)
@@ -74,15 +81,28 @@ class UnraidClient(
         is Result.Failure -> result
     }
 
-    private fun query(query: String): Result<JsonNode> {
+    fun vmCommand(mutation: String, id: String): Result<Boolean> =
+        when (val result = query(UnraidApi.vmMutation(mutation), mapOf("id" to id), commandClient)) {
+            is Result.Ok -> result.data.path("vm").path(mutation).takeIf { it.isBoolean }
+                ?.let { Result.Ok(it.booleanValue()) }
+                ?: Result.Failed(200, "Unraid sent an answer without vm.$mutation")
+
+            is Result.Failure -> result
+        }
+
+    private fun query(query: String, variables: Map<String, Any> = emptyMap(), httpClient: OkHttpClient = client): Result<JsonNode> {
+        val body = when {
+            variables.isEmpty() -> mapOf("query" to query)
+            else -> mapOf("query" to query, "variables" to variables)
+        }
         val request = Request.Builder()
             .url(url)
             .header("x-api-key", config.apiKey)
             .header("Accept", "application/json")
-            .post(objectMapper.writeValueAsString(mapOf("query" to query)).toRequestBody(JSON))
+            .post(objectMapper.writeValueAsString(body).toRequestBody(JSON))
             .build()
         return try {
-            client.newCall(request).execute().use { resultOf(it) }
+            httpClient.newCall(request).execute().use { resultOf(it) }
         } catch (exception: Exception) {
             Result.TransportFailure(exception)
         }

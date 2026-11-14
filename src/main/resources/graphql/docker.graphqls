@@ -435,6 +435,10 @@ type DockerContainer implements Container {
     # for it never waits on docker stats. Null while the container is not running and until its
     # stats have been read once
     usage: WorkloadUsage
+    # Created or exited: START. Running: SHUTDOWN, FORCE_STOP, REBOOT and PAUSE. Paused: RESUME
+    # and FORCE_STOP. Restarting: SHUTDOWN
+    supportedCommands: [PowerCommand!]!
+    commandJob: PowerCommandJob
     command: String!
     created: Long!
     hostConfig: DockerHostConfig!

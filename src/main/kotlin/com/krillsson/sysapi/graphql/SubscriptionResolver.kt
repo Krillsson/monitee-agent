@@ -19,8 +19,6 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
 import com.krillsson.sysapi.graphql.domain.InternetService
 import com.krillsson.sysapi.graphql.domain.Meta
 import com.krillsson.sysapi.logaccess.file.LogFileService
-import com.krillsson.sysapi.graphql.domain.ProxmoxGuestCommandEvent
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.serverid.ServerIdService
 import com.krillsson.sysapi.systemd.SystemDaemonManager
@@ -44,8 +42,7 @@ class SubscriptionResolver(
     val upsService: UpsService,
     val systemDaemonManager: SystemDaemonManager,
     val fileOperations: FileOperationService,
-    val proxmoxService: ProxmoxService,
-    val proxmoxGuestCommandJobs: ProxmoxGuestCommandJobs
+    val proxmoxService: ProxmoxService
 ) {
     @SubscriptionMapping
     fun fileOperationProgress(@Argument id: String): Flux<FileOperation> = fileOperations.events(id)
@@ -157,8 +154,4 @@ class SubscriptionResolver(
     @SubscriptionMapping
     fun dockerContainerBatchUpdate(@Argument batchJobId: UUID): Flux<DockerContainerBatchUpdateEvent> =
         containerBatchUpdateJobs.events(batchJobId)
-
-    @SubscriptionMapping
-    fun proxmoxGuestCommand(@Argument jobId: UUID): Flux<ProxmoxGuestCommandEvent> =
-        proxmoxGuestCommandJobs.events(jobId)
 }

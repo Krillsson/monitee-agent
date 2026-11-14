@@ -8,5 +8,6 @@ data class UnraidConfiguration(
     val apiKey: String = "",
     val verifyTls: Boolean = true,
     val caCertificatePath: String? = null,
-    val pollIntervalSeconds: Long = 15
+    val pollIntervalSeconds: Long = 15,
+    val commandTimeoutSeconds: Long = 120
 )

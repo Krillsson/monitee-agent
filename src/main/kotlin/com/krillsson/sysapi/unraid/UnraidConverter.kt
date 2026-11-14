@@ -9,6 +9,7 @@ object UnraidConverter {
 
     const val VMS_DISABLED_REASON = "VMs are disabled in Unraid (Settings → VM Manager)"
     private const val VMS_NOT_AVAILABLE = "VMs are not available"
+    private const val SET_STATE_FAILED = "Failed to set VM state:"
     private const val NO_VMS_FIELD = "Cannot query field \"vms\""
 
     fun vms(domains: List<UnraidApi.VmDomain>): List<UnraidVm> = domains.mapNotNull { vm(it) }
@@ -54,6 +55,17 @@ object UnraidConverter {
                 else -> "Could not reach Unraid at $address: ${result.error.message ?: result.error::class.java.simpleName}"
             }
         }
+    }
+
+    fun commandFailureReason(result: Result.Failure, config: UnraidConfiguration): String = when (result) {
+        is Result.Forbidden -> "The API key lacks VMS update permission (${result.reason}). Give it vms:update_any"
+        is Result.GraphQlErrors -> result.messages
+            .map { it.removePrefix(SET_STATE_FAILED).trim() }
+            .filter { it.isNotEmpty() }
+            .joinToString("; ")
+            .ifEmpty { "Unraid answered with an error" }
+
+        else -> failureReason(result, config)
     }
 
     fun address(config: UnraidConfiguration): String = "${config.scheme}://${config.host}:${config.port}"

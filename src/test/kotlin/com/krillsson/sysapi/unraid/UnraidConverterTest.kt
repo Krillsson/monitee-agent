@@ -127,4 +127,28 @@ class UnraidConverterTest {
             "Could not reach Unraid at http://localhost:80: Connection refused"
         )
     }
+
+    @Test
+    fun `explains a failed command without unraid's set state prefix, and a missing update permission`() {
+        // Given
+        val failures = listOf(
+            Result.GraphQlErrors(listOf("Failed to set VM state: Cannot pause VM in state SHUTOFF"), emptyList()),
+            Result.GraphQlErrors(listOf("Failed to force stop VM: domain is not running"), emptyList()),
+            Result.GraphQlErrors(emptyList(), listOf("INTERNAL_SERVER_ERROR")),
+            Result.Forbidden("Forbidden resource"),
+            Result.TransportFailure(IOException("timeout"))
+        )
+
+        // When
+        val reasons = failures.map { UnraidConverter.commandFailureReason(it, config) }
+
+        // Then
+        reasons shouldContainExactly listOf(
+            "Cannot pause VM in state SHUTOFF",
+            "Failed to force stop VM: domain is not running",
+            "Unraid answered with an error",
+            "The API key lacks VMS update permission (Forbidden resource). Give it vms:update_any",
+            "Could not reach Unraid at http://localhost:80: timeout"
+        )
+    }
 }
