@@ -6,6 +6,28 @@ extend type Query {
     # The containers of every platform that is enabled and reachable: Docker containers and
     # Proxmox VE LXC containers. platforms says which ones answered
     containers: Containers!
+    # The most recently started power command that is still running, if any. Pass jobId to look
+    # up a specific job instead, including one that finished in the last 30 minutes. Null when no
+    # job has that id, or it has been forgotten
+    powerCommandJob(jobId: UUID): PowerCommandJob
+}
+
+extend type Mutation {
+    # Starts a power command on a VM or container and returns at once, before the platform has
+    # done anything. Follow it with the powerCommand subscription. What each command does differs
+    # per platform, see PowerCommand. Needs VM.PowerMgmt for the Proxmox VE API token and
+    # vms:update_any for the Unraid API key
+    performPowerCommand(input: PerformPowerCommandInput!): PerformPowerCommandOutput!
+}
+
+extend type Subscription {
+    # Follow a command started with performPowerCommand
+    #
+    # Everything the job has emitted so far is replayed on subscribe, so subscribing after the
+    # mutation returned misses nothing. The stream completes after PowerCommandSucceeded or
+    # PowerCommandFailed. Finished jobs are forgotten after 30 minutes and do not survive a restart
+    # of the agent
+    powerCommand(jobId: UUID!): PowerCommandEvent!
 }
 
 # Where a virtual machine or container runs. Not to be confused with Platform, the operating
@@ -72,6 +94,12 @@ interface VirtualMachine {
     # Null when the platform reports no usage for this VM, e.g. while it is stopped. Always null
     # for Unraid
     usage: WorkloadUsage
+    # The commands performPowerCommand would take for this VM, from the last poll, so the
+    # mutation has the final say. Empty while a command for it is running
+    supportedCommands: [PowerCommand!]!
+    # The latest command started on this VM from the agent, running or finished in the last 30
+    # minutes
+    commandJob: PowerCommandJob
 }
 
 interface Container {
@@ -83,6 +111,12 @@ interface Container {
     runState: RunState!
     # Null when the platform reports no usage for this container, e.g. while it is stopped
     usage: WorkloadUsage
+    # The commands performPowerCommand would take for this container, from the last poll, so
+    # the mutation has the final say. Empty while a command for it is running
+    supportedCommands: [PowerCommand!]!
+    # The latest command started on this container from the agent, running or finished in the
+    # last 30 minutes
+    commandJob: PowerCommandJob
 }
 
 # The numbers every platform that reports usage can fill. The detail lives on the platform types
@@ -96,4 +130,114 @@ type WorkloadUsage {
     # When the numbers were read. Proxmox VE: the last poll. Docker: when the agent last read the
     # container's stats, which can be a minute or more ago
     sampledAt: Instant!
+}
+
+enum PowerCommand {
+    START
+    # Proxmox VE: the ACPI power button, or the guest agent when it answers. Waits
+    # proxmox.shutdownTimeoutSeconds and fails if the guest is still up, nothing is killed.
+    # Unraid: the ACPI power button, and Unraid forces the VM off if it has not shut down within
+    # 10 seconds. Docker: docker stop, SIGTERM and then SIGKILL after the container's stop timeout
+    SHUTDOWN
+    # Pulls the plug. Proxmox VE stop, Unraid forceStop, Docker kill
+    FORCE_STOP
+    # Proxmox VE: a shutdown followed by a start, with the same timeout as SHUTDOWN. A VM that
+    # does not shut down in time fails the reboot, a container is killed. Unraid: fails if the VM
+    # has not shut down within 10 seconds, and then leaves it off. Docker: docker restart
+    REBOOT
+    # Pauses in memory. Proxmox VE suspend (VMs only), Unraid pause, Docker pause
+    PAUSE
+    RESUME
+}
+
+input PerformPowerCommandInput {
+    platform: WorkloadPlatform!
+    # The platform's own id, see VirtualMachine.id and Container.id
+    id: String!
+    command: PowerCommand!
+}
+
+# There is no platform task id here. Proxmox VE's UPID comes in a PowerCommandRunning event once
+# Proxmox has accepted the command, and the powerCommand subscription replays it
+type PerformPowerCommandOutputStarted {
+    # Pass this to the powerCommand subscription to follow the command
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+}
+
+# The command was refused before it ran: the platform is unavailable, there is no such VM or
+# container, it does not take the command right now (see supportedCommands), or a command for it
+# is already running
+type PerformPowerCommandOutputFailed {
+    reason: String!
+}
+
+union PerformPowerCommandOutput = PerformPowerCommandOutputStarted | PerformPowerCommandOutputFailed
+
+interface PowerCommandEvent {
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+    timestamp: Instant!
+}
+
+# Sent first, when the job is created. Sent once more for Proxmox VE with its task's UPID, when
+# Proxmox has accepted the command
+type PowerCommandRunning implements PowerCommandEvent {
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+    timestamp: Instant!
+    # The UPID of the Proxmox VE task running the command. Null on the first event and for the
+    # other platforms
+    platformTaskId: String
+}
+
+# Sent after the agent has read the VM or container again, so the next query already shows the
+# new state
+type PowerCommandSucceeded implements PowerCommandEvent {
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+    timestamp: Instant!
+    platformTaskId: String
+    # Proxmox VE's exit status of the task, OK or WARNINGS: n. Null for the other platforms
+    exitStatus: String
+}
+
+type PowerCommandFailed implements PowerCommandEvent {
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+    timestamp: Instant!
+    # Null when the platform refused the command before it started a task, and for the platforms
+    # other than Proxmox VE
+    platformTaskId: String
+    # The platform's error, e.g. "VM quit/powerdown failed - got timeout", why the agent stopped
+    # following the command, or the state the VM or container ended up in instead
+    reason: String!
+    # The last lines of the Proxmox VE task's log. Empty for the other platforms, and when the
+    # agent stopped following the task
+    log: [String!]!
+    # True when a SHUTDOWN or REBOOT timed out and FORCE_STOP would stop the VM or container
+    canForceStop: Boolean!
+}
+
+enum PowerCommandJobState {
+    RUNNING
+    SUCCEEDED
+    FAILED
+}
+
+type PowerCommandJob {
+    jobId: UUID!
+    platform: WorkloadPlatform!
+    id: String!
+    command: PowerCommand!
+    state: PowerCommandJobState!
+    startedAt: Instant!
+    finishedAt: Instant
+    # The last event the powerCommand subscription delivered
+    lastEvent: PowerCommandEvent!
 }

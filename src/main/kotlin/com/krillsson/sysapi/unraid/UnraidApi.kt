@@ -7,6 +7,8 @@ object UnraidApi {
 
     const val VM_DOMAINS_QUERY = "query { vms { domains { id name state } } }"
 
+    fun vmMutation(name: String): String = "mutation(\$id: PrefixedID!) { vm { $name(id: \$id) } }"
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class VmDomain(
         @JsonProperty("id")

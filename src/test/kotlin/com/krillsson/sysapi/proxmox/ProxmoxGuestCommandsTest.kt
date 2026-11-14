@@ -1,11 +1,12 @@
 package com.krillsson.sysapi.proxmox
 
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.FORCE_STOP
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.REBOOT
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.RESUME
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.SHUTDOWN
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.START
-import com.krillsson.sysapi.proxmox.ProxmoxGuestCommand.SUSPEND
+import com.krillsson.sysapi.workload.PowerCommand
+import com.krillsson.sysapi.workload.PowerCommand.FORCE_STOP
+import com.krillsson.sysapi.workload.PowerCommand.PAUSE
+import com.krillsson.sysapi.workload.PowerCommand.REBOOT
+import com.krillsson.sysapi.workload.PowerCommand.RESUME
+import com.krillsson.sysapi.workload.PowerCommand.SHUTDOWN
+import com.krillsson.sysapi.workload.PowerCommand.START
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -28,7 +29,7 @@ class ProxmoxGuestCommandsTest {
     }
 
     @Test
-    fun `offers shutdown, force stop, reboot and suspend for a running vm`() {
+    fun `offers shutdown, force stop, reboot and pause for a running vm`() {
         // Given
         val running = guest(100)
 
@@ -36,11 +37,11 @@ class ProxmoxGuestCommandsTest {
         val supported = ProxmoxGuestCommands.supported(running, quorate = true, qmpStatus = "running")
 
         // Then
-        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, SUSPEND)
+        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, PAUSE)
     }
 
     @Test
-    fun `offers only resume and force stop for a suspended vm`() {
+    fun `offers only resume and force stop for a paused vm`() {
         // Given
         val running = guest(100)
 
@@ -52,7 +53,7 @@ class ProxmoxGuestCommandsTest {
     }
 
     @Test
-    fun `never offers suspend or resume for a container`() {
+    fun `never offers pause or resume for a container`() {
         // Given
         val container = guest(101, kind = ProxmoxGuestKind.LXC)
 
@@ -61,8 +62,8 @@ class ProxmoxGuestCommandsTest {
 
         // Then
         supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT)
-        ProxmoxGuestCommands.refusal(container, SUSPEND, quorate = true, qmpStatus = null) shouldBe
-            "Containers cannot be suspended or resumed"
+        ProxmoxGuestCommands.refusal(container, PAUSE, quorate = true, qmpStatus = null) shouldBe
+            "Containers cannot be paused or resumed"
     }
 
     @Test
@@ -74,7 +75,7 @@ class ProxmoxGuestCommandsTest {
         val supported = ProxmoxGuestCommands.supported(running, quorate = true, qmpStatus = null)
 
         // Then
-        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, SUSPEND)
+        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, PAUSE)
     }
 
     @ParameterizedTest
@@ -112,7 +113,7 @@ class ProxmoxGuestCommandsTest {
         val supported = ProxmoxGuestCommands.supported(managed, quorate = true, qmpStatus = "running")
 
         // Then
-        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, SUSPEND)
+        supported shouldContainExactly listOf(SHUTDOWN, FORCE_STOP, REBOOT, PAUSE)
     }
 
     @ParameterizedTest
@@ -121,14 +122,31 @@ class ProxmoxGuestCommandsTest {
         "SHUTDOWN, 'timeout=45,forceStop=0'",
         "FORCE_STOP, ''",
         "REBOOT, 'timeout=45'",
-        "SUSPEND, ''",
+        "PAUSE, ''",
         "RESUME, ''"
     )
-    fun `sends the shutdown timeout and never forces a shutdown`(command: ProxmoxGuestCommand, expected: String) {
+    fun `sends the shutdown timeout and never forces a shutdown`(command: PowerCommand, expected: String) {
         // When
         val form = ProxmoxGuestCommands.formFor(command, shutdownTimeoutSeconds = 45)
 
         // Then
         form.entries.joinToString(",") { "${it.key}=${it.value}" } shouldBe expected
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "START, start",
+        "SHUTDOWN, shutdown",
+        "FORCE_STOP, stop",
+        "REBOOT, reboot",
+        "PAUSE, suspend",
+        "RESUME, resume"
+    )
+    fun `posts each power command to the proxmox action of its own`(command: PowerCommand, action: String) {
+        // When
+        val posted = ProxmoxGuestCommands.action(command)
+
+        // Then
+        posted shouldBe action
     }
 }
