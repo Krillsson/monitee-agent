@@ -20,3 +20,4 @@ data class Container(
     val status: String
 )
 
+fun Container.displayName() = names.firstOrNull()?.trimStart('/')?.takeIf { it.isNotBlank() } ?: id.take(12)

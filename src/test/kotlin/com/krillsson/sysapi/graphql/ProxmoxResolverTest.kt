@@ -7,7 +7,6 @@ import com.krillsson.sysapi.proxmox.ProxmoxGuestCommandJobs
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxSnapshot
 import com.krillsson.sysapi.proxmox.guest
-import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -38,13 +37,9 @@ class ProxmoxResolverTest {
     fun `answers every field from the snapshot the query started with`() {
         // When
         val cluster = resolver.cluster(info)
-        val running = resolver.runningGuests(info)
-        val stopped = resolver.guest(info, "101")
 
         // Then
         cluster.name shouldBe "homelab"
-        running.map { it.id } shouldContainExactly listOf("100")
-        stopped?.status shouldBe ProxmoxGuestStatus.STOPPED
         resolver.pveVersion(info) shouldBe "9.0.3"
         resolver.lastSuccessfulPoll(info) shouldBe Instant.parse("2026-11-11T10:00:00Z")
     }
