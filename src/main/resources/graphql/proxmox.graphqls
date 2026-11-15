@@ -137,6 +137,8 @@ type ProxmoxContainer implements Container {
     name: String!
     runState: RunState!
     usage: WorkloadUsage
+    # Matched on the container's name, then its osType
+    icon: ContainerIcon!
     vmid: Int!
     node: String!
     status: ProxmoxGuestStatus!
