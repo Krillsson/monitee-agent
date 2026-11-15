@@ -11,12 +11,15 @@ class ContainerIcons {
     }
 
     fun forDockerImage(image: String): ContainerIcon =
-        iconFor(ImageNames.dockerCandidates(image), DOCKER_FALLBACK)
+        iconFor(ImageNames.dockerCandidates(image).asSequence(), DOCKER_FALLBACK)
 
-    fun forLxc(name: String, osType: String?): ContainerIcon =
-        iconFor(listOfNotNull(name, osType), LXC_FALLBACK)
+    fun forLxc(name: String, osType: () -> String?): ContainerIcon =
+        iconFor(
+            ImageNames.nameCandidates(name).asSequence() + sequence { yieldAll(ImageNames.osTypeCandidates(osType())) },
+            LXC_FALLBACK
+        )
 
-    internal fun iconFor(candidates: List<String>, fallback: String): ContainerIcon {
+    internal fun iconFor(candidates: Sequence<String>, fallback: String): ContainerIcon {
         val match = candidates.firstNotNullOfOrNull { index.find(it) }
         val name = match ?: fallback
         return ContainerIcon(
