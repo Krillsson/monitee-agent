@@ -118,7 +118,7 @@ interface Container {
     # last 30 minutes
     commandJob: PowerCommandJob
     # A logo from Dashboard Icons, picked from the Docker image or the LXC container's name and OS
-    # type. Proxmox VE reads the OS type per guest, so leave this out of a long list
+    # type. Proxmox VE reads the OS type of each LXC container whose name matches nothing
     icon: ContainerIcon!
 }
 

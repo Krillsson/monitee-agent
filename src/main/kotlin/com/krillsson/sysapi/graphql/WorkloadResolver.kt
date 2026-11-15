@@ -155,7 +155,7 @@ class WorkloadResolver(
 
     @SchemaMapping(typeName = "ProxmoxContainer", field = "icon")
     fun proxmoxContainerIcon(guest: ProxmoxGuest): ContainerIcon =
-        containerIcons.forLxc(guest.name, proxmoxService.guestDetail(guest)?.osType)
+        containerIcons.forLxc(guest.name) { proxmoxService.guestDetail(guest)?.osType }
 
     private fun proxmoxUsage(guest: ProxmoxGuest): WorkloadUsage? {
         val metrics = guest.metrics

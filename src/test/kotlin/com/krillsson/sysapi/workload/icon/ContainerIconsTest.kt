@@ -2,6 +2,8 @@ package com.krillsson.sysapi.workload.icon
 
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 
 class ContainerIconsTest {
 
@@ -26,7 +28,7 @@ class ContainerIconsTest {
     @Test
     fun `falls back to the whole repository name when the last segment has no icon`() {
         // When
-        val icon = icons.iconFor(listOf("zzz-unknown", "linuxserver-io"), "docker")
+        val icon = icons.iconFor(sequenceOf("zzz-unknown", "linuxserver-io"), "docker")
 
         // Then
         icon.name shouldBe "linuxserver-io"
@@ -36,7 +38,7 @@ class ContainerIconsTest {
     @Test
     fun `shows the docker icon when the image matches nothing`() {
         // When
-        val icon = icons.forDockerImage("example.com/acme/zzz-not-an-icon:1")
+        val icon = icons.forDockerImage("example.com/qqq/zzz-qqq:1")
 
         // Then
         icon shouldBe ContainerIcon(
@@ -61,7 +63,7 @@ class ContainerIconsTest {
     @Test
     fun `matches an lxc container on its name before its os type`() {
         // When
-        val icon = icons.forLxc("plex", "debian")
+        val icon = icons.forLxc("plex") { "debian" }
 
         // Then
         icon.name shouldBe "plex"
@@ -70,16 +72,16 @@ class ContainerIconsTest {
     @Test
     fun `matches an lxc container on its os type when its name has no icon`() {
         // When
-        val icon = icons.forLxc("zzz-box", "nginx")
+        val icon = icons.forLxc("zzz-qqq") { "debian" }
 
         // Then
-        icon.name shouldBe "nginx"
+        icon.name shouldBe "debian-linux"
     }
 
     @Test
     fun `shows the proxmox icon for an lxc container that matches nothing`() {
         // When
-        val icon = icons.forLxc("zzz-box", null)
+        val icon = icons.forLxc("zzz-qqq") { null }
 
         // Then
         icon.name shouldBe "proxmox"
@@ -89,7 +91,7 @@ class ContainerIconsTest {
     @Test
     fun `leaves out a format the icon does not come in`() {
         // When
-        val icon = icons.iconFor(listOf("3xui"), "docker")
+        val icon = icons.iconFor(sequenceOf("3xui"), "docker")
 
         // Then
         icon shouldBe ContainerIcon(
@@ -99,5 +101,49 @@ class ContainerIconsTest {
             png = "$cdn/png/3xui.png",
             webp = "$cdn/webp/3xui.webp"
         )
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "ghcr.io/binhex/arch-qbittorrent, qbittorrent",
+        "copyparty/ac:latest, copyparty",
+        "saspus/duplicacy-web, duplicacy",
+        "eclipse-mosquitto:2, mosquitto",
+        "plexinc/pms-docker, plex",
+        "lscr.io/linuxserver/ddclient, ddclient"
+    )
+    fun `matches an image whose repository name only contains the project name`(image: String, expected: String) {
+        // When
+        val icon = icons.forDockerImage(image)
+
+        // Then
+        icon.name shouldBe expected
+    }
+
+    @Test
+    fun `shows the docker icon rather than matching a generic word in the image name`() {
+        // When
+        val icon = icons.forDockerImage("zzz/zzz-docker")
+
+        // Then
+        icon.isFallback shouldBe true
+    }
+
+    @Test
+    fun `matches an lxc container on a word of its name`() {
+        // When
+        val icon = icons.forLxc("plex-server") { null }
+
+        // Then
+        icon.name shouldBe "plex"
+    }
+
+    @Test
+    fun `does not read the os type when the lxc container's name matches`() {
+        // When
+        val icon = icons.forLxc("plex") { error("os type read") }
+
+        // Then
+        icon.name shouldBe "plex"
     }
 }
