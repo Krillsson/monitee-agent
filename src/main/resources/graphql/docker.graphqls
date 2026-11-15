@@ -431,6 +431,9 @@ type DockerContainer implements Container {
     # The first of names without its leading slash, or the short id when there is none
     name: String!
     runState: RunState!
+    # Matched on the image reference without registry, tag and digest (linuxserver/plex is plex),
+    # then on the whole repository name (linuxserver-plex)
+    icon: ContainerIcon!
     # The stats the agent last read for this container, usually for the metric history, so asking
     # for it never waits on docker stats. Null while the container is not running and until its
     # stats have been read once

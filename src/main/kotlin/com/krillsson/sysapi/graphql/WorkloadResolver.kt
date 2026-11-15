@@ -19,6 +19,8 @@ import com.krillsson.sysapi.workload.WorkloadKind
 import com.krillsson.sysapi.workload.WorkloadList
 import com.krillsson.sysapi.workload.WorkloadPlatform
 import com.krillsson.sysapi.workload.WorkloadUsage
+import com.krillsson.sysapi.workload.icon.ContainerIcon
+import com.krillsson.sysapi.workload.icon.ContainerIcons
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -29,7 +31,8 @@ class WorkloadResolver(
     private val catalog: WorkloadCatalog,
     private val containerService: ContainerService,
     private val proxmoxService: ProxmoxService,
-    private val powerCommandJobs: PowerCommandJobs
+    private val powerCommandJobs: PowerCommandJobs,
+    private val containerIcons: ContainerIcons
 ) {
 
     @QueryMapping
@@ -72,6 +75,9 @@ class WorkloadResolver(
 
     @SchemaMapping(typeName = "DockerContainer", field = "runState")
     fun dockerRunState(container: Container): RunState = RunStates.docker(container.state)
+
+    @SchemaMapping(typeName = "DockerContainer", field = "icon")
+    fun dockerIcon(container: Container): ContainerIcon = containerIcons.forDockerImage(container.image)
 
     @SchemaMapping(typeName = "DockerContainer", field = "usage")
     fun dockerUsage(container: Container): WorkloadUsage? =
@@ -146,6 +152,10 @@ class WorkloadResolver(
             powerCommandJobs.isRunning(platform, id) -> emptyList()
             else -> supported()
         }
+
+    @SchemaMapping(typeName = "ProxmoxContainer", field = "icon")
+    fun proxmoxContainerIcon(guest: ProxmoxGuest): ContainerIcon =
+        containerIcons.forLxc(guest.name, proxmoxService.guestDetail(guest)?.osType)
 
     private fun proxmoxUsage(guest: ProxmoxGuest): WorkloadUsage? {
         val metrics = guest.metrics
