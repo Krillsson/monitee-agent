@@ -22,12 +22,12 @@ import com.krillsson.sysapi.workload.PowerCommand
 import com.krillsson.sysapi.workload.PowerCommandJobs
 import com.krillsson.sysapi.workload.WorkloadPlatform
 import com.krillsson.sysapi.workload.WorkloadUsage
+import com.krillsson.sysapi.workload.icon.ContainerIcons
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
-import com.krillsson.sysapi.workload.icon.ContainerIcons
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
@@ -195,12 +195,12 @@ class WorkloadResolverTest {
     @Test
     fun `picks an lxc container's icon from its name and the os type of its config`() {
         // Given
-        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-box")
+        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-qqq")
         every { proxmoxService.guestDetail(guest) } returns ProxmoxGuestDetail(
             qmpStatus = null,
             agentEnabled = null,
-            osType = "nginx",
-            hostname = "zzz-box",
+            osType = "debian",
+            hostname = "zzz-qqq",
             unprivileged = true,
             swapUsedBytes = null,
             swapTotalBytes = null
@@ -210,13 +210,13 @@ class WorkloadResolverTest {
         val icon = resolver.proxmoxContainerIcon(guest)
 
         // Then
-        icon.name shouldBe "nginx"
+        icon.name shouldBe "debian-linux"
     }
 
     @Test
     fun `shows the fallback icon for an lxc container whose config cannot be read`() {
         // Given
-        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-box")
+        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-qqq")
         every { proxmoxService.guestDetail(guest) } returns null
 
         // When

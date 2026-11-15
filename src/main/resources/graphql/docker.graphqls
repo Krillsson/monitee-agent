@@ -432,7 +432,8 @@ type DockerContainer implements Container {
     name: String!
     runState: RunState!
     # Matched on the image reference without registry, tag and digest (linuxserver/plex is plex),
-    # then on the whole repository name (linuxserver-plex)
+    # then on the whole repository name (linuxserver-plex), then on the words of the image name
+    # (eclipse-mosquitto is mosquitto), then on the namespace (copyparty/ac is copyparty)
     icon: ContainerIcon!
     # The stats the agent last read for this container, usually for the metric history, so asking
     # for it never waits on docker stats. Null while the container is not running and until its
