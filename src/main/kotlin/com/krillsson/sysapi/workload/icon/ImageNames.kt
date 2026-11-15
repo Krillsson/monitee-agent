@@ -2,12 +2,39 @@ package com.krillsson.sysapi.workload.icon
 
 object ImageNames {
 
+    private val ALIASES = mapOf("pms" to "plex")
+    private val GENERIC_WORDS = setOf("docker", "server", "web", "app", "arch", "linux", "alpine", "official")
+    private const val MIN_WORD_LENGTH = 3
+
     fun dockerCandidates(image: String): List<String> {
         val path = repositoryPath(image)
         return when {
             path.isEmpty() -> emptyList()
-            else -> listOf(path.last(), path.joinToString("-")).distinct()
+            else -> withAliases(
+                listOf(path.last(), path.joinToString("-")) +
+                    wordRuns(path.last()) +
+                    path.dropLast(1).reversed().filter { it !in GENERIC_WORDS }
+            )
         }
+    }
+
+    fun nameCandidates(name: String): List<String> {
+        val lowercase = name.trim().lowercase()
+        return withAliases(listOf(lowercase) + wordRuns(lowercase)).filter { it.isNotEmpty() }
+    }
+
+    fun osTypeCandidates(osType: String?): List<String> = when (osType) {
+        null -> emptyList()
+        else -> listOf(osType.lowercase(), "${osType.lowercase()}-linux")
+    }
+
+    private fun withAliases(candidates: List<String>) = candidates.map { ALIASES[it] ?: it }.distinct()
+
+    private fun wordRuns(name: String): List<String> {
+        val words = name.split('-', '_', '.').filter { it.isNotEmpty() }
+        return (words.size - 1 downTo 1).flatMap { length ->
+            (words.size - length downTo 0).map { start -> words.subList(start, start + length).joinToString("-") }
+        }.filter { it.length >= MIN_WORD_LENGTH && it !in GENERIC_WORDS }
     }
 
     private fun repositoryPath(image: String): List<String> {
