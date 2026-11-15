@@ -117,6 +117,21 @@ interface Container {
     # The latest command started on this container from the agent, running or finished in the
     # last 30 minutes
     commandJob: PowerCommandJob
+    # A logo from Dashboard Icons, picked from the Docker image or the LXC container's name and OS
+    # type. Proxmox VE reads the OS type per guest, so leave this out of a long list
+    icon: ContainerIcon!
+}
+
+# Links to https://github.com/homarr-labs/dashboard-icons on the jsDelivr CDN. A format is null
+# when the icon does not come in it, which is the case for a few hundred icons without an SVG
+type ContainerIcon {
+    # The Dashboard Icons name, e.g. plex
+    name: String!
+    # True when nothing matched and this is the generic icon: docker, or proxmox for LXC
+    isFallback: Boolean!
+    svg: String
+    png: String
+    webp: String
 }
 
 # The numbers every platform that reports usage can fill. The detail lives on the platform types

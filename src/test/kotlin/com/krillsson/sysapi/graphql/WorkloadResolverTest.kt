@@ -10,6 +10,8 @@ import com.krillsson.sysapi.core.domain.docker.ThrottlingData
 import com.krillsson.sysapi.docker.ContainerService
 import com.krillsson.sysapi.docker.container
 import com.krillsson.sysapi.proxmox.ProxmoxCluster
+import com.krillsson.sysapi.proxmox.ProxmoxGuestDetail
+import com.krillsson.sysapi.proxmox.ProxmoxGuestKind
 import com.krillsson.sysapi.proxmox.ProxmoxGuestStatus
 import com.krillsson.sysapi.proxmox.ProxmoxService
 import com.krillsson.sysapi.proxmox.ProxmoxSnapshot
@@ -25,6 +27,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.mockk.every
+import com.krillsson.sysapi.workload.icon.ContainerIcons
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
@@ -35,7 +38,7 @@ class WorkloadResolverTest {
     private val containerService = mockk<ContainerService>()
     private val proxmoxService = mockk<ProxmoxService>()
     private val powerCommandJobs = mockk<PowerCommandJobs> { every { isRunning(any(), any()) } returns false }
-    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService, powerCommandJobs)
+    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService, powerCommandJobs, ContainerIcons())
     private val sampledAt = Instant.parse("2026-11-14T10:00:00Z")
 
     private fun dockerMetrics(limitBytes: Long) = ContainerMetrics(
@@ -178,6 +181,49 @@ class WorkloadResolverTest {
         // Then
         busy.shouldBeEmpty()
         idle shouldContainExactly listOf(PowerCommand.SHUTDOWN, PowerCommand.FORCE_STOP, PowerCommand.REBOOT, PowerCommand.PAUSE)
+    }
+
+    @Test
+    fun `picks a docker container's icon from its image`() {
+        // When
+        val icon = resolver.dockerIcon(container("abc", "media", image = "lscr.io/linuxserver/plex:latest"))
+
+        // Then
+        icon.name shouldBe "plex"
+    }
+
+    @Test
+    fun `picks an lxc container's icon from its name and the os type of its config`() {
+        // Given
+        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-box")
+        every { proxmoxService.guestDetail(guest) } returns ProxmoxGuestDetail(
+            qmpStatus = null,
+            agentEnabled = null,
+            osType = "nginx",
+            hostname = "zzz-box",
+            unprivileged = true,
+            swapUsedBytes = null,
+            swapTotalBytes = null
+        )
+
+        // When
+        val icon = resolver.proxmoxContainerIcon(guest)
+
+        // Then
+        icon.name shouldBe "nginx"
+    }
+
+    @Test
+    fun `shows the fallback icon for an lxc container whose config cannot be read`() {
+        // Given
+        val guest = guest(101, kind = ProxmoxGuestKind.LXC, name = "zzz-box")
+        every { proxmoxService.guestDetail(guest) } returns null
+
+        // When
+        val icon = resolver.proxmoxContainerIcon(guest)
+
+        // Then
+        icon.isFallback shouldBe true
     }
 
     private fun snapshot(quorate: Boolean = true) = ProxmoxSnapshot(
