@@ -242,6 +242,9 @@
         "pattern": "\\Qbanner.txt\\E"
       },
       {
+        "pattern": "\\Qdashboard-icons.txt\\E"
+      },
+      {
         "pattern": "\\Qcom/fasterxml/jackson/core/ObjectCodec.class\\E"
       },
       {
