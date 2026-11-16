@@ -22,7 +22,7 @@ import com.krillsson.sysapi.workload.PowerCommand
 import com.krillsson.sysapi.workload.PowerCommandJobs
 import com.krillsson.sysapi.workload.WorkloadPlatform
 import com.krillsson.sysapi.workload.WorkloadUsage
-import com.krillsson.sysapi.workload.icon.ContainerIcons
+import com.krillsson.sysapi.workload.icon.WorkloadIcons
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -38,7 +38,7 @@ class WorkloadResolverTest {
     private val containerService = mockk<ContainerService>()
     private val proxmoxService = mockk<ProxmoxService>()
     private val powerCommandJobs = mockk<PowerCommandJobs> { every { isRunning(any(), any()) } returns false }
-    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService, powerCommandJobs, ContainerIcons())
+    private val resolver = WorkloadResolver(mockk(), containerService, proxmoxService, powerCommandJobs, WorkloadIcons())
     private val sampledAt = Instant.parse("2026-11-14T10:00:00Z")
 
     private fun dockerMetrics(limitBytes: Long) = ContainerMetrics(
@@ -224,6 +224,49 @@ class WorkloadResolverTest {
 
         // Then
         icon.isFallback shouldBe true
+    }
+
+    @Test
+    fun `picks a proxmox vm's icon from the ostype of its config`() {
+        // Given
+        val guest = guest(100, kind = ProxmoxGuestKind.QEMU, name = "zzz-qqq")
+        every { proxmoxService.guestDetail(guest) } returns ProxmoxGuestDetail(
+            qmpStatus = "running",
+            agentEnabled = true,
+            osType = "win11",
+            hostname = null,
+            unprivileged = null,
+            swapUsedBytes = null,
+            swapTotalBytes = null
+        )
+
+        // When
+        val icon = resolver.proxmoxVmIcon(guest)
+
+        // Then
+        icon.name shouldBe "windows-11"
+    }
+
+    @Test
+    fun `reads no config for a proxmox vm whose name matches`() {
+        // Given
+        val guest = guest(100, kind = ProxmoxGuestKind.QEMU, name = "truenas")
+
+        // When
+        val icon = resolver.proxmoxVmIcon(guest)
+
+        // Then
+        icon.name shouldBe "truenas"
+        verify(exactly = 0) { proxmoxService.guestDetail(any()) }
+    }
+
+    @Test
+    fun `picks an unraid vm's icon from its name`() {
+        // When
+        val icon = resolver.unraidVmIcon(unraidVm(name = "Windows 11"))
+
+        // Then
+        icon.name shouldBe "windows-11"
     }
 
     private fun snapshot(quorate: Boolean = true) = ProxmoxSnapshot(

@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class ContainerIconsTest {
+class WorkloadIconsTest {
 
-    private val icons = ContainerIcons()
+    private val icons = WorkloadIcons()
     private val cdn = "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons"
 
     @Test
@@ -16,7 +16,7 @@ class ContainerIconsTest {
         val icon = icons.forDockerImage("lscr.io/linuxserver/plex:latest")
 
         // Then
-        icon shouldBe ContainerIcon(
+        icon shouldBe WorkloadIcon(
             name = "plex",
             isFallback = false,
             svg = "$cdn/svg/plex.svg",
@@ -41,7 +41,7 @@ class ContainerIconsTest {
         val icon = icons.forDockerImage("example.com/qqq/zzz-qqq:1")
 
         // Then
-        icon shouldBe ContainerIcon(
+        icon shouldBe WorkloadIcon(
             name = "docker",
             isFallback = true,
             svg = "$cdn/svg/docker.svg",
@@ -94,7 +94,7 @@ class ContainerIconsTest {
         val icon = icons.iconFor(sequenceOf("3xui"), "docker")
 
         // Then
-        icon shouldBe ContainerIcon(
+        icon shouldBe WorkloadIcon(
             name = "3xui",
             isFallback = false,
             svg = null,
@@ -145,5 +145,51 @@ class ContainerIconsTest {
 
         // Then
         icon.name shouldBe "plex"
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "zzz-qqq, win11, windows-11",
+        "zzz-qqq, wxp, windows-xp",
+        "zzz-qqq, w2k8, microsoft-windows",
+        "zzz-qqq, l26, linux",
+        "opnsense, l26, opnsense",
+        "zzz-qqq, other, proxmox",
+        "zzz-qqq, , proxmox"
+    )
+    fun `matches a proxmox vm on its name before its ostype`(name: String, osType: String?, expected: String) {
+        // When
+        val icon = icons.forProxmoxVm(name) { osType }
+
+        // Then
+        icon.name shouldBe expected
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        "Windows 11, windows-11",
+        "Windows 10 Gaming, windows-10",
+        "Windows Server 2022, microsoft-windows",
+        "Ubuntu, ubuntu-linux",
+        "HAOS, home-assistant",
+        "Home Assistant, home-assistant",
+        "TrueNAS Scale, truenas-scale",
+        "zzz qqq, unraid"
+    )
+    fun `matches an unraid vm on its name`(name: String, expected: String) {
+        // When
+        val icon = icons.forUnraidVm(name)
+
+        // Then
+        icon.name shouldBe expected
+    }
+
+    @Test
+    fun `marks the unraid icon as the fallback for an unraid vm that matches nothing`() {
+        // When
+        val icon = icons.forUnraidVm("zzz qqq")
+
+        // Then
+        icon.isFallback shouldBe true
     }
 }

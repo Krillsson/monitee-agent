@@ -1,8 +1,36 @@
 package com.krillsson.sysapi.workload.icon
 
-object ImageNames {
+object IconCandidates {
 
-    private val ALIASES = mapOf("pms" to "plex")
+    private val ALIASES = mapOf(
+        "pms" to "plex",
+        "haos" to "home-assistant",
+        "win7" to "windows-7",
+        "win10" to "windows-10",
+        "win11" to "windows-11",
+        "windows" to "microsoft-windows",
+        "debian" to "debian-linux",
+        "ubuntu" to "ubuntu-linux",
+        "alpine" to "alpine-linux",
+        "gentoo" to "gentoo-linux",
+        "rocky" to "rocky-linux",
+        "kali" to "kali-linux",
+        "manjaro" to "manjaro-linux",
+        "mint" to "linux-mint"
+    )
+    private val QEMU_OS_TYPES = mapOf(
+        "wxp" to "windows-xp",
+        "wvista" to "windows-vista",
+        "win7" to "windows-7",
+        "win10" to "windows-10",
+        "win11" to "windows-11",
+        "w2k" to "microsoft-windows",
+        "w2k3" to "microsoft-windows",
+        "w2k8" to "microsoft-windows",
+        "win8" to "microsoft-windows",
+        "l24" to "linux",
+        "l26" to "linux"
+    )
     private val GENERIC_WORDS = setOf("docker", "server", "web", "app", "arch", "linux", "alpine", "official")
     private const val MIN_WORD_LENGTH = 3
 
@@ -23,15 +51,17 @@ object ImageNames {
         return withAliases(listOf(lowercase) + wordRuns(lowercase)).filter { it.isNotEmpty() }
     }
 
-    fun osTypeCandidates(osType: String?): List<String> = when (osType) {
+    fun lxcOsTypeCandidates(osType: String?): List<String> = when (osType) {
         null -> emptyList()
         else -> listOf(osType.lowercase(), "${osType.lowercase()}-linux")
     }
 
+    fun qemuOsTypeCandidates(osType: String?): List<String> = listOfNotNull(QEMU_OS_TYPES[osType?.lowercase()])
+
     private fun withAliases(candidates: List<String>) = candidates.map { ALIASES[it] ?: it }.distinct()
 
     private fun wordRuns(name: String): List<String> {
-        val words = name.split('-', '_', '.').filter { it.isNotEmpty() }
+        val words = name.split('-', '_', '.', ' ').filter { it.isNotEmpty() }
         return (words.size - 1 downTo 1).flatMap { length ->
             (words.size - length downTo 0).map { start -> words.subList(start, start + length).joinToString("-") }
         }.filter { it.length >= MIN_WORD_LENGTH && it !in GENERIC_WORDS }

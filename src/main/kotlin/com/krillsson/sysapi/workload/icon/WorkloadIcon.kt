@@ -1,6 +1,6 @@
 package com.krillsson.sysapi.workload.icon
 
-data class ContainerIcon(
+data class WorkloadIcon(
     val name: String,
     val isFallback: Boolean,
     val svg: String?,

@@ -91,6 +91,9 @@ type ProxmoxVm implements VirtualMachine {
     # has the detail
     runState: RunState!
     usage: WorkloadUsage
+    # Matched on the VM's name, then the words of it, then its ostype (win11 is windows-11, l26
+    # is linux)
+    icon: WorkloadIcon!
     vmid: Int!
     node: String!
     status: ProxmoxGuestStatus!
@@ -138,7 +141,7 @@ type ProxmoxContainer implements Container {
     runState: RunState!
     usage: WorkloadUsage
     # Matched on the container's name, then the words of it (plex-server is plex), then its osType
-    icon: ContainerIcon!
+    icon: WorkloadIcon!
     vmid: Int!
     node: String!
     status: ProxmoxGuestStatus!

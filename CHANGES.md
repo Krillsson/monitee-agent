@@ -1,6 +1,6 @@
 ### Unreleased
 
-- Feature: `icon` on `Container` links to the Dashboard Icons logo, as SVG, PNG and WebP, for a Docker container's image or a Proxmox VE LXC container.
+- Feature: `icon` on `Container` and `VirtualMachine` links to the Dashboard Icons logo, as SVG, PNG and WebP, matched on a Docker container's image or on the name and OS type of a Proxmox VE or Unraid guest.
 - Feature: `virtualMachines` and `containers` list the VMs and containers of Docker and Proxmox VE behind shared `VirtualMachine` and `Container` interfaces.
 - Feature: `proxmox` lists the nodes and storage of a Proxmox VE host or cluster, and its VMs and containers are in `virtualMachines` and `containers`, see [docs/proxmox.md](docs/proxmox.md).
 - Feature: `performPowerCommand` starts, shuts down, reboots, pauses and resumes the VMs and containers in `virtualMachines` and `containers`, on Docker, Proxmox VE and Unraid alike.
