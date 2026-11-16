@@ -32,5 +32,7 @@ type UnraidVm implements VirtualMachine {
     # RESUME and FORCE_STOP. SHUTOFF: START. CRASHED, PMSUSPENDED and SHUTDOWN: FORCE_STOP
     supportedCommands: [PowerCommand!]!
     commandJob: PowerCommandJob
+    # Matched on the VM's name, then the words of it (Windows 11 Gaming is windows-11)
+    icon: WorkloadIcon!
     state: UnraidVmState!
 }

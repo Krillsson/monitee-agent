@@ -19,8 +19,8 @@ import com.krillsson.sysapi.workload.WorkloadKind
 import com.krillsson.sysapi.workload.WorkloadList
 import com.krillsson.sysapi.workload.WorkloadPlatform
 import com.krillsson.sysapi.workload.WorkloadUsage
-import com.krillsson.sysapi.workload.icon.ContainerIcon
-import com.krillsson.sysapi.workload.icon.ContainerIcons
+import com.krillsson.sysapi.workload.icon.WorkloadIcon
+import com.krillsson.sysapi.workload.icon.WorkloadIcons
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
@@ -32,7 +32,7 @@ class WorkloadResolver(
     private val containerService: ContainerService,
     private val proxmoxService: ProxmoxService,
     private val powerCommandJobs: PowerCommandJobs,
-    private val containerIcons: ContainerIcons
+    private val workloadIcons: WorkloadIcons
 ) {
 
     @QueryMapping
@@ -77,7 +77,7 @@ class WorkloadResolver(
     fun dockerRunState(container: Container): RunState = RunStates.docker(container.state)
 
     @SchemaMapping(typeName = "DockerContainer", field = "icon")
-    fun dockerIcon(container: Container): ContainerIcon = containerIcons.forDockerImage(container.image)
+    fun dockerIcon(container: Container): WorkloadIcon = workloadIcons.forDockerImage(container.image)
 
     @SchemaMapping(typeName = "DockerContainer", field = "usage")
     fun dockerUsage(container: Container): WorkloadUsage? =
@@ -112,6 +112,10 @@ class WorkloadResolver(
     @SchemaMapping(typeName = "ProxmoxVm", field = "commandJob")
     fun proxmoxVmCommandJob(guest: ProxmoxGuest): PowerCommandJob? = powerCommandJobs.latestFor(WorkloadPlatform.PROXMOX, guest.id)
 
+    @SchemaMapping(typeName = "ProxmoxVm", field = "icon")
+    fun proxmoxVmIcon(guest: ProxmoxGuest): WorkloadIcon =
+        workloadIcons.forProxmoxVm(guest.name) { proxmoxService.guestDetail(guest)?.osType }
+
     @SchemaMapping(typeName = "ProxmoxContainer", field = "platform")
     fun proxmoxContainerPlatform(guest: ProxmoxGuest): WorkloadPlatform = WorkloadPlatform.PROXMOX
 
@@ -144,6 +148,9 @@ class WorkloadResolver(
     @SchemaMapping(typeName = "UnraidVm", field = "commandJob")
     fun unraidVmCommandJob(vm: UnraidVm): PowerCommandJob? = powerCommandJobs.latestFor(WorkloadPlatform.UNRAID, vm.id)
 
+    @SchemaMapping(typeName = "UnraidVm", field = "icon")
+    fun unraidVmIcon(vm: UnraidVm): WorkloadIcon = workloadIcons.forUnraidVm(vm.name)
+
     private fun proxmoxListedCommands(guest: ProxmoxGuest): List<PowerCommand> =
         listed(WorkloadPlatform.PROXMOX, guest.id) { proxmoxService.listedCommands(guest) }
 
@@ -154,8 +161,8 @@ class WorkloadResolver(
         }
 
     @SchemaMapping(typeName = "ProxmoxContainer", field = "icon")
-    fun proxmoxContainerIcon(guest: ProxmoxGuest): ContainerIcon =
-        containerIcons.forLxc(guest.name) { proxmoxService.guestDetail(guest)?.osType }
+    fun proxmoxContainerIcon(guest: ProxmoxGuest): WorkloadIcon =
+        workloadIcons.forLxc(guest.name) { proxmoxService.guestDetail(guest)?.osType }
 
     private fun proxmoxUsage(guest: ProxmoxGuest): WorkloadUsage? {
         val metrics = guest.metrics

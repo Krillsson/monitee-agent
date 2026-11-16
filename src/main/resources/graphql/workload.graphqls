@@ -100,6 +100,9 @@ interface VirtualMachine {
     # The latest command started on this VM from the agent, running or finished in the last 30
     # minutes
     commandJob: PowerCommandJob
+    # A logo from Dashboard Icons, picked from the VM's name, and its ostype for Proxmox VE.
+    # Proxmox VE reads the ostype of each VM whose name matches nothing
+    icon: WorkloadIcon!
 }
 
 interface Container {
@@ -119,15 +122,15 @@ interface Container {
     commandJob: PowerCommandJob
     # A logo from Dashboard Icons, picked from the Docker image or the LXC container's name and OS
     # type. Proxmox VE reads the OS type of each LXC container whose name matches nothing
-    icon: ContainerIcon!
+    icon: WorkloadIcon!
 }
 
 # Links to https://github.com/homarr-labs/dashboard-icons on the jsDelivr CDN. A format is null
 # when the icon does not come in it, which is the case for a few hundred icons without an SVG
-type ContainerIcon {
+type WorkloadIcon {
     # The Dashboard Icons name, e.g. plex
     name: String!
-    # True when nothing matched and this is the generic icon: docker, or proxmox for LXC
+    # True when nothing matched and this is the platform's icon: docker, proxmox or unraid
     isFallback: Boolean!
     svg: String
     png: String
