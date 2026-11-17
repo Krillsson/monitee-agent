@@ -1,9 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
 import com.google.common.collect.Ordering
-import com.krillsson.sysapi.config.ProcessesConfiguration
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.processes.Process
 import com.krillsson.sysapi.core.domain.processes.ProcessSort
@@ -18,6 +15,7 @@ import org.springframework.stereotype.Component
 import oshi.hardware.HardwareAbstractionLayer
 import oshi.software.os.OSProcess
 import oshi.software.os.OperatingSystem
+import java.time.Clock
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -28,6 +26,7 @@ class DefaultProcessesMetrics(
     private val config: YAMLConfigFile,
     private val operatingSystem: OperatingSystem,
     private val hal: HardwareAbstractionLayer,
+    clock: Clock,
 ) : ProcessesMetrics {
 
     companion object {
@@ -37,14 +36,13 @@ class DefaultProcessesMetrics(
     private val priorSnapshotMap: MutableMap<Int, OSProcess> = ConcurrentHashMap()
     private val currentLoad: MutableMap<Int, Double> = ConcurrentHashMap()
 
-    // profiling showed that user and group was expensive in Linux
-    private val cachedUserAndGroup: Cache<Int, Pair<String, String>> = CacheBuilder.newBuilder()
-        .expireAfterWrite(5, TimeUnit.MINUTES)
-        .build()
+    private val ownerNames = ProcessOwnerNames(Duration.ofMinutes(5), clock)
 
     init {
         doIfEnabled {
-            updateMap(operatingSystem.processes)
+            val processes = operatingSystem.processes
+            ownerNames.refresh(processes)
+            updateMap(processes)
         }
     }
 
@@ -53,6 +51,7 @@ class DefaultProcessesMetrics(
         doIfEnabled {
             val processes = operatingSystem.processes
             updateCurrentLoad(processes)
+            ownerNames.refresh(processes)
             updateMap(processes)
         }
     }
@@ -127,19 +126,14 @@ class DefaultProcessesMetrics(
         }
     }
 
-    private fun OSProcess.getOrCreateUserAndGroup(pid: Int): Pair<String, String> {
-        return cachedUserAndGroup.get(pid) { user to group }
-    }
-
     private fun OSProcess.asProcess(cpuPercent: Double, totalBytes: Long): Process {
-        val (user, group) = getOrCreateUserAndGroup(processID)
         return Process(
             name,
             path,
             commandLine,
-            user,
+            ownerNames.userOf(this),
             userID,
-            group,
+            ownerNames.groupOf(this),
             groupID,
             state,
             processID,
