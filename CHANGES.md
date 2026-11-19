@@ -1,11 +1,12 @@
 ### Unreleased
 
-- Feature: `icon` on `Container` and `VirtualMachine` links to the Dashboard Icons logo, as SVG, PNG and WebP, matched on a Docker container's image or on the name and OS type of a Proxmox VE or Unraid guest.
-- Feature: `virtualMachines` and `containers` list the VMs and containers of Docker and Proxmox VE behind shared `VirtualMachine` and `Container` interfaces.
-- Feature: `proxmox` lists the nodes and storage of a Proxmox VE host or cluster, and its VMs and containers are in `virtualMachines` and `containers`, see [docs/proxmox.md](docs/proxmox.md).
-- Feature: `performPowerCommand` starts, shuts down, reboots, pauses and resumes the VMs and containers in `virtualMachines` and `containers`, on Docker, Proxmox VE and Unraid alike.
-- Feature: `PROXMOX_GUEST_RUNNING`, `PROXMOX_GUEST_CPU_LOAD` and `PROXMOX_GUEST_MEMORY_USED` monitor types for the Proxmox VE VMs and containers.
-- Feature: `virtualMachines` lists the VMs of an Unraid server through the Unraid API, with an `UNRAID_VM_RUNNING` monitor type, see [docs/unraid.md](docs/unraid.md#vms).
+### 0.51.0
+
+- Feature: `icon` on `Container` and `VirtualMachine` links to the [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) logos
+- Feature: support for Proxmox LXC containers and VMs. Docs [docs/proxmox.md](docs/proxmox.md)
+- Feature: support for unRAID  VMs. Docs [docs/unraid.md](docs/unraid.md#vms)
+- Feature: unified API for `virtualMachines` and `containers`. Docker and LXC containers and unRAID and Proxmox VMs.
+- Feature: unified API for start/stop/reboot/etc a container or VM `performPowerCommand`
 - Fix: container memory usage leaves out inactive file pages, so it matches `docker stats` and Unraid's Docker page.
 - Fix: the `processes` query no longer stalls for 15–20 seconds every five minutes.
 
