@@ -1,4 +1,4 @@
-package com.krillsson.sysapi
+package com.krillsson.sysapi.notifications
 
 import com.krillsson.sysapi.notifications.ntfy.NtfyApi
 import io.kotest.matchers.shouldBe
@@ -10,7 +10,7 @@ import org.springframework.aot.hint.annotation.RegisterReflectionForBinding
 import org.springframework.aot.hint.predicate.RuntimeHintsPredicates
 import org.springframework.core.annotation.AnnotatedElementUtils
 
-class SysAPIApplicationTest {
+class NotificationsNativeHintsTest {
 
     @ParameterizedTest
     @CsvSource(
@@ -55,7 +55,7 @@ class SysAPIApplicationTest {
     private fun boundHints(): RuntimeHints {
         val hints = RuntimeHints()
         val classes = AnnotatedElementUtils.findMergedAnnotation(
-            SysAPIApplication::class.java,
+            NotificationsNativeHints::class.java,
             RegisterReflectionForBinding::class.java
         )!!.classes.map { it.java }
         BindingReflectionHintsRegistrar().registerReflectionHints(hints.reflection(), *classes.toTypedArray())
