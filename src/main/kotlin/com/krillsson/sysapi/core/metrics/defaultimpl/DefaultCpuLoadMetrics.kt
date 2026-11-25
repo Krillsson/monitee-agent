@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.cpu.CoreLoad
 import com.krillsson.sysapi.core.domain.cpu.CpuLoad
 import com.krillsson.sysapi.core.domain.cpu.LoadAverages
@@ -39,7 +40,7 @@ class DefaultCpuLoadMetrics(
     var systemUsage = updateSystemUsagePercent()
     var loadAverages = updateLoadAverage()
 
-    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun run() {
         coreLoads = updateCoreLoads()
         systemUsage = updateSystemUsagePercent()

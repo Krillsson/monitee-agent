@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.unraid
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.unraid.UnraidClient.Result
 import com.krillsson.sysapi.util.logger
@@ -14,7 +16,7 @@ import java.time.Duration
 class UnraidVmService(
     configuration: YAMLConfigFile,
     private val client: UnraidClient,
-    private val taskScheduler: TaskScheduler,
+    @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler,
     private val clock: Clock
 ) {
     companion object {

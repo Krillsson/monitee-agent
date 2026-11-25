@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.google.common.collect.Ordering
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.processes.Process
@@ -46,7 +47,7 @@ class DefaultProcessesMetrics(
         }
     }
 
-    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun run() {
         doIfEnabled {
             val processes = operatingSystem.processes

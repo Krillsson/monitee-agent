@@ -12,6 +12,8 @@ import jakarta.annotation.PostConstruct
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import java.time.Instant
 import java.util.UUID
 
@@ -22,7 +24,8 @@ class MetricSampler(
     private val upsService: UpsService,
     private val proxmoxService: ProxmoxService,
     private val repository: MetricSeriesBucketRepository,
-    private val taskScheduler: TaskScheduler,
+    @Qualifier(Threads.SAMPLING_SCHEDULER) private val samplingScheduler: TaskScheduler,
+    @Qualifier(Threads.IO_SCHEDULER) private val ioScheduler: TaskScheduler,
     yamlConfigFile: YAMLConfigFile
 ) {
     private val logger by logger()
@@ -30,8 +33,8 @@ class MetricSampler(
 
     @PostConstruct
     fun start() {
-        taskScheduler.scheduleAtFixedRate(this::sampleFast, sampling.fast.asDuration())
-        taskScheduler.scheduleAtFixedRate(this::sampleSlow, sampling.slow.asDuration())
+        samplingScheduler.scheduleAtFixedRate(this::sampleFast, sampling.fast.asDuration())
+        ioScheduler.scheduleAtFixedRate(this::sampleSlow, sampling.slow.asDuration())
     }
 
     fun sampleFast() {

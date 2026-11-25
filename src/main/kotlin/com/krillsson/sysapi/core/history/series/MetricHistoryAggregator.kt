@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.history.series
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -24,7 +25,7 @@ class MetricHistoryAggregator(
         aggregate()
     }
 
-    @Scheduled(cron = "0 10 * * * *")
+    @Scheduled(cron = "0 10 * * * *", scheduler = Threads.IO_SCHEDULER)
     fun rollUpClosedPeriods() {
         aggregate()
     }

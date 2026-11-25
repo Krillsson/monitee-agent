@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.docker.updates
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.ContainerUpdateNotifyStyle
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.genericevents.ContainerImageUpdateAvailable
@@ -28,7 +29,7 @@ class ContainerUpdateDigestNotifier(
     @Volatile
     private var nextDigest = digestAfter(LocalDateTime.now())
 
-    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         if (!enabled()) {
             return

@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
+
 ### 0.51.0
 
 - Feature: `icon` on `Container` and `VirtualMachine` links to the [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) logos

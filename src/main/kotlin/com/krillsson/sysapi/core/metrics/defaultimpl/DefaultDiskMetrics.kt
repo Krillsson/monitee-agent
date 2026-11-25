@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.disk.*
 import com.krillsson.sysapi.core.metrics.DiskMetrics
 import com.krillsson.sysapi.core.speed.SpeedMeasurementManager
@@ -30,7 +31,7 @@ open class DefaultDiskMetrics(
         speedMeasurementManager.registerStores()
     }
 
-    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun runMeasurement() {
         speedMeasurementManager.run()
         diskMetric.tryEmitNext(diskLoads())

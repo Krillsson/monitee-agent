@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.notifications
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.event.EventSeverity
 import com.krillsson.sysapi.core.domain.event.OngoingEvent
@@ -107,7 +108,7 @@ class NotificationManager(
         return enabledServices.flatMap { it.channels }
     }
 
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun summarizeWhenQuietHoursEnd() {
         val active = notificationPolicyService.isQuietHoursActive()
         val ended = quietHoursWereActive && !active
