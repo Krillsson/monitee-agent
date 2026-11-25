@@ -168,4 +168,61 @@ class ConfigurationBindingTest {
         bound shouldBe jackson(yaml)
         bound.internetServicesCheck.services.map { it.name }.shouldContainExactly("A")
     }
+
+    @Test
+    fun `blank values of optional text keys bind to null like Jackson`() {
+        // Given
+        val yaml = minimal.replace("docker: {}\n", "") + """
+
+            docker:
+              host:
+            mqtt:
+              enabled: true
+              password:
+              username: ""
+            proxmox:
+              caCertificatePath:
+            linux:
+              overrideCpuTempSensor:
+            notifications:
+              serverName:
+              ntfy:
+                topic:
+              webhooks:
+                - url: "http://a"
+                  body:
+        """.trimIndent().let { "\n" + it }
+
+        // When
+        val bound = bind(yaml)
+
+        // Then
+        bound.docker.host shouldBe null
+        bound.mqtt.password shouldBe null
+        bound.proxmox.caCertificatePath shouldBe null
+        bound.linux.overrideCpuTempSensor shouldBe null
+        bound.notifications.serverName shouldBe null
+        bound.notifications.ntfy.topic shouldBe null
+        bound.notifications.webhooks.single().body shouldBe null
+        bound.mqtt.username shouldBe null
+        val jackson = jackson(yaml)
+        bound.docker.host shouldBe jackson.docker.host
+        bound.mqtt.password shouldBe jackson.mqtt.password
+        bound.proxmox.caCertificatePath shouldBe jackson.proxmox.caCertificatePath
+        bound.notifications.webhooks.single().body shouldBe jackson.notifications.webhooks.single().body
+    }
+
+    @Test
+    fun `blank values of required text keys stay blank`() {
+        // Given
+        val yaml = minimal.replace("password: password", "password: \"\"") + "\nproxmox:\n  tokenId: \"\"\n  host: \"\"\n"
+
+        // When
+        val bound = bind(yaml)
+
+        // Then
+        bound.user.password shouldBe ""
+        bound.proxmox.tokenId shouldBe ""
+        bound.proxmox.host shouldBe ""
+    }
 }

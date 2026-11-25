@@ -31,7 +31,7 @@ fun bind(
     }
     sources.addLast(yamlSource(yaml))
     return Binder(ConfigurationPropertySources.from(sources))
-        .bind("", Bindable.of(YAMLConfigFile::class.java), handler)
+        .bind("", Bindable.of(YAMLConfigFile::class.java), BlankAsNull(handler))
         .get()
 }
 

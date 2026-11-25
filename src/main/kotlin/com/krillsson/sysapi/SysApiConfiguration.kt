@@ -2,6 +2,7 @@ package com.krillsson.sysapi
 
 import SlowResolverWarningInstrumentation
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.krillsson.sysapi.config.BlankAsNull
 import com.krillsson.sysapi.config.BoundNames
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.connectivity.ConnectivityCheckService
@@ -83,7 +84,7 @@ class SysApiConfiguration : AsyncConfigurer {
         }
         val boundNames = BoundNames()
         val config = Binder.get(environment)
-            .bind("", Bindable.of(YAMLConfigFile::class.java), boundNames)
+            .bind("", Bindable.of(YAMLConfigFile::class.java), BlankAsNull(boundNames))
             .get()
         val keys = environment.propertySources
             .filter { it.name.contains(USER_CONFIG) }
