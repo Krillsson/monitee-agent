@@ -278,7 +278,9 @@
       },
       {
         "name": "userConfigFile",
-        "parameterTypes": []
+        "parameterTypes": [
+          "org.springframework.core.env.ConfigurableEnvironment"
+        ]
       }
     ]
   },
@@ -1877,15 +1879,6 @@
         "parameterTypes": [
           "org.springframework.cglib.proxy.Callback[]"
         ]
-      }
-    ]
-  },
-  {
-    "name": "com.krillsson.sysapi.config.YamlPropertySourceFactory",
-    "methods": [
-      {
-        "name": "<init>",
-        "parameterTypes": []
       }
     ]
   },

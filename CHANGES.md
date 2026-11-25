@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Feature: keys in `configuration.yml` can be overridden with environment variables, and unknown keys are logged as a warning at startup.
+
 ### 0.51.0
 
 - Feature: `icon` on `Container` and `VirtualMachine` links to the [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) logos
