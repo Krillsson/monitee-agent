@@ -9,18 +9,22 @@ import com.krillsson.sysapi.util.measureTimeMillis
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileReader
-import java.io.FileWriter
+import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.nio.file.Paths
 
 abstract class JsonFile<T>(
     fileName: String,
     private val typeToken: TypeReference<T>,
-    objectMapperBase: ObjectMapper
+    objectMapperBase: ObjectMapper,
+    directory: File = FileSystem.data
 ) : Store<T> {
 
-    private val filePath = File(FileSystem.data, fileName)
+    private val filePath = File(directory, fileName)
+    private val tempPath = File(directory, "$fileName.tmp")
 
     private val objectMapper = objectMapperBase.copy()
         .apply {
@@ -32,12 +36,14 @@ abstract class JsonFile<T>(
         return filePath.exists() && Files.size(Paths.get(filePath.path)) > 0
     }
 
+    @Synchronized
     override fun update(action: (T?) -> T) {
         val previousValue = read()
         val newValue = action(previousValue)
         write(newValue)
     }
 
+    @Synchronized
     override fun read(): T? {
         val file = getFile()
         val timedValue: Pair<Long, T?> = measureTimeMillis {
@@ -63,16 +69,22 @@ abstract class JsonFile<T>(
         return timedValue.second
     }
 
+    @Synchronized
     override fun write(content: T) {
         val duration = measureTimeMillis {
-            val file = getFile()
+            getFile()
             try {
-                FileWriter(file).use { writer ->
-                    LOGGER.debug("Writing {}", filePath)
-                    objectMapper.writerWithDefaultPrettyPrinter().writeValue(writer, content)
+                LOGGER.debug("Writing {}", filePath)
+                val bytes = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(content)
+                FileOutputStream(tempPath).use { out ->
+                    out.write(bytes)
+                    out.flush()
+                    out.fd.sync()
                 }
+                moveIntoPlace()
             } catch (e: IOException) {
                 LOGGER.error("Exception while writing {}", filePath, e)
+                tempPath.delete()
             }
         }
         LOGGER.debug(
@@ -82,6 +94,7 @@ abstract class JsonFile<T>(
         )
     }
 
+    @Synchronized
     override fun clear() {
         LOGGER.debug("Deleting {}", filePath)
         getFile().delete()
@@ -90,6 +103,19 @@ abstract class JsonFile<T>(
     fun deleteOnExit() {
         getFile().deleteOnExit()
         LOGGER.info("Marked $filePath for deletion. Will delete when application quits")
+    }
+
+    private fun moveIntoPlace() {
+        try {
+            Files.move(
+                tempPath.toPath(),
+                filePath.toPath(),
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+            )
+        } catch (e: AtomicMoveNotSupportedException) {
+            Files.move(tempPath.toPath(), filePath.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        }
     }
 
     private fun getFile(): File {

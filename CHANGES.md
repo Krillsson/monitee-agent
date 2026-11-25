@@ -1,5 +1,7 @@
 ### Unreleased
 
+- Fix: monitors, events and notification policies survive a crash or power loss while they are being saved.
+
 ### 0.51.0
 
 - Feature: `icon` on `Container` and `VirtualMachine` links to the [Dashboard Icons](https://github.com/homarr-labs/dashboard-icons) logos
