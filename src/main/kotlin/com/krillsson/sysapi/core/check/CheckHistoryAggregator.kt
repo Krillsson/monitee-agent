@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.check
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -25,7 +26,7 @@ class CheckHistoryAggregator(
         aggregate()
     }
 
-    @Scheduled(cron = "0 5 * * * *")
+    @Scheduled(cron = "0 5 * * * *", scheduler = Threads.IO_SCHEDULER)
     @Transactional
     fun rollUpClosedPeriods() {
         aggregate()

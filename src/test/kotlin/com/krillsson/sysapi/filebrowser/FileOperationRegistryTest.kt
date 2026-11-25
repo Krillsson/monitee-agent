@@ -1,5 +1,9 @@
 package com.krillsson.sysapi.filebrowser
 
+import com.krillsson.sysapi.SchedulingConfiguration
+import com.krillsson.sysapi.initialized
+import com.krillsson.sysapi.shutdownInBackground
+import com.krillsson.sysapi.testExecutor
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
@@ -10,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 class FileOperationRegistryTest {
 
-    private val registry = FileOperationRegistry(FileBrowserConfiguration(enabled = true))
+    private val registry = FileOperationRegistry(FileBrowserConfiguration(enabled = true), testExecutor("file-operation-", 2))
 
     @Test
     fun `flips from QUEUED to RUNNING once a worker picks up the operation`() {
@@ -161,5 +165,60 @@ class FileOperationRegistryTest {
 
         // Then
         finished?.bytesPerSecond shouldBe null
+    }
+
+    @Test
+    fun `finishes a running operation and the one queued behind it when its workers are shut down`() {
+        // Given
+        val workers = SchedulingConfiguration().fileOperationExecutor().initialized()
+        val shutdownRegistry = FileOperationRegistry(FileBrowserConfiguration(enabled = true), workers)
+        val bothStarted = CountDownLatch(2)
+        val release = CountDownLatch(1)
+        repeat(2) { index ->
+            shutdownRegistry.submit(FileOperationRequest(FileOperationType.DELETE, listOf("blocker-$index"))) {
+                bothStarted.countDown()
+                release.await(5, TimeUnit.SECONDS)
+            }
+        }
+        bothStarted.await(5, TimeUnit.SECONDS)
+        val queued = shutdownRegistry.submit(FileOperationRequest(FileOperationType.DELETE, listOf("c"))) {}
+
+        // When
+        val shutdown = workers.shutdownInBackground()
+        release.countDown()
+        shutdown.join(5000)
+
+        // Then
+        shutdown.isAlive shouldBe false
+        shutdownRegistry.find(queued.id)?.state shouldBe FileOperationState.COMPLETED
+        shutdownRegistry.all().map { it.state }.distinct() shouldBe listOf(FileOperationState.COMPLETED)
+    }
+
+    @Test
+    fun `leaves the operation's thread uninterrupted while shutting down`() {
+        // Given
+        val workers = SchedulingConfiguration().fileOperationExecutor().initialized()
+        val shutdownRegistry = FileOperationRegistry(FileBrowserConfiguration(enabled = true), workers)
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val interrupted = java.util.concurrent.atomic.AtomicBoolean()
+        shutdownRegistry.submit(FileOperationRequest(FileOperationType.DELETE, listOf("a"))) {
+            started.countDown()
+            try {
+                release.await(5, TimeUnit.SECONDS)
+            } catch (e: InterruptedException) {
+                interrupted.set(true)
+            }
+        }
+        started.await(5, TimeUnit.SECONDS)
+
+        // When
+        val shutdown = workers.shutdownInBackground()
+        Thread.sleep(200)
+        release.countDown()
+        shutdown.join(5000)
+
+        // Then
+        interrupted.get() shouldBe false
     }
 }

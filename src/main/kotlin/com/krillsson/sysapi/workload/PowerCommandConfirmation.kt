@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.workload
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.krillsson.sysapi.util.logger
 import org.springframework.scheduling.TaskScheduler
 import org.springframework.stereotype.Component
@@ -9,7 +11,7 @@ import java.time.Instant
 
 @Component
 class PowerCommandConfirmation(
-    private val taskScheduler: TaskScheduler,
+    @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler,
     private val clock: Clock
 ) {
     companion object {

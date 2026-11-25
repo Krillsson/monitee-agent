@@ -1,29 +1,15 @@
 package com.krillsson.sysapi.workload
 
-import jakarta.annotation.PreDestroy
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Component
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.Executor
 
 @Component
-class PowerCommandRunner {
-    companion object {
-        private const val THREADS = 2
-    }
-
-    private val threadCount = AtomicInteger()
-
-    private val executor: ExecutorService = Executors.newFixedThreadPool(THREADS) { task ->
-        Thread(task, "power-command-${threadCount.incrementAndGet()}").apply { isDaemon = true }
-    }
-
+class PowerCommandRunner(
+    @Qualifier(Threads.POWER_COMMAND_EXECUTOR) private val executor: Executor
+) {
     fun submit(task: Runnable) {
         executor.execute(task)
-    }
-
-    @PreDestroy
-    fun stop() {
-        executor.shutdownNow()
     }
 }

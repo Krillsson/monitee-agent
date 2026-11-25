@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.monitoring
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.event.Event
 import com.krillsson.sysapi.core.domain.event.PastEvent
 import com.krillsson.sysapi.core.monitoring.MonitorConfig
@@ -31,7 +32,7 @@ class MonitorManager(
 
     val logger by logger()
 
-    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun run() {
         val input = monitorInputCreator.createInput(
             activeMonitors.values.map { it.second }

@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.workload
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.util.logger
 import com.krillsson.sysapi.workload.PowerCommandExecutor.Admission
 import org.springframework.scheduling.annotation.Scheduled
@@ -131,7 +132,7 @@ class PowerCommandJobs(
     fun isRunning(platform: WorkloadPlatform, id: String): Boolean =
         jobs.values.any { it.platform == platform && it.id == id && it.finishedAt == null }
 
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun forgetFinishedJobs() {
         val forgetBefore = clock.instant().minus(FINISHED_JOB_RETENTION)
         jobs.values.removeIf { job -> job.finishedAt?.isBefore(forgetBefore) == true }
