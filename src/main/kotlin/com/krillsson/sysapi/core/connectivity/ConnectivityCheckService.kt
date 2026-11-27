@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.connectivity
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.network.Connectivity
 import com.krillsson.sysapi.persistence.KeyValueRepository
@@ -28,7 +29,7 @@ class ConnectivityCheckService(
 
     private var _connectivity: Connectivity = defaultConnectivity
 
-    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         if (config.enabled) {
             _connectivity = resolveConnectivity()

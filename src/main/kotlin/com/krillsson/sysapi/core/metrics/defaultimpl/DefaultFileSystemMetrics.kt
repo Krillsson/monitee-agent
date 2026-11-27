@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.filesystem.FileSystem
 import com.krillsson.sysapi.core.domain.filesystem.FileSystemLoad
 import com.krillsson.sysapi.core.metrics.FileSystemMetrics
@@ -29,7 +30,7 @@ open class DefaultFileSystemMetrics(
             .distinctBy { it.id }
     }
 
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.MINUTES, scheduler = Threads.SAMPLING_SCHEDULER)
     fun runMeasurement() {
         fileSystemMetric.tryEmitNext(fileSystemLoads())
     }

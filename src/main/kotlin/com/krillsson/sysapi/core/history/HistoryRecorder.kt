@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.core.history
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.history.HistorySystemLoad
 import com.krillsson.sysapi.core.metrics.Metrics
@@ -13,7 +15,7 @@ class HistoryRecorder(
         yamlConfigFile: YAMLConfigFile,
         private val metrics: Metrics,
         private val history: HistoryRepository,
-        private val taskScheduler: TaskScheduler
+        @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler
 ) {
 
     private val historyConfig = yamlConfigFile.metricsConfig.history

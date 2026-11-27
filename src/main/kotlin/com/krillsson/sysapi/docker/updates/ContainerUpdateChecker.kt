@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.docker.updates
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.ContainerUpdateNotifyStyle
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.docker.Container
@@ -64,7 +65,7 @@ class ContainerUpdateChecker(
         .map { it.containerId }
         .toSet()
 
-    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         if (!config.enabled || containerService.status != Status.Available) {
             return

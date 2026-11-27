@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.gpu.GpuHealth
 import com.krillsson.sysapi.core.domain.gpu.GpuLoad
 import com.krillsson.sysapi.util.logger
@@ -41,7 +42,7 @@ class DefaultGpuLoadMetrics(private val hal: HardwareAbstractionLayer) {
         gpuLoads = sample()
     }
 
-    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun run() {
         gpuLoads = sample()
         gpuLoadMetric.tryEmitNext(gpuLoads)

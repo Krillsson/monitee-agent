@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.proxmox
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.proxmox.ProxmoxClient.Result
 import com.krillsson.sysapi.util.logger
@@ -19,7 +21,7 @@ class ProxmoxPowerCommandExecutor(
     configuration: YAMLConfigFile,
     private val client: ProxmoxClient,
     private val proxmoxService: ProxmoxService,
-    private val taskScheduler: TaskScheduler,
+    @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler,
     private val clock: Clock
 ) : PowerCommandExecutor {
     companion object {

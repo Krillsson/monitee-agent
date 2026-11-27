@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.docker
 
+import org.springframework.beans.factory.annotation.Qualifier
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.core.domain.docker.ImagePullLayer
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateEvent
@@ -10,7 +12,6 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.util.logger
-import jakarta.annotation.PreDestroy
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -19,12 +20,13 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 
 @Service
 class ContainerUpdateJobs(
-    private val containerRecreateService: ContainerRecreateService
+    private val containerRecreateService: ContainerRecreateService,
+    @Qualifier(Threads.CONTAINER_UPDATE_EXECUTOR) private val executor: Executor
 ) {
     companion object {
         private val FINISHED_JOB_RETENTION = Duration.ofMinutes(30)
@@ -49,10 +51,6 @@ class ContainerUpdateJobs(
     private val logger by logger()
 
     private val jobs = ConcurrentHashMap<UUID, Job>()
-
-    private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "container-update").apply { isDaemon = true }
-    }
 
     fun start(containerId: String, pullImage: Boolean): StartResult {
         if (jobs.values.any { it.containerId == containerId && it.finishedAt == null }) {
@@ -137,15 +135,10 @@ class ContainerUpdateJobs(
         job.events.tryEmitComplete()
     }
 
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun forgetFinishedJobs() {
         val forgetBefore = Instant.now().minus(FINISHED_JOB_RETENTION)
         jobs.entries.removeIf { (_, job) -> job.finishedAt?.isBefore(forgetBefore) == true }
-    }
-
-    @PreDestroy
-    fun stop() {
-        executor.shutdownNow()
     }
 
     private fun Job.emit(event: DockerContainerUpdateEvent) {

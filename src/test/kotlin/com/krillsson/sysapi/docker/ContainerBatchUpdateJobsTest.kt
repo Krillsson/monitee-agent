@@ -1,5 +1,9 @@
 package com.krillsson.sysapi.docker
 
+import com.krillsson.sysapi.SchedulingConfiguration
+import com.krillsson.sysapi.initialized
+import com.krillsson.sysapi.shutdownInBackground
+import com.krillsson.sysapi.testExecutor
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerFinished
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSkipped
@@ -22,13 +26,14 @@ import reactor.core.publisher.Sinks
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
 class ContainerBatchUpdateJobsTest {
 
     private val containerUpdateJobs = mockk<ContainerUpdateJobs>()
-    private val batchUpdateJobs = ContainerBatchUpdateJobs(containerUpdateJobs)
+    private val batchUpdateJobs = ContainerBatchUpdateJobs(containerUpdateJobs, testExecutor("container-batch-update-", 1))
 
     @Test
     fun `refuses to start a batch with no containers`() {
@@ -296,5 +301,35 @@ class ContainerBatchUpdateJobsTest {
     private inline fun <reified T> LinkedBlockingQueue<DockerContainerBatchUpdateEvent>.takeAs(): T {
         val event = poll(2, TimeUnit.SECONDS)
         return event as T
+    }
+
+    @Test
+    fun `lets a running batch finish its containers when the executor is shut down`() {
+        // Given
+        val executor = SchedulingConfiguration().containerBatchUpdateExecutor().initialized()
+        val shutdownBatches = ContainerBatchUpdateJobs(containerUpdateJobs, executor)
+        val running = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val jobId = UUID.randomUUID()
+        every { containerUpdateJobs.start("a", true) } answers {
+            running.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            ContainerUpdateJobs.StartResult.Started(jobId, "a")
+        }
+        every { containerUpdateJobs.events(jobId) } returns Flux.just(
+            DockerContainerUpdateSucceeded(jobId, "a", Instant.now(), "new-a", null)
+        )
+        val started = shutdownBatches.start(listOf("a"), true)
+            .shouldBeInstanceOf<ContainerBatchUpdateJobs.StartResult.Started>()
+        running.await(5, TimeUnit.SECONDS)
+
+        // When
+        val shutdown = executor.shutdownInBackground()
+        release.countDown()
+        shutdown.join(5000)
+
+        // Then
+        shutdown.isAlive shouldBe false
+        shutdownBatches.find(started.batchJobId)?.state shouldBe DockerContainerBatchUpdateJobState.FINISHED
     }
 }

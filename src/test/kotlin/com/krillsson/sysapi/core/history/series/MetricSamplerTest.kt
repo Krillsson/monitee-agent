@@ -35,7 +35,8 @@ class MetricSamplerTest {
     private val upsService = mockk<UpsService>(relaxed = true)
     private val proxmoxService = mockk<ProxmoxService>(relaxed = true)
     private val repository = mockk<MetricSeriesBucketRepository>(relaxed = true)
-    private val taskScheduler = mockk<TaskScheduler>(relaxed = true)
+    private val samplingScheduler = mockk<TaskScheduler>(relaxed = true)
+    private val ioScheduler = mockk<TaskScheduler>(relaxed = true)
 
     private val saved = mutableListOf<MetricSeriesBucketEntity>()
 
@@ -45,7 +46,8 @@ class MetricSamplerTest {
         upsService,
         proxmoxService,
         repository,
-        taskScheduler,
+        samplingScheduler,
+        ioScheduler,
         configWithSeriesRetention()
     )
 
@@ -75,6 +77,16 @@ class MetricSamplerTest {
         every { repository.saveAll(any<Iterable<MetricSeriesBucketEntity>>()) } answers {
             firstArg<Iterable<MetricSeriesBucketEntity>>().toMutableList().also { saved += it }
         }
+    }
+
+    @Test
+    fun `runs the fast sampling on the sampling scheduler and the slow sampling on the I-O scheduler`() {
+        // When
+        sampler.start()
+
+        // Then
+        verify(exactly = 1) { samplingScheduler.scheduleAtFixedRate(any(), any<java.time.Duration>()) }
+        verify(exactly = 1) { ioScheduler.scheduleAtFixedRate(any(), any<java.time.Duration>()) }
     }
 
     @Test

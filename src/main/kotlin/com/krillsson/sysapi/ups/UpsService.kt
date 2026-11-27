@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.ups
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.bash.Upsc
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
@@ -54,7 +55,7 @@ class UpsService(
             }
     }
 
-    @Scheduled(fixedRate = 20, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 20, timeUnit = TimeUnit.SECONDS, scheduler = Threads.IO_SCHEDULER)
     fun runMeasurement() {
         if (config.enabled && upsDeviceMetricsSink.currentSubscriberCount() > 0) {
             upsDeviceMetricsSink.tryEmitNext(

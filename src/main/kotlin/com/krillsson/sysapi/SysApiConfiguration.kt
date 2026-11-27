@@ -24,7 +24,6 @@ import com.krillsson.sysapi.util.asOperatingSystem
 import com.krillsson.sysapi.util.asPlatform
 import com.krillsson.sysapi.util.logger
 import org.apache.catalina.connector.Connector
-import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.graphql.GraphQlSourceBuilderCustomizer
@@ -37,10 +36,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.graphql.execution.RuntimeWiringConfigurer
-import org.springframework.scheduling.annotation.AsyncConfigurer
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.transaction.annotation.EnableTransactionManagement
@@ -54,7 +51,6 @@ import retrofit2.converter.jackson.JacksonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.File
 import java.time.Clock
-import java.util.concurrent.Executor
 
 const val USER_CONFIG = "configuration.yml"
 const val SPRING_CONFIG = "application.properties"
@@ -63,7 +59,7 @@ const val SPRING_CONFIG = "application.properties"
 @EnableTransactionManagement
 @EnableScheduling
 @EnableAsync
-class SysApiConfiguration : AsyncConfigurer {
+class SysApiConfiguration {
 
     val logger by logger()
 
@@ -228,22 +224,6 @@ class SysApiConfiguration : AsyncConfigurer {
             ScalarTypes.scalars.forEach {
                 builder.scalar(it)
             }
-        }
-    }
-
-    override fun getAsyncExecutor(): Executor {
-        val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 2
-        executor.maxPoolSize = 42
-        executor.queueCapacity = 11
-        executor.setThreadNamePrefix("@Async-")
-        executor.initialize()
-        return executor
-    }
-
-    override fun getAsyncUncaughtExceptionHandler(): AsyncUncaughtExceptionHandler {
-        return AsyncUncaughtExceptionHandler { ex, method, params ->
-            logger.error("$method with parameters $params encountered an uncaught exception", ex)
         }
     }
 }

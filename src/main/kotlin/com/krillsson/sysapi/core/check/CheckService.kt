@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.core.check
 
+import org.springframework.beans.factory.annotation.Qualifier
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import com.krillsson.sysapi.util.logger
@@ -15,7 +17,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import kotlin.jvm.optionals.getOrNull
 
@@ -27,7 +29,8 @@ class CheckService(
     private val httpProbe: HttpCheckProbe,
     private val tcpProbe: TcpCheckProbe,
     private val pingProbe: PingCheckProbe,
-    private val dnsProbe: DnsCheckProbe
+    private val dnsProbe: DnsCheckProbe,
+    @Qualifier(Threads.CHECK_EXECUTOR) private val runners: Executor
 ) {
     companion object {
         const val DEFAULT_INTERVAL_SECONDS = 60
@@ -35,15 +38,11 @@ class CheckService(
         const val DEFAULT_EXPECTED_STATUS_CODES = "200-299"
         private const val MIN_INTERVAL_SECONDS = 10
         private const val MAX_TIMEOUT_SECONDS = 300
-        private const val RUNNER_THREADS = 4
     }
 
     private val logger by logger()
     private val lastRunAt = ConcurrentHashMap<UUID, Instant>()
     private val inFlight = ConcurrentHashMap.newKeySet<UUID>()
-    private val runners = Executors.newFixedThreadPool(RUNNER_THREADS) { runnable ->
-        Thread(runnable, "check-runner").apply { isDaemon = true }
-    }
 
     private lateinit var monitorManager: MonitorManager
 
@@ -52,7 +51,7 @@ class CheckService(
         this.monitorManager = monitorManager
     }
 
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.SECONDS, scheduler = Threads.IO_SCHEDULER)
     fun runDueChecks() {
         val now = Instant.now()
         dueChecks(now).forEach { check ->

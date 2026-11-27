@@ -1,5 +1,9 @@
 package com.krillsson.sysapi.docker
 
+import com.krillsson.sysapi.SchedulingConfiguration
+import com.krillsson.sysapi.initialized
+import com.krillsson.sysapi.shutdownInBackground
+import com.krillsson.sysapi.testExecutor
 import com.krillsson.sysapi.core.domain.docker.ContainerUpdateStep
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateJobState
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateStepChanged
@@ -25,7 +29,7 @@ class ContainerUpdateJobsTest {
     )
 
     private val recreateService = mockk<ContainerRecreateService>()
-    private val jobs = ContainerUpdateJobs(recreateService)
+    private val jobs = ContainerUpdateJobs(recreateService, testExecutor("container-update-", 1))
 
     @Test
     fun `has nothing current or findable before anything is started`() {
@@ -148,5 +152,31 @@ class ContainerUpdateJobsTest {
 
     private fun awaitTerminal(jobId: UUID) {
         jobs.events(jobId).blockLast(Duration.ofSeconds(5))
+    }
+
+    @Test
+    fun `lets a running update reach its outcome when the executor is shut down`() {
+        // Given
+        val executor = SchedulingConfiguration().containerUpdateExecutor().initialized()
+        val shutdownJobs = ContainerUpdateJobs(recreateService, executor)
+        every { recreateService.prepare("a", true) } returns prepared
+        val running = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        every { recreateService.recreate(prepared, any()) } answers {
+            running.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            RecreateContainerResult.Success("new-a", null)
+        }
+        val started = shutdownJobs.start("a", true).shouldBeInstanceOf<ContainerUpdateJobs.StartResult.Started>()
+        running.await(5, TimeUnit.SECONDS)
+
+        // When
+        val shutdown = executor.shutdownInBackground()
+        release.countDown()
+        shutdown.join(5000)
+
+        // Then
+        shutdown.isAlive shouldBe false
+        shutdownJobs.find(started.jobId)?.state shouldBe DockerContainerUpdateJobState.SUCCEEDED
     }
 }
