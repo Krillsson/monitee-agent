@@ -530,7 +530,9 @@ fun main(args: Array<String>) {
     LauncherHandshake.fromEnvironment(inNativeImage).exitWhenLauncherExits()
     System.setProperty("spring.graphql.websocket.path", "/graphql");
     try {
-        runApplication<SysAPIApplication>(*args)
+        runApplication<SysAPIApplication>(*args) {
+            setDefaultProperties(ConfigurationFileLocation.defaultProperties())
+        }
     } catch (failure: Throwable) {
         val exitCode = StartupFailure.exitCode(failure, inNativeImage) ?: throw failure
         System.err.println("Startup failed on a native-image limitation, exiting with $exitCode so the launcher can fall back to the JVM")

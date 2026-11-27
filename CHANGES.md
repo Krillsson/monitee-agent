@@ -1,5 +1,6 @@
 ### Unreleased
 
+- Feature: keys in `configuration.yml` can be overridden with environment variables, and unknown keys are logged as a warning at startup.
 - Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
 
 ### 0.51.0

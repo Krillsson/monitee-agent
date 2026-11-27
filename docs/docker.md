@@ -55,6 +55,8 @@ or substitute all with the specific gpu index (e.g “0”)
 
 The agent runs the native build, which uses less memory, and falls back to Java on hosts it can't run on. Want to choose for yourself? Add `-e SYSAPI_RUNTIME=jvm` to always run Java, or `-e SYSAPI_RUNTIME=native` to run the native build without falling back.
 
+Any key in `configuration.yml` can also be set with an environment variable, for example `-e PROXMOX_HOST=pve` or `-e USER_PASSWORD=secret`.
+
 ### Systemd services and the journal
 
 To manage systemd services and read the journal from the app, the host has to run systemd and the

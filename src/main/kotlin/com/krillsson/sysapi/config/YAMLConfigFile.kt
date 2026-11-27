@@ -22,8 +22,8 @@ package com.krillsson.sysapi.config
 
 data class YAMLConfigFile(
     val user: UserConfiguration,
-    val metricsConfig: MetricsConfiguration,
-    val windows: WindowsConfiguration,
+    val metricsConfig: MetricsConfiguration = MetricsConfiguration(),
+    val windows: WindowsConfiguration = WindowsConfiguration(),
     val processes: ProcessesConfiguration = ProcessesConfiguration(),
     val linux: LinuxConfiguration = LinuxConfiguration(),
     val ups: UpsConfiguration = UpsConfiguration(),
@@ -35,7 +35,7 @@ data class YAMLConfigFile(
     val notifications: NotificationsConfiguration = NotificationsConfiguration(),
     val mqtt: MqttConfiguration = MqttConfiguration(),
     val updateCheck: UpdateCheckConfiguration = UpdateCheckConfiguration(),
-    val docker: DockerConfiguration,
+    val docker: DockerConfiguration = DockerConfiguration(),
     val smart: SmartConfig = SmartConfig(),
     val forwardHttpToHttps: Boolean,
     val graphQl: GraphQlConfiguration = GraphQlConfiguration(),
