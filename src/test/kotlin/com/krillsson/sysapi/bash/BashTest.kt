@@ -35,7 +35,7 @@ class BashTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["x;echo injected", "x' ; echo injected ; '", "\$(echo injected)", "x | echo injected", "x && echo injected"])
+    @ValueSource(strings = ["a;b", "a' ; b ; '", "\$(b)", "a | b", "a && b", "a > b"])
     fun `passes arguments to the program without a shell interpreting them`(argument: String) {
         // Given
         val arguments = listOf("printf", "%s", argument)
@@ -50,7 +50,7 @@ class BashTest {
     @Test
     fun `streams arguments to the program without a shell interpreting them`() {
         // Given
-        val argument = "x;echo injected"
+        val argument = "a;b"
 
         // When
         val lines = Bash.executeToTextContinuously(listOf("printf", "%s\\n", argument)).collectList().block()
