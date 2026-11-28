@@ -4,6 +4,7 @@ import com.krillsson.sysapi.util.logger
 import org.apache.commons.exec.*
 import org.apache.commons.io.output.ByteArrayOutputStream
 import reactor.core.publisher.Flux
+import java.io.File
 import java.nio.charset.Charset
 
 object Bash {
@@ -11,19 +12,10 @@ object Bash {
     val logger by logger()
 
     fun executeToText(
-        command: String,
-        timeoutAmountMillis: Long = 3 * 1000
-    ): Result<String> = executeToText(createBashCommand(command), timeoutAmountMillis)
-
-    fun executeToText(
         arguments: List<String>,
         timeoutAmountMillis: Long = 3 * 1000
-    ): Result<String> = executeToText(createCommand(arguments), timeoutAmountMillis)
-
-    private fun executeToText(
-        commandLine: CommandLine,
-        timeoutAmountMillis: Long
     ): Result<String> {
+        val commandLine = createCommand(arguments)
         return try {
             val watchdog = ExecuteWatchdog(timeoutAmountMillis)
             val resultHandler = DefaultExecuteResultHandler()
@@ -45,10 +37,10 @@ object Bash {
     }
 
     fun executeToExitStatus(
-        command: String,
+        arguments: List<String>,
         timeoutAmountMillis: Long = 3 * 1000
     ): Result<Int> {
-        val commandLine = createBashCommand(command)
+        val commandLine = createCommand(arguments)
         return try {
             val resultHandler = executeWithWatchdog(timeoutAmountMillis, commandLine)
             Result.success(resultHandler.exitValue)
@@ -58,19 +50,23 @@ object Bash {
         }
     }
 
-    fun checkIfCommandExists(
-        command: String,
-        timeoutAmountMillis: Long = 3 * 1000
-    ): Result<Boolean> {
-        val commandLine = CommandLine("/bin/sh")
-        commandLine.addArguments("-c")
-        commandLine.addArguments("'command -v $command >/dev/null 2>&1'", false)
+    fun checkIfCommandExists(command: String): Result<Boolean> {
         return try {
-            val resultHandler = executeWithWatchdog(timeoutAmountMillis, commandLine)
-            Result.success(resultHandler.exitValue == 0)
+            Result.success(findOnPath(command, System.getenv("PATH").orEmpty()) != null)
         } catch (throwable: Throwable) {
-            logger.error("Failed to execute ${commandLine.toStrings().joinToString(" ")}", throwable)
+            logger.error("Failed to look up $command", throwable)
             Result.failure(throwable)
+        }
+    }
+
+    fun findOnPath(command: String, path: String): File? {
+        return when {
+            !CommandArgument.isCommandName(command) -> null
+            else -> path
+                .split(File.pathSeparator)
+                .filter { it.isNotBlank() }
+                .map { File(it, command) }
+                .firstOrNull { it.isFile && it.canExecute() }
         }
     }
 
@@ -88,14 +84,9 @@ object Bash {
         return resultHandler
     }
 
-    fun executeToTextContinuously(command: String): Flux<String> =
-        executeToTextContinuously(createBashCommand(command))
-
-    fun executeToTextContinuously(arguments: List<String>): Flux<String> =
-        executeToTextContinuously(createCommand(arguments))
-
-    private fun executeToTextContinuously(commandLine: CommandLine): Flux<String> {
+    fun executeToTextContinuously(arguments: List<String>): Flux<String> {
         return Flux.create { emitter ->
+            val commandLine = createCommand(arguments)
             logger.debug("Executing ${commandLine.toStrings().joinToString(" ")}")
 
             // Run the command in a separate thread
@@ -141,12 +132,4 @@ object Bash {
         arguments.drop(1).forEach { commandLine.addArgument(it, false) }
         return commandLine
     }
-
-    private fun createBashCommand(command: String): CommandLine {
-        val commandLine = CommandLine("/bin/sh")
-        commandLine.addArguments("-c")
-        commandLine.addArguments("'$command'", false)
-        return commandLine
-    }
 }
-

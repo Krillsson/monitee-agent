@@ -1,8 +1,8 @@
 package com.krillsson.sysapi.core.check
 
+import com.krillsson.sysapi.bash.CommandArgument
+
 object CheckHost {
 
-    private val PATTERN = Regex("""[A-Za-z0-9._:%\[\]-]+""")
-
-    fun isValid(host: String) = PATTERN.matches(host)
+    fun isValid(host: String) = CommandArgument.isHost(host)
 }

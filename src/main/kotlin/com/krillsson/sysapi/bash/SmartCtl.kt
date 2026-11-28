@@ -14,7 +14,15 @@ class SmartCtl(
 
     companion object {
         private const val COMMAND = "smartctl"
-        private const val QUERY_SMART_DATA = "$COMMAND -n standby%s -jA %s"
+
+        fun smartDataCommand(deviceName: String, additionalFlags: String?): List<String> =
+            listOf(COMMAND, "-n", "standby") + splitFlags(additionalFlags) + listOf("-jA", deviceName)
+
+        private fun splitFlags(flags: String?) = flags
+            ?.trim()
+            ?.split(Regex("""\s+"""))
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
     }
 
     private val logger by logger()
@@ -24,23 +32,28 @@ class SmartCtl(
     fun supportsCommand() = Bash.checkIfCommandExists(COMMAND).getOrNull() ?: false
 
     fun getSmartData(deviceName: String): Output? {
-        return try {
-            val result = Bash.executeToText(createCommand(deviceName))
-            val json = result.getOrNull()?.convertJsonStringToSmartData(deviceName)
-            json
-        } catch (exception: Throwable) {
-            logger.error("Unable to execute command for device $deviceName", exception)
-            null
+        return when {
+            !CommandArgument.isDevicePath(deviceName) -> {
+                logger.warn("Ignoring device. \"$deviceName\" is not a device path")
+                null
+            }
+
+            else -> try {
+                val result = Bash.executeToText(createCommand(deviceName))
+                result.getOrNull()?.convertJsonStringToSmartData(deviceName)
+            } catch (exception: Throwable) {
+                logger.error("Unable to execute command for device $deviceName", exception)
+                null
+            }
         }
     }
 
-    private fun createCommand(deviceName: String): String {
+    private fun createCommand(deviceName: String): List<String> {
         val additionalFlags = config
             .additionalDeviceFlags
             .firstOrNull { it.device == deviceName }
-            ?.flags?.let { " $it" }.orEmpty()
-
-        return QUERY_SMART_DATA.format(additionalFlags, deviceName)
+            ?.flags
+        return smartDataCommand(deviceName, additionalFlags)
     }
 
     private fun String.convertJsonStringToSmartData(deviceName: String): Output? {

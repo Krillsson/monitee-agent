@@ -59,7 +59,7 @@ class JournalCtl(
     fun tailLines(
         serviceUnitName: String
     ): Flux<SystemDaemonJournalEntry> {
-        return if (journalLogsConfiguration.enabled) {
+        return if (journalLogsConfiguration.enabled && CommandArgument.isUnitName(serviceUnitName)) {
             Bash.executeToTextContinuously(tailCommand(serviceUnitName))
                 .map { it.convertJsonStringToEntries() }
                 .flatMapIterable { it }
@@ -74,7 +74,7 @@ class JournalCtl(
         since: Instant? = null,
         until: Instant? = null
     ): List<SystemDaemonJournalEntry> {
-        return if (journalLogsConfiguration.enabled) {
+        return if (journalLogsConfiguration.enabled && CommandArgument.isUnitName(serviceUnitName)) {
             val result = Bash.executeToText(linesCommand(serviceUnitName, limit, since, until))
             result.getOrNull()?.convertJsonStringToEntries().orEmpty()
         } else {
@@ -85,7 +85,7 @@ class JournalCtl(
     fun firstLine(
         serviceUnitName: String
     ): SystemDaemonJournalEntry? {
-        return if (journalLogsConfiguration.enabled) {
+        return if (journalLogsConfiguration.enabled && CommandArgument.isUnitName(serviceUnitName)) {
             val result = Bash.executeToText(entriesCommand(serviceUnitName))
             result.getOrNull()?.convertJsonStringToEntries().orEmpty().firstOrNull()
         } else {

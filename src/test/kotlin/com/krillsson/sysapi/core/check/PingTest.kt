@@ -26,7 +26,7 @@ class PingTest {
         val command = ping.command("router.lan", 20)
 
         // Then
-        command shouldBe expected
+        command shouldBe expected.split(" ")
     }
 
     @ParameterizedTest
@@ -44,7 +44,7 @@ class PingTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["router.lan; rm -rf \$HOME", "\$(whoami).lan", "router.lan && reboot", "router'lan"])
+    @ValueSource(strings = ["router.lan; rm -rf \$HOME", "\$(whoami).lan", "router.lan && reboot", "router'lan", "-f", "-t"])
     fun `refuses to build a command out of a host that would reach the shell`(host: String) {
         // Given
         val ping = Ping(Platform.LINUX)
