@@ -4,6 +4,7 @@
 - Feature: keys in `configuration.yml` can be overridden with environment variables, and unknown keys are logged as a warning at startup.
 - Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
 - Fix: journal queries and the `tailJournalLogs` subscription run journalctl without a shell.
+- Fix: UPS devices are queried by running upsc without a shell.
 
 ### 0.51.0
 
