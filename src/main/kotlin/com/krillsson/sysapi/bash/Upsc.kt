@@ -11,6 +11,14 @@ import kotlin.time.Duration.Companion.seconds
 
 @Component
 class Upsc {
+    companion object {
+        fun listCommand(host: String, port: Int?) = listOf("upsc", "-L", address(host, port))
+
+        fun queryCommand(name: String, host: String, port: Int?) = listOf("upsc", "$name@${address(host, port)}")
+
+        private fun address(host: String, port: Int?) = host + port?.let { ":$it" }.orEmpty()
+    }
+
     private val logger by logger()
 
     fun supportedBySystem(): Boolean {
@@ -18,8 +26,7 @@ class Upsc {
     }
 
     fun upsDevices(host: String, port: Int? = null): ListUpsDevicesOutput {
-        val portNumber = port?.let { ":$port" }.orEmpty()
-        val result = Bash.executeToText("upsc -L $host$portNumber")
+        val result = Bash.executeToText(listCommand(host, port))
         val devices = result.getOrNull().orEmpty()
             .lines()
             .filter { it.contains(":") }
@@ -32,8 +39,7 @@ class Upsc {
     }
 
     fun queryUpsDevice(name: String, host: String, port: Int? = null ): QueryUpsDevicesOutput {
-        val portNumber = port?.let { ":$port" }.orEmpty()
-        val result = Bash.executeToText("upsc $name@$host$portNumber")
+        val result = Bash.executeToText(queryCommand(name, host, port))
         val data = result.getOrNull().orEmpty()
             .lines()
             .filter { it.contains(":") }
