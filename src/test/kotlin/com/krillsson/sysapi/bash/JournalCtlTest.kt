@@ -10,7 +10,7 @@ import java.time.Instant
 class JournalCtlTest {
 
     @ParameterizedTest
-    @ValueSource(strings = ["x;id>/tmp/pwned;true", "x' ; id ; '", "\$(id)", "x --follow", "x\"; id; \""])
+    @ValueSource(strings = ["a;b", "a' ; b ; '", "\$(b)", "a --follow", "a\"; b; \""])
     fun `keeps the service name in a single argument`(serviceName: String) {
         // Given
         val since = Instant.parse("2026-11-01T10:00:00Z")
