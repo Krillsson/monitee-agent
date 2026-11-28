@@ -11,6 +11,8 @@ object Bash {
 
     val logger by logger()
 
+    private const val DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
     fun executeToText(
         arguments: List<String>,
         timeoutAmountMillis: Long = 3 * 1000
@@ -52,12 +54,14 @@ object Bash {
 
     fun checkIfCommandExists(command: String): Result<Boolean> {
         return try {
-            Result.success(findOnPath(command, System.getenv("PATH").orEmpty()) != null)
+            Result.success(findOnPath(command, searchPath(System.getenv("PATH"))) != null)
         } catch (throwable: Throwable) {
             logger.error("Failed to look up $command", throwable)
             Result.failure(throwable)
         }
     }
+
+    fun searchPath(path: String?): String = path?.takeIf { it.isNotBlank() } ?: DEFAULT_PATH
 
     fun findOnPath(command: String, path: String): File? {
         return when {

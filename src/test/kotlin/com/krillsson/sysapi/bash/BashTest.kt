@@ -7,6 +7,7 @@ import org.junit.jupiter.api.condition.OS
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.NullAndEmptySource
 import org.junit.jupiter.params.provider.ValueSource
 
 @EnabledOnOs(OS.LINUX, OS.MAC)
@@ -95,6 +96,26 @@ class BashTest {
 
         // Then
         found shouldBe null
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = ["  "])
+    fun `searches the usual system directories when PATH is not set`(path: String?) {
+        // When
+        val searchPath = Bash.searchPath(path)
+
+        // Then
+        searchPath shouldBe "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    }
+
+    @Test
+    fun `searches PATH when it is set`() {
+        // When
+        val searchPath = Bash.searchPath("/opt/bin:/usr/bin")
+
+        // Then
+        searchPath shouldBe "/opt/bin:/usr/bin"
     }
 
     @Test
