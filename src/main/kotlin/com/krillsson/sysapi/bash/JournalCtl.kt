@@ -18,15 +18,26 @@ class JournalCtl(
     private val journalLogsConfiguration: JournalLogsConfiguration
 ) {
     companion object {
-        private const val GET_LOG_ENTRIES_COMMAND = "journalctl --output=json UNIT=%s"
-
-        private const val GET_LOG_ENTRIES_FILTER_SINCE = "--since \"%s\""
-        private const val GET_LOG_ENTRIES_FILTER_UNTIL = "--until \"%s\""
-        private const val GET_LOG_ENTRIES_LIMIT = "-n %d"
-
         private val JOURNALD_TIME_FORMAT_PATTERN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-        private const val GET_LOG_LINES_FOLLOW = "--follow"
+        fun entriesCommand(serviceUnitName: String) = listOf("journalctl", "--output=json", "UNIT=$serviceUnitName")
+
+        fun tailCommand(serviceUnitName: String) = entriesCommand(serviceUnitName) + listOf("-n", "0", "--follow")
+
+        fun linesCommand(
+            serviceUnitName: String,
+            limit: Int?,
+            since: Instant?,
+            until: Instant?
+        ): List<String> = entriesCommand(serviceUnitName) + when {
+            limit != null && limit >= 0 -> listOf("-n", limit.toString())
+            else -> timeFilter("--since", since) + timeFilter("--until", until)
+        }
+
+        private fun timeFilter(option: String, instant: Instant?) = when (instant) {
+            null -> emptyList()
+            else -> listOf(option, JOURNALD_TIME_FORMAT_PATTERN.format(instant.toOffsetDateTime()))
+        }
     }
 
     private val logger by logger()
@@ -49,15 +60,7 @@ class JournalCtl(
         serviceUnitName: String
     ): Flux<SystemDaemonJournalEntry> {
         return if (journalLogsConfiguration.enabled) {
-            val command =
-                buildString {
-                    append(GET_LOG_ENTRIES_COMMAND.format(serviceUnitName))
-                    append(" ")
-                    append(GET_LOG_ENTRIES_LIMIT.format(0))
-                    append(" ")
-                    append(GET_LOG_LINES_FOLLOW)
-                }
-            Bash.executeToTextContinuously(command)
+            Bash.executeToTextContinuously(tailCommand(serviceUnitName))
                 .map { it.convertJsonStringToEntries() }
                 .flatMapIterable { it }
         } else {
@@ -72,30 +75,7 @@ class JournalCtl(
         until: Instant? = null
     ): List<SystemDaemonJournalEntry> {
         return if (journalLogsConfiguration.enabled) {
-            val command = when {
-                limit != null && limit >= 0 -> {
-                    buildString {
-                        append(GET_LOG_ENTRIES_COMMAND.format(serviceUnitName))
-                        append(" ")
-                        append(GET_LOG_ENTRIES_LIMIT.format(limit))
-                    }
-                }
-
-                else -> {
-                    buildString {
-                        append(GET_LOG_ENTRIES_COMMAND.format(serviceUnitName))
-                        if (since != null) {
-                            append(" ")
-                            append(GET_LOG_ENTRIES_FILTER_SINCE.format(JOURNALD_TIME_FORMAT_PATTERN.format(since.toOffsetDateTime())))
-                        }
-                        if (until != null) {
-                            append(" ")
-                            append(GET_LOG_ENTRIES_FILTER_UNTIL.format(JOURNALD_TIME_FORMAT_PATTERN.format(until.toOffsetDateTime())))
-                        }
-                    }
-                }
-            }
-            val result = Bash.executeToText(command)
+            val result = Bash.executeToText(linesCommand(serviceUnitName, limit, since, until))
             result.getOrNull()?.convertJsonStringToEntries().orEmpty()
         } else {
             emptyList()
@@ -106,7 +86,7 @@ class JournalCtl(
         serviceUnitName: String
     ): SystemDaemonJournalEntry? {
         return if (journalLogsConfiguration.enabled) {
-            val result = Bash.executeToText(GET_LOG_ENTRIES_COMMAND.format(serviceUnitName))
+            val result = Bash.executeToText(entriesCommand(serviceUnitName))
             result.getOrNull()?.convertJsonStringToEntries().orEmpty().firstOrNull()
         } else {
             null

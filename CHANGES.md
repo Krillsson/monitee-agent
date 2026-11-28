@@ -3,6 +3,7 @@
 - Fix: monitors, events and notification policies survive a crash or power loss while they are being saved.
 - Feature: keys in `configuration.yml` can be overridden with environment variables, and unknown keys are logged as a warning at startup.
 - Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
+- Fix: journal queries and the `tailJournalLogs` subscription run journalctl without a shell, so a service name can no longer inject shell commands.
 
 ### 0.51.0
 

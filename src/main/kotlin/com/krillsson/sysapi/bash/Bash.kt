@@ -13,8 +13,17 @@ object Bash {
     fun executeToText(
         command: String,
         timeoutAmountMillis: Long = 3 * 1000
+    ): Result<String> = executeToText(createBashCommand(command), timeoutAmountMillis)
+
+    fun executeToText(
+        arguments: List<String>,
+        timeoutAmountMillis: Long = 3 * 1000
+    ): Result<String> = executeToText(createCommand(arguments), timeoutAmountMillis)
+
+    private fun executeToText(
+        commandLine: CommandLine,
+        timeoutAmountMillis: Long
     ): Result<String> {
-        val commandLine = createBashCommand(command)
         return try {
             val watchdog = ExecuteWatchdog(timeoutAmountMillis)
             val resultHandler = DefaultExecuteResultHandler()
@@ -79,9 +88,14 @@ object Bash {
         return resultHandler
     }
 
-    fun executeToTextContinuously(command: String): Flux<String> {
+    fun executeToTextContinuously(command: String): Flux<String> =
+        executeToTextContinuously(createBashCommand(command))
+
+    fun executeToTextContinuously(arguments: List<String>): Flux<String> =
+        executeToTextContinuously(createCommand(arguments))
+
+    private fun executeToTextContinuously(commandLine: CommandLine): Flux<String> {
         return Flux.create { emitter ->
-            val commandLine = createBashCommand(command)
             logger.debug("Executing ${commandLine.toStrings().joinToString(" ")}")
 
             // Run the command in a separate thread
@@ -120,6 +134,12 @@ object Bash {
                 }
             }
         }
+    }
+
+    private fun createCommand(arguments: List<String>): CommandLine {
+        val commandLine = CommandLine(arguments.first())
+        arguments.drop(1).forEach { commandLine.addArgument(it, false) }
+        return commandLine
     }
 
     private fun createBashCommand(command: String): CommandLine {
