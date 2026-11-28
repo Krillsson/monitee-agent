@@ -13,8 +13,11 @@ class SystemCtl(
     private val logger by logger()
 
     companion object {
-        private const val LIST_SERVICES_COMMAND = "systemctl --output=json --type=service --all"
-        private const val SERVICE_DETAILS_COMMAND = "systemctl show --no-pager"
+        private val LIST_SERVICES_COMMAND = listOf("systemctl", "--output=json", "--type=service", "--all")
+
+        fun serviceDetailsCommand(name: String) = listOf("systemctl", "show", "--no-pager", name)
+
+        fun serviceCommand(command: SystemDaemonCommand, name: String) = listOf("systemctl", command.name.lowercase(), name)
     }
 
     class ListServicesOutput : ArrayList<ListServicesOutput.Item>() {
@@ -79,8 +82,9 @@ class SystemCtl(
     }
 
     fun serviceDetails(name: String): ServiceDetailsOutput? {
-        return service(name)?.let {
-            val result = Bash.executeToText("$SERVICE_DETAILS_COMMAND $name")
+        val service = if (CommandArgument.isUnitName(name)) service(name) else null
+        return service?.let {
+            val result = Bash.executeToText(serviceDetailsCommand(name))
             result.mapCatching { data ->
                 val values = parseDelimitedString(data)
                 ServiceDetailsOutput(
@@ -118,6 +122,7 @@ class SystemCtl(
 
     fun performCommandWithService(serviceName: String, command: SystemDaemonCommand): CommandResult {
         return when {
+            !CommandArgument.isUnitName(serviceName) -> CommandResult.Failed(IllegalArgumentException("\"$serviceName\" is not a unit name"))
             !hasUnit(serviceName) -> CommandResult.Failed(NotFoundException("$serviceName does not exist"))
             else -> {
                 performCommand(serviceName, command)
@@ -126,7 +131,7 @@ class SystemCtl(
     }
 
     private fun performCommand(serviceUnitName: String, command: SystemDaemonCommand): CommandResult {
-        val exitStatus = Bash.executeToExitStatus("systemctl ${command.name.lowercase()} $serviceUnitName")
+        val exitStatus = Bash.executeToExitStatus(serviceCommand(command, serviceUnitName))
         return exitStatus.fold(
             onSuccess = {
                 if (it == 0) {

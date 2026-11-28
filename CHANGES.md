@@ -5,6 +5,7 @@
 - Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
 - Fix: journal queries and the `tailJournalLogs` subscription run journalctl without a shell.
 - Fix: UPS devices are queried by running upsc without a shell.
+- Fix: every external command (systemctl, smartctl, ping, upsc, journalctl) runs without a shell, and unit names, UPS names, device paths and hosts are checked before they are passed on.
 
 ### 0.51.0
 

@@ -17,6 +17,16 @@ class Upsc {
         fun queryCommand(name: String, host: String, port: Int?) = listOf("upsc", "$name@${address(host, port)}")
 
         private fun address(host: String, port: Int?) = host + port?.let { ":$it" }.orEmpty()
+
+        fun parseDeviceList(output: String): List<ListUpsDevicesOutput.UpsDevice> = output
+            .lines()
+            .filter { it.contains(":") }
+            .map { it.split(":", limit = 2) }
+            .map { it[0].trim() to it[1].trim() }
+            .filter { (name, _) -> CommandArgument.isUpsName(name) }
+            .map { (name, description) ->
+                ListUpsDevicesOutput.UpsDevice(name = name, description = description)
+            }
     }
 
     private val logger by logger()
@@ -26,21 +36,25 @@ class Upsc {
     }
 
     fun upsDevices(host: String, port: Int? = null): ListUpsDevicesOutput {
-        val result = Bash.executeToText(listCommand(host, port))
-        val devices = result.getOrNull().orEmpty()
-            .lines()
-            .filter { it.contains(":") }
-            .map { it.split(":", limit = 2) }
-            .map { it[0].trim() to it[1].trim() }
-            .map { (name, description) ->
-                ListUpsDevicesOutput.UpsDevice(name = name, description = description)
+        val devices = when {
+            !CommandArgument.isHost(host) -> {
+                logger.warn("Ignoring UPS host. \"$host\" is not a host name or address")
+                emptyList()
             }
+
+            else -> parseDeviceList(Bash.executeToText(listCommand(host, port)).getOrNull().orEmpty())
+        }
         return ListUpsDevicesOutput(devices)
     }
 
     fun queryUpsDevice(name: String, host: String, port: Int? = null ): QueryUpsDevicesOutput {
-        val result = Bash.executeToText(queryCommand(name, host, port))
-        val data = result.getOrNull().orEmpty()
+        val output = when {
+            CommandArgument.isUpsName(name) && CommandArgument.isHost(host) ->
+                Bash.executeToText(queryCommand(name, host, port)).getOrNull().orEmpty()
+
+            else -> ""
+        }
+        val data = output
             .lines()
             .filter { it.contains(":") }
             .map { it.split(":", limit = 2) }

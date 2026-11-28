@@ -38,10 +38,10 @@ class Ping(val platform: Platform) {
         else -> Bash.checkIfCommandExists(COMMAND)
     }.getOrNull() ?: false
 
-    fun command(host: String, timeoutSeconds: Int): String? = when (flavour) {
-        Flavour.IPUTILS -> "$COMMAND -n -c 1 -W $timeoutSeconds $host"
-        Flavour.BSD -> "$COMMAND -n -c 1 -t $timeoutSeconds $host"
-        Flavour.WINDOWS -> "$COMMAND -n 1 -w ${timeoutSeconds * 1000} $host"
+    fun command(host: String, timeoutSeconds: Int): List<String>? = when (flavour) {
+        Flavour.IPUTILS -> listOf(COMMAND, "-n", "-c", "1", "-W", "$timeoutSeconds", host)
+        Flavour.BSD -> listOf(COMMAND, "-n", "-c", "1", "-t", "$timeoutSeconds", host)
+        Flavour.WINDOWS -> listOf(COMMAND, "-n", "1", "-w", "${timeoutSeconds * 1000}", host)
         null -> null
     }
 

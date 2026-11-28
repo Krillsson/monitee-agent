@@ -34,4 +34,21 @@ class UpscTest {
         // Then
         command shouldBe listOf("upsc", "ups@nas.local")
     }
+
+    @Test
+    fun `drops devices whose name the server sent is not a NUT name`() {
+        // Given
+        val output = """
+            ups: APC Back-UPS
+            a;b: Not a NUT name
+            eaton-5p: Eaton 5P
+        """.trimIndent()
+
+        // When
+        val devices = Upsc.parseDeviceList(output)
+
+        // Then
+        devices.map { it.name } shouldBe listOf("ups", "eaton-5p")
+        devices.first().description shouldBe "APC Back-UPS"
+    }
 }
