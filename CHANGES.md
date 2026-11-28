@@ -1,11 +1,12 @@
 ### Unreleased
 
+### 0.51.1
+
+- **Security fix**: every external command (systemctl, smartctl, ping, upsc, journalctl) runs without a shell, and unit names, UPS names, device paths and hosts are checked before they are passed on.
+
 - Fix: monitors, events and notification policies survive a crash or power loss while they are being saved.
 - Feature: keys in `configuration.yml` can be overridden with environment variables, and unknown keys are logged as a warning at startup.
 - Fix: slow network and Docker jobs can no longer delay CPU and memory sampling, and the agent waits for running container updates and file operations when it shuts down.
-- Fix: journal queries and the `tailJournalLogs` subscription run journalctl without a shell.
-- Fix: UPS devices are queried by running upsc without a shell.
-- Fix: every external command (systemctl, smartctl, ping, upsc, journalctl) runs without a shell, and unit names, UPS names, device paths and hosts are checked before they are passed on.
 
 ### 0.51.0
 
