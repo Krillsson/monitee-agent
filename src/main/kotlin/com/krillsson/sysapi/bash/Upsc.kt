@@ -12,6 +12,8 @@ import kotlin.time.Duration.Companion.seconds
 @Component
 class Upsc {
     companion object {
+        private val logger by logger()
+
         fun listCommand(host: String, port: Int?) = listOf("upsc", "-L", address(host, port))
 
         fun queryCommand(name: String, host: String, port: Int?) = listOf("upsc", "$name@${address(host, port)}")
@@ -23,13 +25,15 @@ class Upsc {
             .filter { it.contains(":") }
             .map { it.split(":", limit = 2) }
             .map { it[0].trim() to it[1].trim() }
-            .filter { (name, _) -> CommandArgument.isUpsName(name) }
+            .filter { (name, _) ->
+                CommandArgument.isUpsName(name).also { valid ->
+                    if (!valid) logger.warn("Ignoring UPS device. \"$name\" is not a NUT device name")
+                }
+            }
             .map { (name, description) ->
                 ListUpsDevicesOutput.UpsDevice(name = name, description = description)
             }
     }
-
-    private val logger by logger()
 
     fun supportedBySystem(): Boolean {
         return (Bash.checkIfCommandExists("upsc").getOrNull() ?: false)
