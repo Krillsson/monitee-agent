@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.mqtt
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.mqtt.homeassistant.HomeAssistantDiscovery
@@ -17,7 +19,7 @@ class MqttPublisher(
     private val discovery: HomeAssistantDiscovery,
     private val topics: MqttTopics,
     private val mapper: ObjectMapper,
-    private val taskScheduler: TaskScheduler
+    @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler
 ) {
 
     private val logger by logger()

@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.docker
 
+import org.springframework.beans.factory.annotation.Qualifier
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerFinished
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerSkipped
 import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateContainerStarted
@@ -11,7 +13,6 @@ import com.krillsson.sysapi.graphql.domain.DockerContainerBatchUpdateStarted
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateFailed
 import com.krillsson.sysapi.graphql.domain.DockerContainerUpdateSucceeded
 import com.krillsson.sysapi.util.logger
-import jakarta.annotation.PreDestroy
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
@@ -20,12 +21,13 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 
 @Service
 class ContainerBatchUpdateJobs(
-    private val containerUpdateJobs: ContainerUpdateJobs
+    private val containerUpdateJobs: ContainerUpdateJobs,
+    @Qualifier(Threads.CONTAINER_BATCH_UPDATE_EXECUTOR) private val executor: Executor
 ) {
     companion object {
         private val FINISHED_JOB_RETENTION = Duration.ofMinutes(30)
@@ -58,10 +60,6 @@ class ContainerBatchUpdateJobs(
     private val logger by logger()
 
     private val batches = ConcurrentHashMap<UUID, Batch>()
-
-    private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "container-batch-update").apply { isDaemon = true }
-    }
 
     fun start(containerIds: List<String>, pullImage: Boolean): StartResult {
         if (containerIds.isEmpty()) {
@@ -186,15 +184,10 @@ class ContainerBatchUpdateJobs(
         }
     }
 
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun forgetFinishedBatches() {
         val forgetBefore = Instant.now().minus(FINISHED_JOB_RETENTION)
         batches.entries.removeIf { (_, batch) -> batch.finishedAt?.isBefore(forgetBefore) == true }
-    }
-
-    @PreDestroy
-    fun stop() {
-        executor.shutdownNow()
     }
 
     private fun Batch.emit(event: DockerContainerBatchUpdateEvent) {

@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.proxmox
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.google.common.base.Ticker
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -24,7 +26,7 @@ import java.util.concurrent.TimeUnit
 class ProxmoxService(
     configuration: YAMLConfigFile,
     private val client: ProxmoxClient,
-    private val taskScheduler: TaskScheduler,
+    @Qualifier(Threads.IO_SCHEDULER) private val taskScheduler: TaskScheduler,
     private val clock: Clock
 ) {
     companion object {

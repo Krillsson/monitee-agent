@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.forecast
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.history.series.HistoryResolution
 import com.krillsson.sysapi.core.history.series.MetricHistoryService
 import com.krillsson.sysapi.core.history.series.MetricId
@@ -19,7 +20,7 @@ class FileSystemSpaceForecastRecorder(
     private val clock: Clock
 ) {
 
-    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.DAYS)
+    @Scheduled(fixedRate = 1, timeUnit = TimeUnit.DAYS, scheduler = Threads.IO_SCHEDULER)
     @Transactional
     fun run() {
         val now = clock.instant()

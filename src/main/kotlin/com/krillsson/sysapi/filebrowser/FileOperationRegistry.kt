@@ -1,5 +1,7 @@
 package com.krillsson.sysapi.filebrowser
 
+import com.krillsson.sysapi.Threads
+import org.springframework.beans.factory.annotation.Qualifier
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import com.krillsson.sysapi.util.logger
 import org.springframework.stereotype.Service
@@ -10,7 +12,7 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
+import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicLong
 
 data class FileOperationRequest(
@@ -24,10 +26,12 @@ data class FileOperationRequest(
 )
 
 @Service
-class FileOperationRegistry(private val configuration: FileBrowserConfiguration) {
+class FileOperationRegistry(
+    private val configuration: FileBrowserConfiguration,
+    @Qualifier(Threads.FILE_OPERATION_EXECUTOR) private val workers: Executor
+) {
 
     companion object {
-        private const val WORKER_THREADS = 2
         private const val MAX_RETAINED = 200
 
         private val EMIT_EVERY: Duration = Duration.ofMillis(250)
@@ -36,10 +40,6 @@ class FileOperationRegistry(private val configuration: FileBrowserConfiguration)
     val logger by logger()
 
     private val operations = ConcurrentHashMap<String, RunningOperation>()
-
-    private val workers = Executors.newFixedThreadPool(WORKER_THREADS) { runnable ->
-        Thread(runnable, "file-operation").apply { isDaemon = true }
-    }
 
     fun submit(request: FileOperationRequest, work: (FileOperationSink) -> Unit): FileOperation {
         sweep()

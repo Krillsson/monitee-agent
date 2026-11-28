@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.docker
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.domain.docker.State
 import org.springframework.scheduling.annotation.Scheduled
@@ -15,7 +16,7 @@ class ContainerStatisticsHistoryRecorder(
 
     private val historyConfiguration = config.metricsConfig.history
 
-    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         val containers = containerService.containers()
         val statistics = containers

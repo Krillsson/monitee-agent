@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 
-class MetricSeriesConfiguration(
+data class MetricSeriesConfiguration(
         @JsonProperty val sampling: MetricSamplingConfiguration = MetricSamplingConfiguration(),
         @JsonProperty val raw: RetentionConfiguration = RetentionConfiguration(12, ChronoUnit.HOURS),
         @JsonProperty val fiveMinute: RetentionConfiguration = RetentionConfiguration(72, ChronoUnit.HOURS),
@@ -12,12 +12,12 @@ class MetricSeriesConfiguration(
         @JsonProperty val daily: RetentionConfiguration = RetentionConfiguration(730, ChronoUnit.DAYS)
 )
 
-class MetricSamplingConfiguration(
+data class MetricSamplingConfiguration(
         @JsonProperty val fast: IntervalConfiguration = IntervalConfiguration(60, TimeUnit.SECONDS),
         @JsonProperty val slow: IntervalConfiguration = IntervalConfiguration(5, TimeUnit.MINUTES)
 )
 
-class IntervalConfiguration(
+data class IntervalConfiguration(
         @JsonProperty val interval: Long,
         @JsonProperty val unit: TimeUnit
 )

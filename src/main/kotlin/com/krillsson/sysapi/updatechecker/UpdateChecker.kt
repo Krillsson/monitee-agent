@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.updatechecker
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.BuildConfig
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.genericevents.GenericEventRepository
@@ -22,7 +23,7 @@ class UpdateChecker(
 ) {
     private val logger by logger()
 
-    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         if (config.updateCheck.enabled) {
             logger.debug("Checking for new release")

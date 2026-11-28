@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.core.connectivity
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.util.logger
 import jakarta.annotation.PostConstruct
@@ -63,7 +64,7 @@ class InternetServicesCheckService(
 
     private val logger by logger()
 
-    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 10, timeUnit = TimeUnit.SECONDS, scheduler = Threads.IO_SCHEDULER)
     fun runMeasurement() {
         if (config.enabled && internetServicesLatencyCheckResult.currentSubscriberCount() > 0) {
             checkServices()

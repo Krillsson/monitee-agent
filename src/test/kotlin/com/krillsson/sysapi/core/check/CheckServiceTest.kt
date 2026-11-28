@@ -1,5 +1,12 @@
 package com.krillsson.sysapi.core.check
 
+import com.krillsson.sysapi.SchedulingConfiguration
+import com.krillsson.sysapi.Threads
+import com.krillsson.sysapi.initialized
+import com.krillsson.sysapi.shutdownInBackground
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import com.krillsson.sysapi.runnerExecutor
 import com.krillsson.sysapi.core.monitoring.Monitor
 import com.krillsson.sysapi.core.monitoring.MonitorManager
 import io.kotest.matchers.shouldBe
@@ -36,7 +43,7 @@ class CheckServiceTest {
 
     @BeforeEach
     fun setUp() {
-        service = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe, dnsProbe)
+        service = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe, dnsProbe, runnerExecutor())
         service.setMonitorManager(monitorManager)
         every { probe.probe(any()) } returns probeResult(CheckType.HTTP)
         every { tcpProbe.probe(any()) } returns probeResult(CheckType.TCP)
@@ -311,5 +318,35 @@ class CheckServiceTest {
 
         // Then
         verify(exactly = 1) { probe.probe(any()) }
+    }
+
+    @Test
+    fun `interrupts a running probe and drops the checks queued behind it when the runners are shut down`() {
+        // Given
+        val executor = SchedulingConfiguration().checkExecutor().initialized()
+        val shutdownService = CheckService(repository, resultRepository, bucketRepository, probe, tcpProbe, pingProbe, dnsProbe, executor)
+        shutdownService.setMonitorManager(monitorManager)
+        val ids = List(Threads.CHECK_THREADS + 1) { UUID.randomUUID() }
+        every { repository.findAll() } returns ids.map { httpCheckEntity(id = it, url = "https://$it.lan") }
+        val running = CountDownLatch(Threads.CHECK_THREADS)
+        val interrupted = CountDownLatch(Threads.CHECK_THREADS)
+        every { probe.probe(any()) } answers {
+            running.countDown()
+            try {
+                Thread.sleep(10_000)
+            } catch (e: InterruptedException) {
+                interrupted.countDown()
+            }
+            probeResult(CheckType.HTTP)
+        }
+        shutdownService.runDueChecks()
+        running.await(5, TimeUnit.SECONDS)
+
+        // When
+        executor.shutdownInBackground().join(5000)
+
+        // Then
+        interrupted.await(5, TimeUnit.SECONDS) shouldBe true
+        verify(exactly = Threads.CHECK_THREADS) { probe.probe(any()) }
     }
 }

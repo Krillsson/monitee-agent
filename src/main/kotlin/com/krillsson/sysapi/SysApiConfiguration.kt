@@ -1,9 +1,9 @@
 package com.krillsson.sysapi
 
 import SlowResolverWarningInstrumentation
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.krillsson.sysapi.config.BlankAsNull
+import com.krillsson.sysapi.config.BoundNames
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.core.connectivity.ConnectivityCheckService
 import com.krillsson.sysapi.core.connectivity.ExternalIpAddressService
@@ -24,19 +24,20 @@ import com.krillsson.sysapi.util.asOperatingSystem
 import com.krillsson.sysapi.util.asPlatform
 import com.krillsson.sysapi.util.logger
 import org.apache.catalina.connector.Connector
-import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.graphql.GraphQlSourceBuilderCustomizer
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
 import org.springframework.boot.web.server.WebServerFactoryCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.graphql.execution.RuntimeWiringConfigurer
-import org.springframework.scheduling.annotation.AsyncConfigurer
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.transaction.annotation.EnableTransactionManagement
@@ -50,20 +51,15 @@ import retrofit2.converter.jackson.JacksonConverterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import java.io.File
 import java.time.Clock
-import java.util.concurrent.Executor
 
 const val USER_CONFIG = "configuration.yml"
 const val SPRING_CONFIG = "application.properties"
-
-fun configFileParser(): ObjectMapper = ObjectMapper(YAMLFactory())
-    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-    .findAndRegisterModules()
 
 @Configuration
 @EnableTransactionManagement
 @EnableScheduling
 @EnableAsync
-class SysApiConfiguration : AsyncConfigurer {
+class SysApiConfiguration {
 
     val logger by logger()
 
@@ -77,16 +73,24 @@ class SysApiConfiguration : AsyncConfigurer {
     }
 
     @Bean
-    fun userConfigFile(): YAMLConfigFile {
-        val yamlParser = configFileParser()
+    fun userConfigFile(environment: ConfigurableEnvironment): YAMLConfigFile {
         val configFile = File(FileSystem.config, USER_CONFIG)
-        val fallbackConfigFile = javaClass.getResourceAsStream("/config/$USER_CONFIG")
-        return if (configFile.exists()) {
-            yamlParser.readValue(configFile, YAMLConfigFile::class.java)
-        } else {
+        if (!configFile.exists()) {
             logger.warn("Config file is missing at ${configFile.absoluteFile}. Using default...")
-            yamlParser.readValue(fallbackConfigFile, YAMLConfigFile::class.java)
         }
+        val boundNames = BoundNames()
+        val config = Binder.get(environment)
+            .bind("", Bindable.of(YAMLConfigFile::class.java), BlankAsNull(boundNames))
+            .get()
+        val keys = environment.propertySources
+            .filter { it.name.contains(USER_CONFIG) }
+            .filterIsInstance<EnumerablePropertySource<*>>()
+            .flatMap { it.propertyNames.asList() }
+        val unknown = boundNames.unknown(keys)
+        if (unknown.isNotEmpty()) {
+            logger.warn("Ignoring unknown keys in $USER_CONFIG: ${unknown.joinToString()}")
+        }
+        return config
     }
 
     @Suppress("DEPRECATION")
@@ -220,22 +224,6 @@ class SysApiConfiguration : AsyncConfigurer {
             ScalarTypes.scalars.forEach {
                 builder.scalar(it)
             }
-        }
-    }
-
-    override fun getAsyncExecutor(): Executor {
-        val executor = ThreadPoolTaskExecutor()
-        executor.corePoolSize = 2
-        executor.maxPoolSize = 42
-        executor.queueCapacity = 11
-        executor.setThreadNamePrefix("@Async-")
-        executor.initialize()
-        return executor
-    }
-
-    override fun getAsyncUncaughtExceptionHandler(): AsyncUncaughtExceptionHandler {
-        return AsyncUncaughtExceptionHandler { ex, method, params ->
-            logger.error("$method with parameters $params encountered an uncaught exception", ex)
         }
     }
 }

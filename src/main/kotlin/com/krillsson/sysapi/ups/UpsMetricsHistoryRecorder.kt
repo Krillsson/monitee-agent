@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.ups
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.config.YAMLConfigFile
 import com.krillsson.sysapi.docker.ContainersHistoryRepository
 import org.springframework.scheduling.annotation.Scheduled
@@ -16,7 +17,7 @@ class UpsMetricsHistoryRecorder(
 
     private val historyConfiguration = config.metricsConfig.history
 
-    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES)
+    @Scheduled(fixedRate = 30, timeUnit = TimeUnit.MINUTES, scheduler = Threads.IO_SCHEDULER)
     fun run() {
         val devices = upsService.upsDevices()
         val metrics = devices.map { it.metrics }

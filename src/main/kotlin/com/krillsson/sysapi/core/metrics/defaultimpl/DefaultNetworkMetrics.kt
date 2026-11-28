@@ -20,6 +20,7 @@
  */
 package com.krillsson.sysapi.core.metrics.defaultimpl
 
+import com.krillsson.sysapi.Threads
 import com.krillsson.sysapi.core.connectivity.ConnectivityCheckService
 import com.krillsson.sysapi.core.connectivity.InternetServicesCheckService
 import com.krillsson.sysapi.core.domain.network.*
@@ -79,7 +80,7 @@ open class DefaultNetworkMetrics(
         speedMeasurementManager.register(sources)
     }
 
-    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedRate = 15, timeUnit = TimeUnit.SECONDS, scheduler = Threads.SAMPLING_SCHEDULER)
     fun runMeasurement() {
         speedMeasurementManager.run()
         networkInterfaceMetric.tryEmitNext(networkInterfaceLoads())

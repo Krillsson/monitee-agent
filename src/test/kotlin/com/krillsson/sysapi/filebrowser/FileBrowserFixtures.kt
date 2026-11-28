@@ -1,5 +1,6 @@
 package com.krillsson.sysapi.filebrowser
 
+import com.krillsson.sysapi.testExecutor
 import com.krillsson.sysapi.config.FileBrowserAccess
 import com.krillsson.sysapi.config.FileBrowserConfiguration
 import org.junit.jupiter.api.Assumptions
@@ -18,7 +19,7 @@ class FileBrowser(val configuration: FileBrowserConfiguration, cache: Path) {
     val archives = ArchiveService(configuration, sandbox, manager, fileTypeRegistry)
     val archiveBrowser = ArchiveBrowser(configuration, sandbox, entryFactory, fileTypeRegistry)
     val trash = TrashService(configuration, sandbox, manager)
-    val registry = FileOperationRegistry(configuration)
+    val registry = FileOperationRegistry(configuration, testExecutor("file-operation-", 2))
     val operations = FileOperationService(sandbox, manager, archives, trash, registry, treeWalker)
 
     fun await(operation: FileOperation): FileOperation =

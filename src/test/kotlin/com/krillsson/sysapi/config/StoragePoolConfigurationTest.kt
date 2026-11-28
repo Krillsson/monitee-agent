@@ -1,7 +1,6 @@
 package com.krillsson.sysapi.config
 
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.krillsson.sysapi.configFileParser
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 
